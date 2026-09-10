@@ -1,0 +1,67 @@
+<div class="contenedor-angosto">
+  @if (confirmacion(); as c) {
+    <div class="card">
+      <div class="alerta alerta-exito">¡Turno confirmado!</div>
+      <h2>{{ formatearFecha(c.fecha) }}</h2>
+      <p>{{ formatearHora(c.horaInicio) }} hs con {{ c.docenteNombre }}</p>
+      <p class="texto-suave">Te enviamos la confirmación por WhatsApp. Un día antes te vamos a mandar un recordatorio.</p>
+      <p class="texto-suave">Número de turno: <strong>#{{ c.id }}</strong> (guardalo, lo necesitás si querés cancelar).</p>
+      <a routerLink="/reservar" class="btn btn-secundario">Volver al inicio</a>
+    </div>
+  } @else {
+    <a routerLink="/reservar/{{ docenteId }}" class="texto-suave">&larr; Elegir otro horario</a>
+    <h1>Completá tus datos</h1>
+
+    @if (cargando()) {
+      <p class="texto-suave">Cargando...</p>
+    } @else {
+      @if (turnoSeleccionado(); as turno) {
+        <div class="card" style="margin-bottom:16px;">
+          <strong>{{ formatearFecha(turno.fecha) }}</strong> — {{ formatearHora(turno.horaInicio) }} a {{ formatearHora(turno.horaFin) }} hs
+        </div>
+
+        @if (error()) {
+          <div class="alerta alerta-error">{{ error() }}</div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="confirmar()" class="card">
+          <div class="form-grupo">
+            <label for="nombrePadre">Tu nombre y apellido</label>
+            <input id="nombrePadre" type="text" formControlName="nombrePadre" />
+            @if (form.controls.nombrePadre.invalid && form.controls.nombrePadre.touched) {
+              <span class="error-campo">Ingresá tu nombre completo.</span>
+            }
+          </div>
+
+          <div class="form-grupo">
+            <label for="telefonoPadre">Tu WhatsApp (con código de área)</label>
+            <input id="telefonoPadre" type="tel" placeholder="Ej: 2235551234" formControlName="telefonoPadre" />
+            @if (form.controls.telefonoPadre.invalid && form.controls.telefonoPadre.touched) {
+              <span class="error-campo">Ingresá un número de teléfono válido.</span>
+            }
+            <span class="texto-suave">A este número te vamos a mandar la confirmación y el recordatorio.</span>
+          </div>
+
+          <div class="form-grupo">
+            <label for="nombreNino">Nombre y apellido del niño/a</label>
+            <input id="nombreNino" type="text" formControlName="nombreNino" />
+            @if (form.controls.nombreNino.invalid && form.controls.nombreNino.touched) {
+              <span class="error-campo">Ingresá el nombre del niño/a.</span>
+            }
+          </div>
+
+          <div class="form-grupo">
+            <label for="observaciones">Comentarios (opcional)</label>
+            <textarea id="observaciones" rows="3" formControlName="observaciones"></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primario" [disabled]="enviando()">
+            {{ enviando() ? 'Confirmando...' : 'Confirmar turno' }}
+          </button>
+        </form>
+      } @else if (error()) {
+        <div class="alerta alerta-error">{{ error() }}</div>
+      }
+    }
+  }
+</div>

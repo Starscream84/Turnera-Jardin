@@ -1,0 +1,28 @@
+<div class="contenedor">
+  <div class="barra-superior">
+    <div>
+      <h1>Turnos de entrevista</h1>
+      <p class="texto-suave">Elegí el/la docente con quien querés coordinar la entrevista de tu hijo/a.</p>
+    </div>
+    <a routerLink="/cancelar" class="texto-suave">¿Ya tenés un turno reservado? Cancelalo acá</a>
+  </div>
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando docentes...</p>
+  } @else if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  } @else if (docentes().length === 0) {
+    <p class="texto-suave">Por el momento no hay docentes disponibles para reservar turnos.</p>
+  } @else {
+    <div class="grilla-tarjetas">
+      @for (docente of docentes(); track docente.id) {
+        <button type="button" class="tarjeta-clickeable" (click)="elegir(docente)">
+          <strong>{{ docente.nombreCompleto }}</strong>
+          @if (docente.sala) {
+            <div class="texto-suave">{{ docente.sala }}</div>
+          }
+        </button>
+      }
+    </div>
+  }
+</div>

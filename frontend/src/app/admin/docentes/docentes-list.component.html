@@ -1,0 +1,50 @@
+<div class="contenedor">
+  <div class="barra-superior">
+    <h1>Docentes</h1>
+    <a routerLink="/admin/docentes/nuevo" class="btn btn-primario">+ Nuevo docente</a>
+  </div>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando...</p>
+  } @else {
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Sala</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (docente of docentes(); track docente.id) {
+            <tr>
+              <td>{{ docente.nombre }} {{ docente.apellido }}</td>
+              <td>{{ docente.email }}</td>
+              <td>{{ docente.sala || '—' }}</td>
+              <td>
+                @if (docente.activo) {
+                  <span class="badge badge-completado">Activo</span>
+                } @else {
+                  <span class="badge badge-cancelado">Inactivo</span>
+                }
+              </td>
+              <td style="white-space: nowrap;">
+                <a [routerLink]="['/admin/docentes', docente.id, 'editar']" class="btn btn-secundario btn-chico">Editar</a>
+                @if (docente.activo) {
+                  <button type="button" class="btn btn-peligro btn-chico" (click)="alternarActivo(docente)">Desactivar</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

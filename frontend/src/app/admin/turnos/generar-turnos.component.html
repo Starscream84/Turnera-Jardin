@@ -1,0 +1,71 @@
+<div class="contenedor-angosto">
+  <h1>Generar turnos disponibles</h1>
+  <p class="texto-suave">Abrí franjas horarias para que los padres puedan reservar. No se duplican turnos ya cargados en el mismo horario.</p>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (resultado(); as creados) {
+    <div class="alerta alerta-exito">Se generaron {{ creados }} turno(s) nuevo(s).</div>
+  }
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando docentes...</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="generar()" class="card">
+      <div class="form-grupo">
+        <label for="docenteId">Docente</label>
+        <select id="docenteId" formControlName="docenteId">
+          <option value="" disabled>Elegí un docente</option>
+          @for (docente of docentes(); track docente.id) {
+            <option [value]="docente.id">{{ docente.nombre }} {{ docente.apellido }}</option>
+          }
+        </select>
+      </div>
+
+      <div style="display:flex; gap:16px;">
+        <div class="form-grupo" style="flex:1;">
+          <label for="fechaDesde">Desde</label>
+          <input id="fechaDesde" type="date" formControlName="fechaDesde" />
+        </div>
+        <div class="form-grupo" style="flex:1;">
+          <label for="fechaHasta">Hasta</label>
+          <input id="fechaHasta" type="date" formControlName="fechaHasta" />
+        </div>
+      </div>
+
+      <div class="form-grupo">
+        <label>Días de la semana</label>
+        <div formGroupName="diasSeleccionados" style="display:flex; gap:14px; flex-wrap:wrap;">
+          @for (dia of dias; track dia.numero) {
+            <label style="font-weight:400; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" [formControlName]="dia.numero" style="width:auto;" />
+              {{ dia.etiqueta }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <div style="display:flex; gap:16px;">
+        <div class="form-grupo" style="flex:1;">
+          <label for="horaInicio">Hora inicio</label>
+          <input id="horaInicio" type="time" formControlName="horaInicio" />
+        </div>
+        <div class="form-grupo" style="flex:1;">
+          <label for="horaFin">Hora fin</label>
+          <input id="horaFin" type="time" formControlName="horaFin" />
+        </div>
+        <div class="form-grupo" style="flex:1;">
+          <label for="duracionMinutos">Duración (min)</label>
+          <input id="duracionMinutos" type="number" formControlName="duracionMinutos" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primario" [disabled]="guardando()">
+        {{ guardando() ? 'Generando...' : 'Generar turnos' }}
+      </button>
+      <a routerLink="/admin/turnos" class="btn btn-secundario">Ver turnos</a>
+    </form>
+  }
+</div>

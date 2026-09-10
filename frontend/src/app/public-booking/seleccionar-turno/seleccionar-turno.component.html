@@ -1,0 +1,30 @@
+<div class="contenedor">
+  <div class="barra-superior">
+    <div>
+      <h1>Elegí un horario</h1>
+      <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
+    </div>
+    <a routerLink="/reservar" class="texto-suave">&larr; Elegir otro/a docente</a>
+  </div>
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando horarios...</p>
+  } @else if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  } @else if (grupos().length === 0) {
+    <p class="texto-suave">No hay horarios disponibles por el momento para este/a docente. Probá más adelante o elegí otro/a docente.</p>
+  } @else {
+    @for (grupo of grupos(); track grupo.fecha) {
+      <div class="card" style="margin-bottom: 16px;">
+        <h3 style="text-transform: capitalize;">{{ formatearFecha(grupo.fecha) }}</h3>
+        <div class="grilla-tarjetas">
+          @for (turno of grupo.turnos; track turno.id) {
+            <button type="button" class="tarjeta-clickeable" (click)="elegirTurno(turno)">
+              {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

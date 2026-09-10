@@ -1,0 +1,45 @@
+<div class="contenedor-angosto">
+  <a routerLink="/admin/docentes" class="texto-suave">&larr; Volver</a>
+  <h1>{{ esEdicion ? 'Editar docente' : 'Nuevo docente' }}</h1>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando...</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="guardar()" class="card">
+      <div class="form-grupo">
+        <label for="nombre">Nombre</label>
+        <input id="nombre" type="text" formControlName="nombre" />
+      </div>
+
+      <div class="form-grupo">
+        <label for="apellido">Apellido</label>
+        <input id="apellido" type="text" formControlName="apellido" />
+      </div>
+
+      <div class="form-grupo">
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" />
+      </div>
+
+      <div class="form-grupo">
+        <label for="sala">Sala / grupo a cargo (opcional)</label>
+        <input id="sala" type="text" formControlName="sala" placeholder="Ej: Sala Verde (1 año)" />
+      </div>
+
+      @if (esEdicion) {
+        <div class="form-grupo" style="flex-direction: row; align-items: center;">
+          <input id="activo" type="checkbox" formControlName="activo" style="width: auto;" />
+          <label for="activo" style="font-weight: 400;">Activo (visible en la agenda pública)</label>
+        </div>
+      }
+
+      <button type="submit" class="btn btn-primario" [disabled]="guardando()">
+        {{ guardando() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </form>
+  }
+</div>
