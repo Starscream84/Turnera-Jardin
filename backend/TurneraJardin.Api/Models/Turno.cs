@@ -26,6 +26,13 @@ public class Turno
 
     /// <summary>Teléfono en formato internacional E.164 sin "+" (ej: 5492235551234), listo para WhatsApp Cloud API.</summary>
     public string? TelefonoPadre { get; set; }
+    /// <summary>
+    /// Correo electrónico del padre.
+    /// </summary>
+    public string? EmailPadre { get; set; }
+    public string Modalidad { get; set; } = "Presencial";
+    public string? LinkMeet { get; set; }
+    public string? GoogleEventId { get; set; }
 
     public string? NombreNino { get; set; }
     public string? Observaciones { get; set; }

@@ -22,4 +22,5 @@ public class Docente
     public ICollection<Turno> Turnos { get; set; } = new List<Turno>();
 
     public string NombreCompleto => $"{Nombre} {Apellido}";
+    public ICollection<Disponibilidad> Disponibilidades { get; set; } = new List<Disponibilidad>();
 }
