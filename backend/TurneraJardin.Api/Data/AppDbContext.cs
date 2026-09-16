@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Docente> Docentes => Set<Docente>();
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Disponibilidad> Disponibilidades => Set<Disponibilidad>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,15 +23,16 @@ public class AppDbContext : DbContext
             entity.HasIndex(d => d.Email).IsUnique();
         });
 
-        modelBuilder.Entity<Turno>(entity =>
+// Configuración de Disponibilidad (Relación 1:N e Índice Compuesto)
+        modelBuilder.Entity<Disponibilidad>(entity =>
         {
-            entity.HasOne(t => t.Docente)
-                .WithMany(d => d.Turnos)
-                .HasForeignKey(t => t.DocenteId)
+            entity.HasOne(d => d.Docente)
+                .WithMany(doc => doc.Disponibilidades)
+                .HasForeignKey(d => d.DocenteId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Un docente no puede tener dos turnos que arranquen a la misma hora el mismo día.
-            entity.HasIndex(t => new { t.DocenteId, t.Fecha, t.HoraInicio }).IsUnique();
+            // Evita registrar dos veces la misma franja que inicie el mismo día a la misma hora
+            entity.HasIndex(d => new { d.DocenteId, d.DiaSemana, d.HoraInicio }).IsUnique();
         });
 
         modelBuilder.Entity<Usuario>(entity =>
