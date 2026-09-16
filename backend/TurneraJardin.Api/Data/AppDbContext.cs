@@ -25,9 +25,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Turno>(entity =>
         {
             entity.HasOne(t => t.Docente)
-                  .WithMany(d => d.Turnos)
-                  .HasForeignKey(t => t.DocenteId)
-                  .OnDelete(DeleteBehavior.Cascade);
+                .WithMany(d => d.Turnos)
+                .HasForeignKey(t => t.DocenteId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Un docente no puede tener dos turnos que arranquen a la misma hora el mismo día.
             entity.HasIndex(t => new { t.DocenteId, t.Fecha, t.HoraInicio }).IsUnique();
@@ -38,9 +38,9 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email).IsUnique();
 
             entity.HasOne(u => u.Docente)
-                  .WithMany()
-                  .HasForeignKey(u => u.DocenteId)
-                  .OnDelete(DeleteBehavior.SetNull);
+                .WithMany()
+                .HasForeignKey(u => u.DocenteId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
