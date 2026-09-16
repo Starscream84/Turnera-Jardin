@@ -9,9 +9,11 @@ using TurneraJardin.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Base de datos (SQLite, un solo archivo, sin instalar ningún motor aparte) ---
-var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=turnera.db";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
+// --- Base de datos (PostgreSQL) ---
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Host=localhost;Port=5432;Database=turnera_jardin;Username=postgres;Password=ME12345jLeNa"; // Valor por defecto para desarrollo local
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 // --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
@@ -55,8 +57,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(CorsPolicyFrontend, policy =>
     {
         policy.WithOrigins(origenesPermitidos)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -104,4 +106,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// --- Ejecutar Seeder al iniciar ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<AppDbContext>();
+    DbSeeder.Seed(context);
+}
 app.Run();
