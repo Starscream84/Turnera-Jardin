@@ -1,0 +1,449 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  width: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+
+  /* Color de base que coincide exactamente con el borde de la imagen original */
+  background-color: #032b49;
+  
+  /* Foto original al 100% de brillo y saturación, sin filtros por encima */
+  background-image: url('/idra-edificio.png');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.agenda-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 30px 20px 60px;
+}
+
+/* Header IDRA con estilo Glassmorphism suave */
+.idra-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 24px 30px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-top: 5px solid #002b49;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  margin-bottom: 22px;
+}
+
+.brand-nivel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.badge-jardin {
+  background-color: #fff3ea;
+  color: #f37021;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.8px;
+}
+
+.colegio-title {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #002b49;
+  letter-spacing: 1px;
+}
+
+.titulo-modulo {
+  font-size: 1.8rem;
+  color: #002b49;
+  margin: 6px 0 8px 0;
+  font-weight: 700;
+}
+
+.docente-info {
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.sala-chip {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+/* Métricas Resumen Flotantes */
+.metricas-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 22px;
+}
+
+.metrica-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.metrica-num {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #002b49;
+}
+
+.metrica-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metrica-card.confirmado .metrica-num { color: #16a34a; }
+.metrica-card.pendiente .metrica-num { color: #f37021; }
+.metrica-card.completado .metrica-num { color: #0284c7; }
+
+/* Barra Navegación */
+.barra-navegacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+
+.selector-vista button {
+  padding: 9px 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.selector-vista button:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.selector-vista button:last-child {
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+.selector-vista button.activo {
+  background: #002b49;
+  color: white;
+  border-color: #002b49;
+}
+
+.navegacion-fecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.btn-flecha {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #002b49;
+  font-size: 0.9rem;
+}
+
+.fecha-actual {
+  font-weight: 600;
+  color: #002b49;
+}
+
+/* Tarjetas de Entrevistas */
+.citas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tarjeta-entrevista {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-left: 6px solid #cbd5e1;
+  padding: 18px 24px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease;
+}
+
+.tarjeta-entrevista:hover {
+  transform: translateY(-2px);
+}
+
+.tarjeta-entrevista.confirmado { border-left-color: #16a34a; }
+.tarjeta-entrevista.pendiente { border-left-color: #f37021; }
+.tarjeta-entrevista.completado { border-left-color: #0284c7; }
+
+.col-horario {
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.horario-texto {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #002b49;
+}
+
+.badge-estado {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.badge-estado.confirmado { background: #dcfce7; color: #166534; }
+.badge-estado.pendiente { background: #ffedd5; color: #9a3412; }
+.badge-estado.completado { background: #e0f2fe; color: #075985; }
+
+.col-info {
+  flex-grow: 1;
+  padding: 0 28px;
+}
+
+.alumno-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.alumno-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #0f172a;
+}
+
+.sala-tag {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.familia-datos {
+  display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.familia-datos a {
+  color: #0284c7;
+  text-decoration: none;
+}
+
+.box-observacion {
+  margin-top: 10px;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  border-radius: 4px;
+  display: flex;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #78350f;
+}
+
+.box-observacion p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* Botones */
+.btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-config {
+  background: white;
+  border: 1.5px solid #002b49;
+  color: #002b49;
+}
+
+.btn-config:hover {
+  background: #f1f5f9;
+}
+
+.btn-nota {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #002b49;
+}
+
+.btn-nota:hover {
+  background: #e2e8f0;
+}
+
+/* Modales */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 43, 73, 0.6);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal-card {
+  background: white;
+  padding: 26px;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #002b49;
+}
+
+.btn-cerrar {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.modal-sub {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 6px 0 16px 0;
+}
+
+.label-form {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #002b49;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.modal-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.form-group:last-child {
+  grid-column: span 2;
+}
+
+.input-form {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btn-cancelar {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.btn-guardar {
+  background: #f37021;
+  color: white;
+}
+
+.btn-guardar:hover {
+  background: #d95e14;
+} .contenedor-fecha-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.contenedor-fecha-picker:hover {
+  background-color: #f1f5f9;
+}
+
+.input-fecha-oculto {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}

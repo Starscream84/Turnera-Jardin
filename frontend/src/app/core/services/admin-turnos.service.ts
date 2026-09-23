@@ -34,4 +34,9 @@ export class AdminTurnosService {
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
+
+  // Permite guardar la nota pedagógica que escribe el docente
+  actualizarObservacion(id: number, observaciones: string): Observable<void> {
+    return this.http.patch<void>(`${this.base}/${id}/observacion`, { observaciones });
+  }
 }

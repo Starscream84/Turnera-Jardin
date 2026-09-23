@@ -1,0 +1,185 @@
+<div class="agenda-wrapper">
+  <!-- Header Institucional IDRA -->
+  <header class="idra-header">
+    <div class="header-main">
+      <div class="brand-nivel">
+        <span class="badge-jardin">NIVEL INICIAL</span>
+        <span class="colegio-title">COLEGIO IDRA</span>
+      </div>
+      <h1 class="titulo-modulo">Panel de Agenda & Entrevistas</h1>
+      <p class="docente-info">
+        Docente a cargo: <strong>{{ docenteNombre }}</strong> 
+        <span class="sala-chip">{{ salaAsignada }}</span>
+      </p>
+    </div>
+
+    <div class="header-acciones">
+      <button class="btn btn-config" (click)="abrirModalConfig()">
+        ⚙ Configurar Disponibilidad
+      </button>
+    </div>
+  </header>
+
+  <!-- Tarjetas de Resumen Rápido -->
+  <section class="metricas-resumen">
+    <div class="metrica-card">
+      <span class="metrica-num">{{ citas.length }}</span>
+      <span class="metrica-label">Total Entrevistas</span>
+    </div>
+    <div class="metrica-card confirmado">
+      <span class="metrica-num">{{ contarPorEstado('Reservado') }}</span>
+      <span class="metrica-label">Reservadas</span>
+    </div>
+    <div class="metrica-card pendiente">
+      <span class="metrica-num">{{ contarPorEstado('Disponible') }}</span>
+      <span class="metrica-label">Disponibles</span>
+    </div>
+    <div class="metrica-card completado">
+      <span class="metrica-num">{{ contarPorEstado('Completado') }}</span>
+      <span class="metrica-label">Realizadas</span>
+    </div>
+  </section>
+
+  <!-- Barra de Navegación y Fechas -->
+  <section class="barra-navegacion">
+    <div class="selector-vista">
+      <button 
+        [class.activo]="vistaActual === 'dia'" 
+        (click)="vistaActual = 'dia'">
+        Vista Diaria
+      </button>
+      <button 
+        [class.activo]="vistaActual === 'semana'" 
+        (click)="vistaActual = 'semana'">
+        Vista Semanal
+      </button>
+    </div>
+
+    <div class="navegacion-fecha">
+      <button class="btn-flecha" (click)="cambiarDia(-1)" title="Día anterior">◀</button>
+      
+      <!-- Selector interactivo de fecha (2026-2030) -->
+      <div class="contenedor-fecha-picker" (click)="abrirCalendario()">
+        <span class="fecha-actual">📅 {{ fechaFormateada }}</span>
+        <input 
+          #datePicker
+          type="date" 
+          class="input-fecha-oculto"
+          [value]="fechaEnFormatoInput"
+          min="2026-01-01" 
+          max="2030-12-31" 
+          (change)="seleccionarFechaDirecta($event)">
+      </div>
+
+      <button class="btn-flecha" (click)="cambiarDia(1)" title="Día siguiente">▶</button>
+    </div>
+  </section>
+
+  <!-- Lista de Citas de Entrevista -->
+  <main class="citas-container">
+    <div *ngIf="cargando" style="text-align: center; color: white; padding: 20px;">
+      Cargando agenda...
+    </div>
+
+    <div *ngIf="!cargando && citas.length === 0" style="text-align: center; background: white; padding: 30px; border-radius: 12px; color: #64748b;">
+      No hay turnos registrados para esta fecha.
+    </div>
+
+    <div *ngFor="let cita of citas" class="tarjeta-entrevista" [ngClass]="cita.estado.toLowerCase()">
+      <!-- Franja horaria -->
+      <div class="col-horario">
+        <span class="horario-texto">
+          {{ formatearHora(cita.horaInicio) }} - {{ formatearHora(cita.horaFin) }}
+        </span>
+        <span class="badge-estado" [ngClass]="cita.estado.toLowerCase()">
+          {{ cita.estado }}
+        </span>
+      </div>
+
+      <!-- Datos del alumno y tutor -->
+      <div class="col-info">
+        <div class="alumno-header">
+          <h3>{{ cita.nombreNino || 'Turno sin asignar' }}</h3>
+          <span class="sala-tag">{{ salaAsignada }}</span>
+        </div>
+
+        <div class="familia-datos" *ngIf="cita.nombrePadre">
+          <span>👥 <strong>Tutor:</strong> {{ cita.nombrePadre }}</span>
+          <span *ngIf="cita.telefonoPadre">📞 <a [href]="'tel:' + cita.telefonoPadre">{{ cita.telefonoPadre }}</a></span>
+        </div>
+        
+        <div *ngIf="cita.observaciones" class="box-observacion">
+          <span class="icono-nota">📝</span>
+          <p>{{ cita.observaciones }}</p>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="col-acciones">
+        <button class="btn btn-nota" (click)="abrirModalObservacion(cita)">
+          {{ cita.observaciones ? 'Editar Observación' : '+ Agregar Nota' }}
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de Observaciones -->
+  <div class="modal-overlay" *ngIf="citaSeleccionada">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Observaciones de la Entrevista</h3>
+        <button class="btn-cerrar" (click)="cerrarModal()">✕</button>
+      </div>
+      <p class="modal-sub">
+        Alumno: <strong>{{ citaSeleccionada.nombreNino || 'Sin asignar' }}</strong>
+      </p>
+      
+      <label class="label-form">Anotaciones del docente:</label>
+      <textarea 
+        [(ngModel)]="textoObservacion" 
+        rows="5" 
+        placeholder="Escribí los detalles o acuerdos con la familia...">
+      </textarea>
+
+      <div class="modal-footer">
+        <button class="btn btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn btn-guardar" (click)="guardarObservacion()">Guardar Observación</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configurar Horarios -->
+  <div class="modal-overlay" *ngIf="mostrarModalConfig">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Configurar Horarios de Entrevista</h3>
+        <button class="btn-cerrar" (click)="mostrarModalConfig = false">✕</button>
+      </div>
+      <p class="modal-sub">Definí las franjas horarias de atención para las familias.</p>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Hora Inicio:</label>
+          <input type="time" value="08:30" class="input-form">
+        </div>
+        <div class="form-group">
+          <label>Hora Fin:</label>
+          <input type="time" value="12:00" class="input-form">
+        </div>
+        <div class="form-group">
+          <label>Duración por entrevista:</label>
+          <select class="input-form">
+            <option value="20">20 minutos</option>
+            <option value="30" selected>30 minutos</option>
+            <option value="45">45 minutos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-cancelar" (click)="mostrarModalConfig = false">Cerrar</button>
+        <button class="btn btn-guardar" (click)="mostrarModalConfig = false">Aplicar Horarios</button>
+      </div>
+    </div>
+  </div>
+</div>

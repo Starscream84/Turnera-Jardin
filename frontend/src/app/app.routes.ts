@@ -10,6 +10,7 @@ import { DocenteFormComponent } from './admin/docentes/docente-form.component';
 import { GenerarTurnosComponent } from './admin/turnos/generar-turnos.component';
 import { TurnosListComponent } from './admin/turnos/turnos-list.component';
 import { authGuard } from './core/guards/auth.guard';
+import { PanelAgendaDocenteComponent } from './admin/panel-agenda-docente/panel-agenda-docente.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'reservar' },
@@ -19,6 +20,9 @@ export const routes: Routes = [
   { path: 'reservar/:docenteId', component: SeleccionarTurnoComponent },
   { path: 'reservar/:docenteId/turno/:turnoId', component: FormularioReservaComponent },
   { path: 'cancelar', component: CancelarTurnoComponent },
+
+  // Ruta directa de desarrollo para ver tu componente sin pasar por el login
+  { path: 'mi-agenda', component: PanelAgendaDocenteComponent },
 
   // Panel de administración
   { path: 'admin/login', component: LoginComponent },
@@ -32,7 +36,8 @@ export const routes: Routes = [
       { path: 'docentes/nuevo', component: DocenteFormComponent },
       { path: 'docentes/:id/editar', component: DocenteFormComponent },
       { path: 'turnos', component: TurnosListComponent },
-      { path: 'turnos/generar', component: GenerarTurnosComponent }
+      { path: 'turnos/generar', component: GenerarTurnosComponent },
+      { path: 'agenda', component: PanelAgendaDocenteComponent }
     ]
   },
 
