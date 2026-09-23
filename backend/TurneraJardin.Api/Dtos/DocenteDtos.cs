@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using TurneraJardin.Api.Dtos;
 
 namespace TurneraJardin.Api.Dtos;
 
@@ -39,3 +40,4 @@ public class DocenteUpdateDto
 
     public bool Activo { get; set; } = true;
 }
+

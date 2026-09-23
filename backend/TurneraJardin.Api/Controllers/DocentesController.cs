@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Services;
+
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -12,10 +14,12 @@ namespace TurneraJardin.Api.Controllers;
 public class DocentesController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly ITurnosService _turnosService;
 
-    public DocentesController(AppDbContext db)
+    public DocentesController(AppDbContext db, ITurnosService turnosService)
     {
         _db = db;
+        _turnosService = turnosService;
     }
 
     [HttpGet]
@@ -56,4 +60,16 @@ public class DocentesController : ControllerBase
 
         return Ok(turnos);
     }
+
+    [HttpPut("{id}/disponibilidad")]
+public async Task<IActionResult> ActualizarDisponibilidad(int id, [FromBody] List<CrearDisponibilidadDto> nuevasReglas)
+{
+    if (id <= 0 || nuevasReglas == null)
+    {
+        return BadRequest("Datos de solicitud inválidos.");
+    }
+
+    await _turnosService.ActualizarDisponibilidadDocenteAsync(id, nuevasReglas);
+    return NoContent();
+}
 }

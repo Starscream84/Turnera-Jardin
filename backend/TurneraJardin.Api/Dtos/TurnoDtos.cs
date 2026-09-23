@@ -72,3 +72,20 @@ public class GenerarTurnosDto
     [Range(5, 240)]
     public int DuracionMinutos { get; set; } = 20;
 }
+
+public class TurnoSlotDto
+{
+    public int DocenteId { get; set; }
+    public DateOnly Fecha { get; set; }
+    public TimeOnly HoraInicio { get; set; }
+    public TimeOnly HoraFin { get; set; }
+    public bool Disponible { get; set; }
+}
+
+public class CrearDisponibilidadDto
+{
+    public DayOfWeek DiaSemana { get; set; }
+    public TimeSpan HoraInicio { get; set; }
+    public TimeSpan HoraFin { get; set; }
+    public int DuracionBloqueMinutos { get; set; } = 30;
+}

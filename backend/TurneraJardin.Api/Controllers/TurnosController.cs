@@ -10,18 +10,12 @@ namespace TurneraJardin.Api.Controllers;
 /// <summary>Endpoints públicos para que un padre/madre reserve o cancele su turno. Sin autenticación.</summary>
 [ApiController]
 [Route("api/turnos")]
-public class TurnosController : ControllerBase
+public class TurnosController(AppDbContext db, IWhatsAppService whatsApp, ILogger<TurnosController> logger, ITurnosService turnosService) : ControllerBase
 {
-    private readonly AppDbContext _db;
-    private readonly IWhatsAppService _whatsApp;
-    private readonly ILogger<TurnosController> _logger;
-
-    public TurnosController(AppDbContext db, IWhatsAppService whatsApp, ILogger<TurnosController> logger)
-    {
-        _db = db;
-        _whatsApp = whatsApp;
-        _logger = logger;
-    }
+    private readonly AppDbContext _db = db;
+    private readonly IWhatsAppService _whatsApp = whatsApp;
+    private readonly ILogger<TurnosController> _logger = logger;
+    private readonly ITurnosService _turnosService = turnosService;
 
     [HttpPost("{id:int}/reservar")]
     public async Task<ActionResult<TurnoConfirmadoDto>> Reservar(int id, ReservaTurnoDto dto)
@@ -94,5 +88,17 @@ public class TurnosController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("slots")]
+    public async Task<ActionResult<List<TurnoSlotDto>>> GetSlots([FromQuery] int docenteId, [FromQuery] DateOnly fecha)
+    {
+        if (docenteId <= 0)
+        {
+            return BadRequest("El ID del docente no es válido.");
+        }
+
+        var slots = await _turnosService.ObtenerSlotsDisponiblesAsync(docenteId, fecha);
+        return Ok(slots);
     }
 }

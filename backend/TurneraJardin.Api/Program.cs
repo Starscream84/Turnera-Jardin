@@ -8,6 +8,7 @@ using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<ITurnosService, TurnosService>();
 
 // --- Base de datos (PostgreSQL) ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
