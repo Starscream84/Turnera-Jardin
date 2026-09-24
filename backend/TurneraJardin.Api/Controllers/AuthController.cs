@@ -1,3 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
@@ -34,5 +37,33 @@ public class AuthController : ControllerBase
         var (token, expiraUtc) = _jwtService.GenerarToken(usuario);
 
         return Ok(new LoginResponseDto(token, expiraUtc, usuario.NombreCompleto, usuario.Rol.ToString(), usuario.DocenteId));
+    }
+
+    /// <summary>Permite a cualquier usuario logueado (dirección o docente) cambiar su propia contraseña.</summary>
+    [Authorize]
+    [HttpPost("cambiar-password")]
+    public async Task<IActionResult> CambiarPassword(CambiarPasswordPropiaDto dto)
+    {
+        var idClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (idClaim is null || !int.TryParse(idClaim, out var usuarioId))
+        {
+            return Unauthorized();
+        }
+
+        var usuario = await _db.Usuarios.FindAsync(usuarioId);
+        if (usuario is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.PasswordActual, usuario.PasswordHash))
+        {
+            return BadRequest(new { mensaje = "La contraseña actual no es correcta." });
+        }
+
+        usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordNueva);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
     }
 }

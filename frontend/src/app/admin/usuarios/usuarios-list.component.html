@@ -1,0 +1,95 @@
+<div class="contenedor">
+  <div class="barra-superior">
+    <h1>Usuarios</h1>
+  </div>
+  <p class="texto-suave">Cada docente necesita su propio usuario para entrar al panel y ver solo sus propios turnos. Dirección puede crear esos accesos acá y restablecer contraseñas cuando haga falta.</p>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (credencialesGeneradas(); as credenciales) {
+    <div class="alerta alerta-exito">
+      <strong>Contraseña generada para {{ credenciales.email }}:</strong>
+      <div style="font-family: monospace; font-size: 1.1em; margin: 6px 0;">{{ credenciales.passwordTemporal }}</div>
+      Compartila con la persona por un medio seguro (no queda guardada en ningún otro lado) y pedile que la cambie apenas entre, desde "Mi contraseña".
+      <div style="margin-top: 8px;">
+        <button type="button" class="btn btn-secundario btn-chico" (click)="cerrarCredenciales()">Cerrar</button>
+      </div>
+    </div>
+  }
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando...</p>
+  } @else {
+    <div class="card" style="margin-bottom: 24px;">
+      <h2 style="margin-top:0;">Crear login para un docente</h2>
+
+      @if (docentesSinUsuario().length === 0) {
+        <p class="texto-suave">Todos los docentes activos ya tienen un usuario creado.</p>
+      } @else {
+        <form [formGroup]="formCrear" (ngSubmit)="crearParaDocente()">
+          <div style="display:flex; gap:16px; flex-wrap: wrap; align-items: flex-end;">
+            <div class="form-grupo" style="flex: 1; min-width: 220px;">
+              <label for="docenteId">Docente</label>
+              <select id="docenteId" formControlName="docenteId">
+                <option value="" disabled>Elegí un docente</option>
+                @for (docente of docentesSinUsuario(); track docente.id) {
+                  <option [value]="docente.id">{{ docente.nombre }} {{ docente.apellido }} ({{ docente.email }})</option>
+                }
+              </select>
+            </div>
+            <div class="form-grupo" style="flex: 1; min-width: 220px;">
+              <label for="password">Contraseña inicial (opcional)</label>
+              <input id="password" type="text" formControlName="password" placeholder="Dejalo vacío para generar una automática" />
+            </div>
+            <div class="form-grupo" style="margin-bottom: 20px;">
+              <button type="submit" class="btn btn-primario" [disabled]="creando()">
+                {{ creando() ? 'Creando...' : 'Crear usuario' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      }
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Accesos existentes</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Docente vinculado</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of usuarios(); track usuario.id) {
+            <tr>
+              <td>{{ usuario.nombreCompleto }}</td>
+              <td>{{ usuario.email }}</td>
+              <td>{{ usuario.rol === 'Admin' ? 'Dirección' : 'Docente' }}</td>
+              <td>{{ usuario.docenteNombre || '—' }}</td>
+              <td>
+                @if (usuario.activo) {
+                  <span class="badge badge-completado">Activo</span>
+                } @else {
+                  <span class="badge badge-cancelado">Inactivo</span>
+                }
+              </td>
+              <td style="white-space: nowrap;">
+                <button type="button" class="btn btn-secundario btn-chico" (click)="restablecer(usuario)">Restablecer contraseña</button>
+                <button type="button" class="btn btn-peligro btn-chico" (click)="alternarActivo(usuario)">
+                  {{ usuario.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

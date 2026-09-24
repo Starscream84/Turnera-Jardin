@@ -9,5 +9,7 @@ public enum RolUsuario
     Admin = 0,
 
     /// <summary>Docente: solo ve y gestiona sus propios turnos.</summary>
-    Docente = 1
+    Docente = 1,
+
+    Coordinador = 2
 }

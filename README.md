@@ -29,6 +29,8 @@ Desarrollado como proyecto académico y **cedido sin cargo** a la institución, 
 **Panel de administración**
 - Login con roles (dirección / docente)
 - ABM de docentes
+- Login individual por docente (creado por dirección) para que cada uno vea solo sus propios turnos
+- Restablecimiento de contraseñas desde el panel, sin tocar la base de datos
 - Generación masiva de turnos disponibles (por rango de fechas, días y horario)
 - Listado y filtrado de reservas, cancelación de turnos
 

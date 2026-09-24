@@ -1,95 +1,133 @@
 <div class="contenedor">
-  <h1>Turnos</h1>
+    <h1>Turnos</h1>
 
-  @if (error()) {
-    <div class="alerta alerta-error">{{ error() }}</div>
-  }
-
-  <form [formGroup]="filtro" (ngSubmit)="buscar()" class="card" style="margin-bottom:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
-    @if (auth.rol() === 'Admin') {
-      <div class="form-grupo" style="min-width:200px;">
-        <label for="docenteId">Docente</label>
-        <select id="docenteId" formControlName="docenteId">
-          <option value="">Todos</option>
-          @for (docente of docentes(); track docente.id) {
-            <option [value]="docente.id">{{ docente.nombre }} {{ docente.apellido }}</option>
-          }
-        </select>
-      </div>
+    @if (error()) {
+        <div class="alerta alerta-error">{{ error() }}</div>
     }
 
-    <div class="form-grupo">
-      <label for="desde">Desde</label>
-      <input id="desde" type="date" formControlName="desde" />
-    </div>
+    <form
+        [formGroup]="filtro"
+        (ngSubmit)="buscar()"
+        class="card"
+        style="
+            margin-bottom: 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        "
+    >
+        @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
+            <div class="form-grupo" style="min-width: 200px">
+                <label for="docenteId">Docente</label>
+                <select id="docenteId" formControlName="docenteId">
+                    <option value="">Todos</option>
+                    @for (docente of docentes(); track docente.id) {
+                        <option [value]="docente.id">
+                            {{ docente.nombre }} {{ docente.apellido }}
+                        </option>
+                    }
+                </select>
+            </div>
+        }
 
-    <div class="form-grupo">
-      <label for="hasta">Hasta</label>
-      <input id="hasta" type="date" formControlName="hasta" />
-    </div>
+        <div class="form-grupo">
+            <label for="desde">Desde</label>
+            <input id="desde" type="date" formControlName="desde" />
+        </div>
 
-    <div class="form-grupo">
-      <label for="estado">Estado</label>
-      <select id="estado" formControlName="estado">
-        <option value="">Todos</option>
-        <option value="Disponible">Disponible</option>
-        <option value="Reservado">Reservado</option>
-        <option value="Cancelado">Cancelado</option>
-        <option value="Completado">Completado</option>
-      </select>
-    </div>
+        <div class="form-grupo">
+            <label for="hasta">Hasta</label>
+            <input id="hasta" type="date" formControlName="hasta" />
+        </div>
 
-    <button type="submit" class="btn btn-primario">Buscar</button>
-  </form>
+        <div class="form-grupo">
+            <label for="estado">Estado</label>
+            <select id="estado" formControlName="estado">
+                <option value="">Todos</option>
+                <option value="Disponible">Disponible</option>
+                <option value="Reservado">Reservado</option>
+                <option value="Cancelado">Cancelado</option>
+                <option value="Completado">Completado</option>
+            </select>
+        </div>
 
-  @if (cargando()) {
-    <p class="texto-suave">Cargando...</p>
-  } @else if (turnos().length === 0) {
-    <p class="texto-suave">No hay turnos que coincidan con el filtro.</p>
-  } @else {
-    <div class="card">
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            @if (auth.rol() === 'Admin') { <th>Docente</th> }
-            <th>Estado</th>
-            <th>Familia</th>
-            <th>WhatsApp</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (turno of turnos(); track turno.id) {
-            <tr>
-              <td>{{ formatearFecha(turno.fecha) }}</td>
-              <td>{{ formatearHora(turno.horaInicio) }}</td>
-              @if (auth.rol() === 'Admin') { <td>{{ turno.docenteNombre }}</td> }
-              <td><span class="badge" [class]="claseBadge(turno.estado)">{{ turno.estado }}</span></td>
-              <td>
-                @if (turno.nombreNino) {
-                  {{ turno.nombreNino }} <span class="texto-suave">({{ turno.nombrePadre }})</span>
-                } @else {
-                  <span class="texto-suave">—</span>
-                }
-              </td>
-              <td>
-                @if (turno.estado === 'Reservado') {
-                  {{ turno.confirmacionEnviada ? 'Confirmación enviada' : 'Confirmación pendiente' }}
-                }
-              </td>
-              <td style="white-space: nowrap;">
-                @if (turno.estado === 'Reservado') {
-                  <button type="button" class="btn btn-peligro btn-chico" (click)="cancelar(turno)">Cancelar</button>
-                } @else if (turno.estado === 'Disponible') {
-                  <button type="button" class="btn btn-secundario btn-chico" (click)="eliminar(turno)">Eliminar</button>
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  }
+        <button type="submit" class="btn btn-primario">Buscar</button>
+    </form>
+
+    @if (cargando()) {
+        <p class="texto-suave">Cargando...</p>
+    } @else if (turnos().length === 0) {
+        <p class="texto-suave">No hay turnos que coincidan con el filtro.</p>
+    } @else {
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
+                            <th>Docente</th>
+                        }
+                        <th>Estado</th>
+                        <th>Familia</th>
+                        <th>WhatsApp</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (turno of turnos(); track turno.id) {
+                        <tr>
+                            <td>{{ formatearFecha(turno.fecha) }}</td>
+                            <td>{{ formatearHora(turno.horaInicio) }}</td>
+                            @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
+                                <td>{{ turno.docenteNombre }}</td>
+                            }
+                            <td>
+                                <span class="badge" [class]="claseBadge(turno.estado)">{{
+                                    turno.estado
+                                }}</span>
+                            </td>
+                            <td>
+                                @if (turno.nombreNino) {
+                                    {{ turno.nombreNino }}
+                                    <span class="texto-suave">({{ turno.nombrePadre }})</span>
+                                } @else {
+                                    <span class="texto-suave">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (turno.estado === "Reservado") {
+                                    {{
+                                        turno.confirmacionEnviada
+                                            ? "Confirmación enviada"
+                                            : "Confirmación pendiente"
+                                    }}
+                                }
+                            </td>
+                            <td style="white-space: nowrap">
+                                @if (turno.estado === "Reservado") {
+                                    <button
+                                        type="button"
+                                        class="btn btn-peligro btn-chico"
+                                        (click)="cancelar(turno)"
+                                    >
+                                        Cancelar
+                                    </button>
+                                } @else if (turno.estado === "Disponible") {
+                                    <button
+                                        type="button"
+                                        class="btn btn-secundario btn-chico"
+                                        (click)="eliminar(turno)"
+                                    >
+                                        Eliminar
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>

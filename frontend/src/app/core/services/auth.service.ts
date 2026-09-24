@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CambiarPasswordRequest } from '../models/usuario.model';
 import { LoginRequest, LoginResponse } from '../models/auth.model';
 
 const STORAGE_KEY = 'turnera_jardin_sesion';
@@ -28,6 +29,11 @@ export class AuthService {
   logout(): void {
     this.sesion.set(null);
     localStorage.removeItem(STORAGE_KEY);
+  }
+
+  /** Cambia la contraseña del usuario logueado (dirección o docente). No cambia la sesión activa. */
+  cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/cambiar-password`, datos);
   }
 
   get token(): string | null {

@@ -11,7 +11,7 @@ namespace TurneraJardin.Api.Controllers;
 /// <summary>CRUD de docentes. Solo para administración (dirección del jardín).</summary>
 [ApiController]
 [Route("api/admin/docentes")]
-[Authorize(Roles = nameof(RolUsuario.Admin))]
+[Authorize(Roles = $"{nameof(RolUsuario.Admin)},{nameof(RolUsuario.Coordinador)}")]
 public class AdminDocentesController : ControllerBase
 {
     private readonly AppDbContext _db;

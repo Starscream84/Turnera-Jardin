@@ -1,0 +1,33 @@
+<div class="contenedor-angosto">
+  <h1>Mi contraseña</h1>
+  <p class="texto-suave">Cambiá tu contraseña de acceso al panel.</p>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (exito()) {
+    <div class="alerta alerta-exito">Tu contraseña se actualizó correctamente.</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="cambiar()" class="card">
+    <div class="form-grupo">
+      <label for="passwordActual">Contraseña actual</label>
+      <input id="passwordActual" type="password" formControlName="passwordActual" autocomplete="current-password" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="passwordNueva">Contraseña nueva</label>
+      <input id="passwordNueva" type="password" formControlName="passwordNueva" autocomplete="new-password" />
+    </div>
+
+    <div class="form-grupo">
+      <label for="confirmarPassword">Confirmar contraseña nueva</label>
+      <input id="confirmarPassword" type="password" formControlName="confirmarPassword" autocomplete="new-password" />
+    </div>
+
+    <button type="submit" class="btn btn-primario" [disabled]="guardando()">
+      {{ guardando() ? 'Guardando...' : 'Cambiar contraseña' }}
+    </button>
+  </form>
+</div>

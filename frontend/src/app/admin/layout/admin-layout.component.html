@@ -1,14 +1,18 @@
 <nav style="background: var(--color-superficie); border-bottom: 1px solid var(--color-borde); padding: 12px 16px; display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 12px;">
   <div style="display:flex; align-items:center; gap: 20px; flex-wrap: wrap;">
     <strong>Panel — Turnera del Jardín</strong>
-    @if (auth.rol() === 'Admin') {
+    @if (auth.rol() === 'Admin' || auth.rol() === 'Coordinador') {
       <a routerLink="/admin/docentes" routerLinkActive="texto-activo">Docentes</a>
       <a routerLink="/admin/turnos/generar" routerLinkActive="texto-activo">Generar turnos</a>
+    }
+    @if (auth.rol() === 'Admin') {
+      <a routerLink="/admin/usuarios" routerLinkActive="texto-activo">Usuarios</a>
     }
     <a routerLink="/admin/turnos" routerLinkActive="texto-activo">Turnos</a>
   </div>
   <div style="display:flex; align-items:center; gap: 12px;">
     <span class="texto-suave">{{ auth.nombreUsuario() }}</span>
+    <a routerLink="/admin/mi-cuenta" routerLinkActive="texto-activo" class="btn btn-secundario btn-chico">Mi contraseña</a>
     <button type="button" class="btn btn-secundario btn-chico" (click)="salir()">Salir</button>
   </div>
 </nav>

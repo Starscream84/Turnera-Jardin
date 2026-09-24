@@ -31,7 +31,7 @@ export class TurnosListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (this.auth.rol() === 'Admin') {
+    if (this.auth.rol() === 'Admin' || this.auth.rol() === 'Coordinador') {
       this.docentesService.listar().subscribe({ next: (docentes) => this.docentes.set(docentes) });
     }
     this.buscar();
