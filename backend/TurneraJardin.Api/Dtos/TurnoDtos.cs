@@ -7,21 +7,15 @@ namespace TurneraJardin.Api.Dtos;
 public record TurnoDisponibleDto(int Id, DateOnly Fecha, TimeOnly HoraInicio, TimeOnly HoraFin);
 
 /// <summary>Datos que completa el padre/madre para reservar un turno ya elegido.</summary>
-public class ReservaTurnoDto
-{
-    [Required, MaxLength(120)]
-    public required string NombrePadre { get; set; }
-
-    /// <summary>Número de WhatsApp. Se acepta con o sin "+"; el backend lo normaliza.</summary>
-    [Required, Phone, MaxLength(30)]
-    public required string TelefonoPadre { get; set; }
-
-    [Required, MaxLength(120)]
-    public required string NombreNino { get; set; }
-
-    [MaxLength(500)]
-    public string? Observaciones { get; set; }
-}
+public record ReservaTurnoDto(
+    int DocenteId,
+    DateOnly Fecha,
+    TimeOnly HoraInicio,
+    string NombrePadre,
+    string TelefonoPadre,
+    string NombreNino,
+    string? Observaciones
+);
 
 /// <summary>Confirmación devuelta al padre/madre luego de reservar con éxito.</summary>
 public record TurnoConfirmadoDto(

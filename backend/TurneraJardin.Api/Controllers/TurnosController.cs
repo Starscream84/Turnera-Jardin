@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
+using ReservarTurnoDto = TurneraJardin.Api.Dtos.ReservaTurnoDto;
 using TurneraJardin.Api.Models.Enums;
 using TurneraJardin.Api.Services;
 
@@ -17,50 +18,48 @@ public class TurnosController(AppDbContext db, IWhatsAppService whatsApp, ILogge
     private readonly ILogger<TurnosController> _logger = logger;
     private readonly ITurnosService _turnosService = turnosService;
 
-    [HttpPost("{id:int}/reservar")]
-    public async Task<ActionResult<TurnoConfirmadoDto>> Reservar(int id, ReservaTurnoDto dto)
+    /// <summary>
+    /// Procesa la reserva de un turno dinámico de manera transaccional.
+    /// </summary>
+    [HttpPost("reservar")]
+    public async Task<ActionResult<TurnoConfirmadoDto>> Reservar([FromBody] ReservaTurnoDto dto)
     {
-        // Se usa una transacción para evitar que dos padres reserven el mismo turno al mismo tiempo.
-        await using var transaccion = await _db.Database.BeginTransactionAsync();
-
-        var turno = await _db.Turnos.Include(t => t.Docente).FirstOrDefaultAsync(t => t.Id == id);
-
-        if (turno is null)
+        if (!ModelState.IsValid)
         {
-            return NotFound(new { mensaje = "El turno no existe." });
+            return BadRequest(ModelState);
         }
 
-        if (turno.Estado != EstadoTurno.Disponible)
+        try
         {
-            return Conflict(new { mensaje = "Este turno ya no está disponible. Elegí otro horario." });
+            // Delegar la verificación transaccional y la creación del turno al servicio
+            var turno = await _turnosService.ReservarTurnoAsync(dto);
+
+            // Intentar enviar WhatsApp de confirmación (desacoplado de la transacción principal)
+            var enviado = await _whatsApp.EnviarConfirmacionAsync(turno);
+            turno.ConfirmacionEnviada = enviado;
+            await _db.SaveChangesAsync();
+
+            if (!enviado)
+            {
+                _logger.LogWarning("El turno {TurnoId} se reservó pero no se pudo mandar el WhatsApp de confirmación.", turno.Id);
+            }
+
+            return Ok(new TurnoConfirmadoDto(
+                turno.Id,
+                turno.Docente?.NombreCompleto ?? "Docente",
+                turno.Fecha,
+                turno.HoraInicio,
+                turno.HoraFin,
+                turno.NombreNino!));
         }
-
-        turno.NombrePadre = dto.NombrePadre.Trim();
-        turno.TelefonoPadre = dto.TelefonoPadre.Trim();
-        turno.NombreNino = dto.NombreNino.Trim();
-        turno.Observaciones = dto.Observaciones?.Trim();
-        turno.Estado = EstadoTurno.Reservado;
-        turno.FechaReserva = DateTime.UtcNow;
-
-        await _db.SaveChangesAsync();
-        await transaccion.CommitAsync();
-
-        var enviado = await _whatsApp.EnviarConfirmacionAsync(turno);
-        turno.ConfirmacionEnviada = enviado;
-        await _db.SaveChangesAsync();
-
-        if (!enviado)
+        catch (InvalidOperationException ex)
         {
-            _logger.LogWarning("El turno {TurnoId} se reservó pero no se pudo mandar el WhatsApp de confirmación.", turno.Id);
+            return Conflict(new { mensaje = ex.Message });
         }
-
-        return Ok(new TurnoConfirmadoDto(
-            turno.Id,
-            turno.Docente!.NombreCompleto,
-            turno.Fecha,
-            turno.HoraInicio,
-            turno.HoraFin,
-            turno.NombreNino!));
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensaje = "Ocurrió un error al procesar la reserva.", detalle = ex.Message });
+        }
     }
 
     /// <summary>

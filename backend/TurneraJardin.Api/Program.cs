@@ -10,11 +10,14 @@ using TurneraJardin.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<ITurnosService, TurnosService>();
 
-// --- Base de datos (PostgreSQL) ---
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Host=localhost;Port=5432;Database=turnera_jardin;Username=postgres;Password=ME12345jLeNa"; // Valor por defecto para desarrollo local
+// --- Base de datos (MySQL) ---
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(
+        connectionString,
+        ServerVersion.AutoDetect(connectionString)
+    ));
 
 // --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));

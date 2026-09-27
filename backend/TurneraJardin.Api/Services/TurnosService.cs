@@ -89,4 +89,72 @@ public class TurnosService : ITurnosService
 
         await _context.SaveChangesAsync();
     }
+
+
+public async Task<Turno> ReservarTurnoAsync(ReservaTurnoDto dto)
+{
+    using var transaction = await _context.Database.BeginTransactionAsync();
+
+    try
+    {
+        var diaSemana = dto.Fecha.DayOfWeek;
+        var horaInicioTimeSpan = dto.HoraInicio.ToTimeSpan();
+
+        // 1. Obtener de MySQL las disponibilidades del docente para ese día
+        var disponibilidadesDocente = await _context.Disponibilidades
+            .Where(d => d.DocenteId == dto.DocenteId && d.DiaSemana == diaSemana)
+            .ToListAsync();
+
+        // 2. Validar en memoria la franja horaria usando ToTimeSpan() para unificar tipos
+        var disponibilidad = disponibilidadesDocente.FirstOrDefault(d => 
+            d.HoraInicio.ToTimeSpan() <= horaInicioTimeSpan && 
+            d.HoraFin.ToTimeSpan() >= horaInicioTimeSpan.Add(TimeSpan.FromMinutes(d.DuracionBloqueMinutos)));
+
+        if (disponibilidad == null)
+        {
+            throw new InvalidOperationException("El docente no tiene disponibilidad configurada para ese horario.");
+        }
+
+        // 3. Verificar que el slot no esté reservado por otro padre
+        var turnoExistente = await _context.Turnos
+            .FirstOrDefaultAsync(t => t.DocenteId == dto.DocenteId 
+                                && t.Fecha == dto.Fecha 
+                                && t.HoraInicio == dto.HoraInicio 
+                                && t.Estado != EstadoTurno.Cancelado);
+
+        if (turnoExistente != null)
+        {
+            throw new InvalidOperationException("El turno seleccionado ya fue reservado por otra familia.");
+        }
+
+        // 4. Crear el turno
+        var duracion = TimeSpan.FromMinutes(disponibilidad.DuracionBloqueMinutos);
+        var nuevoTurno = new Turno
+        {
+            DocenteId = dto.DocenteId,
+            Fecha = dto.Fecha,
+            HoraInicio = dto.HoraInicio,
+            HoraFin = dto.HoraInicio.Add(duracion),
+            NombrePadre = dto.NombrePadre,
+            TelefonoPadre = dto.TelefonoPadre,
+            NombreNino = dto.NombreNino,
+            Observaciones = dto.Observaciones,
+            Estado = EstadoTurno.Reservado,
+            FechaReserva = DateTime.UtcNow,
+            ConfirmacionEnviada = false
+        };
+
+        _context.Turnos.Add(nuevoTurno);
+        await _context.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+
+        return nuevoTurno;
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
 }
