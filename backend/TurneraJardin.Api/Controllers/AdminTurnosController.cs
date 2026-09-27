@@ -17,97 +17,80 @@ namespace TurneraJardin.Api.Controllers;
 [Authorize]
 public class AdminTurnosController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext _context;
 
-    public AdminTurnosController(AppDbContext db)
+    public AdminTurnosController(AppDbContext context)
     {
-        _db = db;
+        _context = context;
     }
 
+    /// <summary>
+    /// Consulta administrativa de todos los turnos con filtros opcionales.
+    /// </summary>
     [HttpGet]
-    public async Task<ActionResult<List<TurnoAdminDto>>> Listar(
-        [FromQuery] int? docenteId, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] EstadoTurno? estado)
+    public async Task<IActionResult> ObtenerTurnos(
+        [FromQuery] int? docenteId,
+        [FromQuery] DateOnly? fecha,
+        [FromQuery] EstadoTurno? estado)
     {
-        var query = _db.Turnos.Include(t => t.Docente).AsQueryable();
+        var query = _context.Turnos
+            .Include(t => t.Docente)
+            .AsQueryable();
 
-        if (EsDocente(out var docenteIdPropio))
+        if (docenteId.HasValue && docenteId > 0)
         {
-            // Un docente jamás puede ver la agenda de otro, sin importar qué pida por query string.
-            query = query.Where(t => t.DocenteId == docenteIdPropio);
-        }
-        else if (docenteId is not null)
-        {
-            query = query.Where(t => t.DocenteId == docenteId);
+            query = query.Where(t => t.DocenteId == docenteId.Value);
         }
 
-        if (desde is not null) query = query.Where(t => t.Fecha >= desde);
-        if (hasta is not null) query = query.Where(t => t.Fecha <= hasta);
-        if (estado is not null) query = query.Where(t => t.Estado == estado);
+        if (fecha.HasValue)
+        {
+            query = query.Where(t => t.Fecha == fecha.Value);
+        }
+
+        if (estado.HasValue)
+        {
+            query = query.Where(t => t.Estado == estado.Value);
+        }
 
         var turnos = await query
-            .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
-            .Select(t => new TurnoAdminDto(
-                t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
-                t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
-                t.ConfirmacionEnviada, t.RecordatorioEnviado))
+            .OrderBy(t => t.Fecha)
+            .ThenBy(t => t.HoraInicio)
+            .Select(t => new
+            {
+                t.Id,
+                t.DocenteId,
+                DocenteNombre = t.Docente != null ? t.Docente.NombreCompleto : "Sin Asignar",
+                t.Fecha,
+                t.HoraInicio,
+                t.HoraFin,
+                t.NombrePadre,
+                t.TelefonoPadre,
+                t.NombreNino,
+                t.Observaciones,
+                t.Estado,
+                t.FechaReserva
+            })
             .ToListAsync();
 
         return Ok(turnos);
     }
 
-    [HttpPost("{id:int}/cancelar")]
-    public async Task<IActionResult> Cancelar(int id)
+    /// <summary>
+    /// Cambia el estado de un turno reservado (ej. Atendido, Cancelado).
+    /// </summary>
+    [HttpPatch("{id:int}/estado")]
+    public async Task<IActionResult> CambiarEstado(int id, [FromBody] EstadoTurno nuevoEstado)
     {
-        var turno = await _db.Turnos.FindAsync(id);
-        if (turno is null)
+        var turno = await _context.Turnos.FindAsync(id);
+
+        if (turno == null)
         {
-            return NotFound();
+            return NotFound(new { mensaje = "El turno no existe." });
         }
 
-        if (EsDocente(out var docenteIdPropio) && turno.DocenteId != docenteIdPropio)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden);
-        }
+        turno.Estado = nuevoEstado;
+        await _context.SaveChangesAsync();
 
-        turno.Estado = EstadoTurno.Cancelado;
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
-
-    /// <summary>Elimina una franja "Disponible" que todavía nadie reservó (por ejemplo, para corregir un error de carga).</summary>
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Eliminar(int id)
-    {
-        var turno = await _db.Turnos.FindAsync(id);
-        if (turno is null)
-        {
-            return NotFound();
-        }
-
-        if (EsDocente(out var docenteIdPropio) && turno.DocenteId != docenteIdPropio)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        if (turno.Estado != EstadoTurno.Disponible)
-        {
-            return BadRequest(new { mensaje = "Solo se pueden eliminar turnos que todavía no fueron reservados. Si ya tiene una familia asignada, cancelalo en vez de eliminarlo." });
-        }
-
-        _db.Turnos.Remove(turno);
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
-
-    private bool EsDocente(out int docenteId)
-    {
-        docenteId = 0;
-        if (!User.IsInRole(nameof(RolUsuario.Docente)))
-        {
-            return false;
-        }
-
-        var claim = User.FindFirstValue("docenteId");
-        return claim is not null && int.TryParse(claim, out docenteId);
+        return Ok(new { mensaje = "Estado actualizado correctamente.", turnoId = turno.Id, nuevoEstado = turno.Estado });
     }
 }

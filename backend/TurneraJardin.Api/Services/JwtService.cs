@@ -15,39 +15,36 @@ public class JwtService : IJwtService
         _config = config;
     }
 
-    public (string Token, DateTime ExpiraUtc) GenerarToken(Usuario usuario)
+    public string GenerarToken(Usuario usuario)
     {
-        var jwtConfig = _config.GetSection("Jwt");
-        var key = jwtConfig["Key"]
-            ?? throw new InvalidOperationException("Falta configurar Jwt:Key en appsettings.json");
-        var horasExpiracion = double.TryParse(jwtConfig["HorasExpiracion"], out var h) ? h : 8;
+        var secretKey = _config["Jwt:SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey no está configurada.");
+        var issuer = _config["Jwt:Issuer"] ?? "TurneraJardinApi";
+        var audience = _config["Jwt:Audience"] ?? "TurneraJardinClient";
 
-        var claims = new List<Claim>
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
         {
-            new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, usuario.Email),
-            new(ClaimTypes.Name, usuario.NombreCompleto),
-            new(ClaimTypes.Role, usuario.Rol.ToString())
+            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+            new Claim(ClaimTypes.Email, usuario.Email),
+            new Claim(ClaimTypes.Name, usuario.NombreCompleto),
+            new Claim(ClaimTypes.Role, usuario.Rol.ToString())
         };
 
-        if (usuario.DocenteId is not null)
-        {
-            claims.Add(new Claim("docenteId", usuario.DocenteId.Value.ToString()));
-        }
-
-        var expiraUtc = DateTime.UtcNow.AddHours(horasExpiracion);
-
-        var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
-            SecurityAlgorithms.HmacSha256);
-
         var token = new JwtSecurityToken(
-            issuer: jwtConfig["Issuer"],
-            audience: jwtConfig["Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            expires: expiraUtc,
-            signingCredentials: credentials);
+            expires: DateTime.UtcNow.AddHours(8),
+            signingCredentials: creds
+        );
 
-        return (new JwtSecurityTokenHandler().WriteToken(token), expiraUtc);
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    (string Token, DateTime ExpiraUtc) IJwtService.GenerarToken(Usuario usuario)
+    {
+        throw new NotImplementedException();
     }
 }
