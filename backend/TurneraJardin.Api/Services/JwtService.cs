@@ -15,9 +15,9 @@ public class JwtService : IJwtService
         _config = config;
     }
 
-    public string GenerarToken(Usuario usuario)
+    public (string Token, DateTime ExpiraUtc) GenerarToken(Usuario usuario)
     {
-        var secretKey = _config["Jwt:SecretKey"] ?? throw new InvalidOperationException("Jwt:SecretKey no está configurada.");
+        var secretKey = _config["Jwt:SecretKey"] ?? "TuSuperClaveSecretaQueDebeSerLarga123!";
         var issuer = _config["Jwt:Issuer"] ?? "TurneraJardinApi";
         var audience = _config["Jwt:Audience"] ?? "TurneraJardinClient";
 
@@ -32,19 +32,18 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Role, usuario.Rol.ToString())
         };
 
+        var expiraUtc = DateTime.UtcNow.AddHours(8);
+
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            expires: expiraUtc,
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-    (string Token, DateTime ExpiraUtc) IJwtService.GenerarToken(Usuario usuario)
-    {
-        throw new NotImplementedException();
+        return (tokenString, expiraUtc);
     }
 }

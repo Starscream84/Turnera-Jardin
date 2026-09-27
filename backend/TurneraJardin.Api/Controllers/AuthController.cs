@@ -38,10 +38,11 @@ public class AuthController : ControllerBase
             return Unauthorized(new { mensaje = "Credenciales inválidas." });
         }
 
-        var token = _jwtService.GenerarToken(usuario);
+        // Generar el token JWT
+        var resultadoToken = _jwtService.GenerarToken(usuario);
 
         return Ok(new AuthResponseDto(
-            token,
+            resultadoToken.Token,
             usuario.Id,
             usuario.NombreCompleto,
             usuario.Email,
