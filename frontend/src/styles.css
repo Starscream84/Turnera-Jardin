@@ -217,3 +217,73 @@ th {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+
+/* --- Selector de día y grilla de horas (reserva pública) --- */
+.titulo-paso {
+  margin: 24px 0 12px;
+  font-size: 1rem;
+}
+
+.selector-dias {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x proximity;
+}
+
+.chip-dia {
+  flex: 0 0 auto;
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  scroll-snap-align: start;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.chip-dia:hover {
+  border-color: var(--color-primario);
+}
+
+.chip-dia-activo {
+  background: var(--color-primario);
+  border-color: var(--color-primario);
+  color: white;
+}
+
+.chip-dia-semana {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chip-dia-fecha {
+  font-weight: 700;
+}
+
+.chip-dia-cantidad {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.grilla-horas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 10px;
+}
+
+.hora-boton {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+}

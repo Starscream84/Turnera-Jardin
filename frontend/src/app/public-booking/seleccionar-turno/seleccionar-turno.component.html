@@ -2,6 +2,64 @@
   <div class="barra-superior">
     <div>
       <h1>Elegí un horario</h1>
+      <!-- CAMBIADO: si tenemos el docente, mostramos su nombre y sala -->
+      @if (docente(); as d) {
+        <p class="texto-suave">
+          Entrevista con <strong>{{ d.nombreCompleto }}</strong>@if (d.sala) { · {{ d.sala }} }
+        </p>
+      } @else {
+        <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
+      }
+    </div>
+    <a routerLink="/reservar" class="texto-suave">&larr; Elegir otro/a docente</a>
+  </div>
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando horarios...</p>
+  } @else if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  } @else if (grupos().length === 0) {
+    <p class="texto-suave">No hay horarios disponibles por el momento para este/a docente. Probá más adelante o elegí otro/a docente.</p>
+  } @else {
+    <!-- NUEVO: todo lo que sigue reemplaza al @for de tarjetas por día -->
+    <h3 class="titulo-paso">1. Elegí el día</h3>
+    <div class="selector-dias" role="tablist" aria-label="Días disponibles">
+      @for (grupo of grupos(); track grupo.fecha) {
+        <button
+          type="button"
+          role="tab"
+          class="chip-dia"
+          [class.chip-dia-activo]="grupo.fecha === fechaElegida()"
+          [attr.aria-selected]="grupo.fecha === fechaElegida()"
+          (click)="elegirFecha(grupo.fecha)"
+        >
+          <span class="chip-dia-semana">{{ diaCorto(grupo.fecha) }}</span>
+          <span class="chip-dia-fecha">{{ diaYMes(grupo.fecha) }}</span>
+          <span class="chip-dia-cantidad">{{ grupo.turnos.length }} {{ grupo.turnos.length === 1 ? 'turno' : 'turnos' }}</span>
+        </button>
+      }
+    </div>
+
+    @if (fechaElegida(); as fecha) {
+      <h3 class="titulo-paso">2. Elegí la hora — {{ formatearFecha(fecha) }}</h3>
+      <div class="grilla-horas">
+        @for (turno of turnosDelDia(); track turno.id) {
+          <button type="button" class="tarjeta-clickeable hora-boton" (click)="elegirTurno(turno)">
+            {{ formatearHora(turno.horaInicio) }}
+          </button>
+        }
+      </div>
+    }
+  }
+</div>
+
+
+
+<!--LO ANTERIOR POR LAS DUDAS
+<div class="contenedor">
+  <div class="barra-superior">
+    <div>
+      <h1>Elegí un horario</h1>
       <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
     </div>
     <a routerLink="/reservar" class="texto-suave">&larr; Elegir otro/a docente</a>
@@ -28,3 +86,5 @@
     }
   }
 </div>
+-->
+

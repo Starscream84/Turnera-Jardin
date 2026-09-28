@@ -28,7 +28,7 @@ export class SeleccionarDocenteComponent implements OnInit {
       }
     });
   }
-
+  //
   elegir(docente: Docente): void {
     this.router.navigate(['/reservar', docente.id]);
   }

@@ -4,6 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DocentesService } from '../../core/services/docentes.service';
 import { TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
+import { forkJoin } from 'rxjs';
+import { Docente } from '../../core/models/docente.model';
 
 @Component({
   selector: 'app-formulario-reserva',
@@ -19,6 +21,7 @@ export class FormularioReservaComponent implements OnInit {
   docenteId!: number;
   turnoId!: number;
   turnoSeleccionado = signal<TurnoDisponible | null>(null);
+  docente = signal<Docente | null>(null);
 
   cargando = signal(true);
   enviando = signal(false);
@@ -36,8 +39,14 @@ export class FormularioReservaComponent implements OnInit {
     this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));
     this.turnoId = Number(this.route.snapshot.paramMap.get('turnoId'));
 
-    this.docentesService.turnosDisponibles(this.docenteId).subscribe({
-      next: (turnos) => {
+    /*this.docentesService.turnosDisponibles(this.docenteId).subscribe({
+      next: (turnos) => {*/
+        forkJoin({
+        docentes: this.docentesService.listar(),
+        turnos: this.docentesService.turnosDisponibles(this.docenteId)
+        }).subscribe({
+        next: ({ docentes, turnos }) => {
+        this.docente.set(docentes.find((d) => d.id === this.docenteId) ?? null);
         const turno = turnos.find((t) => t.id === this.turnoId) ?? null;
         this.turnoSeleccionado.set(turno);
         if (!turno) {

@@ -18,6 +18,9 @@
       @if (turnoSeleccionado(); as turno) {
         <div class="card" style="margin-bottom:16px;">
           <strong>{{ formatearFecha(turno.fecha) }}</strong> — {{ formatearHora(turno.horaInicio) }} a {{ formatearHora(turno.horaFin) }} hs
+          @if (docente(); as d) {
+          <div class="texto-suave">Con {{ d.nombreCompleto }}@if (d.sala) { · {{ d.sala }} }</div>
+}
         </div>
 
         @if (error()) {
