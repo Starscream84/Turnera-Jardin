@@ -14,6 +14,12 @@ export class AuthService {
   readonly estaLogueado = computed(() => this.sesion() !== null);
   readonly nombreUsuario = computed(() => this.sesion()?.nombreCompleto ?? '');
   readonly rol = computed(() => this.sesion()?.rol ?? null);
+  readonly fotoUrl = computed(() => this.sesion()?.fotoUrl ?? null);
+  /** La foto ya lista para usar en un <img src>, con la raíz del backend antepuesta. Null si no tiene. */
+  readonly fotoUrlCompleta = computed(() => {
+    const relativa = this.fotoUrl();
+    return relativa ? `${environment.archivosUrl}${relativa}` : null;
+  });
 
   constructor(private http: HttpClient) {}
 
@@ -34,6 +40,23 @@ export class AuthService {
   /** Cambia la contraseña del usuario logueado (dirección o docente). No cambia la sesión activa. */
   cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
     return this.http.post<void>(`${environment.apiUrl}/auth/cambiar-password`, datos);
+  }
+
+  /** Sube (o reemplaza) la foto de perfil del usuario logueado, y actualiza la sesión activa con la URL nueva. */
+  subirFoto(archivo: File): Observable<{ fotoUrl: string }> {
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+
+    return this.http.post<{ fotoUrl: string }>(`${environment.apiUrl}/auth/mi-foto`, formData).pipe(
+      tap((respuesta) => {
+        const sesionActual = this.sesion();
+        if (sesionActual) {
+          const sesionActualizada = { ...sesionActual, fotoUrl: respuesta.fotoUrl };
+          this.sesion.set(sesionActualizada);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(sesionActualizada));
+        }
+      })
+    );
   }
 
   get token(): string | null {

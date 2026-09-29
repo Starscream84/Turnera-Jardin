@@ -11,4 +11,4 @@ public class LoginDto
     public required string Password { get; set; }
 }
 
-public record LoginResponseDto(string Token, DateTime ExpiraUtc, string NombreCompleto, string Rol, int? DocenteId);
+public record LoginResponseDto(string Token, DateTime ExpiraUtc, string NombreCompleto, string Rol, int? DocenteId, string? FotoUrl);

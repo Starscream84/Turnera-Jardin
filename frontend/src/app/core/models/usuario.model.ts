@@ -1,11 +1,14 @@
+import { Rol } from './auth.model';
+
 export interface UsuarioAdmin {
   id: number;
   email: string;
   nombreCompleto: string;
-  rol: 'Admin' | 'Docente';
+  rol: Rol;
   docenteId: number | null;
   docenteNombre: string | null;
   activo: boolean;
+  fotoUrl: string | null;
 }
 
 export interface UsuarioCreateRequest {

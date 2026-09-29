@@ -22,4 +22,7 @@ public class Usuario
     public Docente? Docente { get; set; }
 
     public bool Activo { get; set; } = true;
+
+    /// <summary>Ruta relativa (ej. "/fotos-perfil/xxx.jpg") a la foto de perfil, servida como archivo estático. Null si no tiene.</summary>
+    public string? FotoUrl { get; set; }
 }

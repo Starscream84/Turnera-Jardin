@@ -11,6 +11,13 @@
     <a routerLink="/admin/turnos" routerLinkActive="texto-activo">Turnos</a>
   </div>
   <div style="display:flex; align-items:center; gap: 12px;">
+    @if (auth.fotoUrlCompleta()) {
+      <img [src]="auth.fotoUrlCompleta()" alt="" style="width:28px;height:28px;border-radius:50%;object-fit:cover;" />
+    } @else {
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--color-borde);display:flex;align-items:center;justify-content:center;font-size:0.8rem;">
+        {{ auth.nombreUsuario().charAt(0) }}
+      </div>
+    }
     <span class="texto-suave">{{ auth.nombreUsuario() }}</span>
     <a routerLink="/admin/mi-cuenta" routerLinkActive="texto-activo" class="btn btn-secundario btn-chico">Mi contraseña</a>
     <button type="button" class="btn btn-secundario btn-chico" (click)="salir()">Salir</button>

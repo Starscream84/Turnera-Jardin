@@ -5,6 +5,7 @@ import { AdminUsuariosService } from '../../core/services/admin-usuarios.service
 import { AdminDocentesService } from '../../core/services/admin-docentes.service';
 import { UsuarioAdmin } from '../../core/models/usuario.model';
 import { DocenteAdmin } from '../../core/models/docente.model';
+import { environment } from '../../../environments/environment';
 
 /**
  * Pantalla de dirección para gestionar los accesos al panel: crear el login individual
@@ -116,5 +117,17 @@ export class UsuariosListComponent implements OnInit {
 
   cerrarCredenciales(): void {
     this.credencialesGeneradas.set(null);
+  }
+
+  fotoCompleta(usuario: UsuarioAdmin): string | null {
+    return usuario.fotoUrl ? `${environment.archivosUrl}${usuario.fotoUrl}` : null;
+  }
+
+  etiquetaRol(usuario: UsuarioAdmin): string {
+    switch (usuario.rol) {
+      case 'Admin': return 'Administrador';
+      case 'Coordinador': return 'Coordinador';
+      case 'Docente': return 'Docente';
+    }
   }
 }

@@ -7,7 +7,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const token = auth.token;
 
-  const requiereAuth = req.url.includes('/admin/') || req.url.includes('/auth/cambiar-password');
+  const requiereAuth =
+    req.url.includes('/admin/') ||
+    req.url.includes('/auth/cambiar-password') ||
+    req.url.includes('/auth/mi-foto');
 
   if (token && requiereAuth) {
     req = req.clone({

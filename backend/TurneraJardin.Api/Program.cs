@@ -32,6 +32,9 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // Sin esto, ASP.NET Core remapea el claim "sub" a un nombre interno distinto,
+    // y el código que busca JwtRegisteredClaimNames.Sub (en AuthController) no lo encuentra más.
+    options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -98,6 +101,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles(); // sirve wwwroot/fotos-perfil (fotos de perfil de los usuarios)
 app.UseCors(CorsPolicyFrontend);
 app.UseAuthentication();
 app.UseAuthorization();

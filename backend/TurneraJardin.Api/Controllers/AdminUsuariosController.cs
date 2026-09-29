@@ -34,7 +34,7 @@ public class AdminUsuariosController : ControllerBase
             .Include(u => u.Docente)
             .OrderBy(u => u.Rol).ThenBy(u => u.NombreCompleto)
             .Select(u => new UsuarioAdminDto(
-                u.Id, u.Email, u.NombreCompleto, u.Rol, u.DocenteId, u.Docente!.NombreCompleto, u.Activo))
+                u.Id, u.Email, u.NombreCompleto, u.Rol, u.DocenteId, u.Docente!.NombreCompleto, u.Activo, u.FotoUrl))
             .ToListAsync();
 
         return Ok(usuarios);

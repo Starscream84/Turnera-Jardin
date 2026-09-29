@@ -11,7 +11,8 @@ public record UsuarioAdminDto(
     RolUsuario Rol,
     int? DocenteId,
     string? DocenteNombre,
-    bool Activo);
+    bool Activo,
+    string? FotoUrl);
 
 /// <summary>
 /// Datos para crear un acceso nuevo. Si se manda <see cref="DocenteId"/>, se crea un login de tipo
