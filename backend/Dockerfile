@@ -9,6 +9,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app .
 ENV ASPNETCORE_HTTP_PORTS=8080
-ENV ASPNETCORE_ENVIROMENT=Production
+ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "TurneraJardin.Api.dll"]
+ENTRYPOINT ["dotnet", "TurneraJardin.Api.dll"
