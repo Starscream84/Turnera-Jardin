@@ -5,11 +5,14 @@ export interface TurnoDisponible {
   horaFin: string;
 }
 
+export type ModalidadEntrevista = 'Presencial' | 'Virtual';
+
 export interface ReservaTurno {
   nombrePadre: string;
   telefonoPadre: string;
   nombreNino: string;
   observaciones?: string;
+  modalidad: ModalidadEntrevista;
 }
 
 export interface TurnoConfirmado {
@@ -19,6 +22,7 @@ export interface TurnoConfirmado {
   horaInicio: string;
   horaFin: string;
   nombreNino: string;
+  modalidad: ModalidadEntrevista;
 }
 
 export type EstadoTurno = 'Disponible' | 'Reservado' | 'Cancelado' | 'Completado';
@@ -37,6 +41,8 @@ export interface TurnoAdmin {
   observaciones: string | null;
   confirmacionEnviada: boolean;
   recordatorioEnviado: boolean;
+  /** null mientras el turno está disponible (todavía nadie eligió). */
+  modalidad: ModalidadEntrevista | null;
 }
 
 export interface GenerarTurnos {

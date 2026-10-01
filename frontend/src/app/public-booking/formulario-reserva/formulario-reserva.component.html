@@ -4,9 +4,15 @@
       <div class="alerta alerta-exito">¡Turno confirmado!</div>
       <h2>{{ formatearFecha(c.fecha) }}</h2>
       <p>{{ formatearHora(c.horaInicio) }} hs con {{ c.docenteNombre }}</p>
+      <p>Modalidad: <strong>{{ c.modalidad }}</strong></p>
       <p class="texto-suave">Te enviamos la confirmación por WhatsApp. Un día antes te vamos a mandar un recordatorio.</p>
       <p class="texto-suave">Número de turno: <strong>#{{ c.id }}</strong> (guardalo, lo necesitás si querés cancelar).</p>
-      <a routerLink="/reservar" class="btn btn-secundario">Volver al inicio</a>
+      <div class="acciones-confirmacion">
+        @if (enlaceGoogleCalendar(); as enlace) {
+          <a [href]="enlace" target="_blank" rel="noopener" class="btn btn-primario">Agregar recordatorio en Google Calendar</a>
+        }
+        <a routerLink="/reservar" class="btn btn-secundario">Volver al inicio</a>
+      </div>
     </div>
   } @else {
     <a routerLink="/reservar/{{ docenteId }}" class="texto-suave">&larr; Elegir otro horario</a>
@@ -25,6 +31,23 @@
         }
 
         <form [formGroup]="form" (ngSubmit)="confirmar()" class="card">
+          <fieldset class="form-grupo grupo-modalidad">
+            <legend>¿Cómo querés tener la entrevista?</legend>
+            <div class="opciones-modalidad">
+              <label class="opcion-modalidad">
+                <input type="radio" formControlName="modalidad" value="Presencial" />
+                Presencial
+              </label>
+              <label class="opcion-modalidad">
+                <input type="radio" formControlName="modalidad" value="Virtual" />
+                Virtual
+              </label>
+            </div>
+            @if (form.controls.modalidad.invalid && form.controls.modalidad.touched) {
+              <span class="error-campo">Elegí si la entrevista es presencial o virtual.</span>
+            }
+          </fieldset>
+
           <div class="form-grupo">
             <label for="nombrePadre">Tu nombre y apellido</label>
             <input id="nombrePadre" type="text" formControlName="nombrePadre" />

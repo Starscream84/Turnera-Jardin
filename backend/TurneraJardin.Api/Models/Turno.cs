@@ -30,6 +30,9 @@ public class Turno
     public string? NombreNino { get; set; }
     public string? Observaciones { get; set; }
 
+    /// <summary>Presencial o virtual. Queda en null mientras el turno está disponible (todavía nadie eligió).</summary>
+    public ModalidadEntrevista? Modalidad { get; set; }
+
     public DateTime? FechaReserva { get; set; }
 
     /// <summary>Se pone en true apenas se envía (o se intenta enviar) el WhatsApp de confirmación.</summary>

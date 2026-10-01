@@ -70,6 +70,7 @@
                             <th>Docente</th>
                         }
                         <th>Estado</th>
+                        <th>Modalidad</th>
                         <th>Familia</th>
                         <th>WhatsApp</th>
                         <th></th>
@@ -87,6 +88,13 @@
                                 <span class="badge" [class]="claseBadge(turno.estado)">{{
                                     turno.estado
                                 }}</span>
+                            </td>
+                            <td>
+                                @if (turno.modalidad) {
+                                    {{ turno.modalidad }}
+                                } @else {
+                                    <span class="texto-suave">—</span>
+                                }
                             </td>
                             <td>
                                 @if (turno.nombreNino) {

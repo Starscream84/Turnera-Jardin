@@ -45,6 +45,7 @@ public class TurnosController : ControllerBase
         turno.TelefonoPadre = dto.TelefonoPadre.Trim();
         turno.NombreNino = dto.NombreNino.Trim();
         turno.Observaciones = dto.Observaciones?.Trim();
+        turno.Modalidad = dto.Modalidad;
         turno.Estado = EstadoTurno.Reservado;
         turno.FechaReserva = DateTime.UtcNow;
 
@@ -66,7 +67,8 @@ public class TurnosController : ControllerBase
             turno.Fecha,
             turno.HoraInicio,
             turno.HoraFin,
-            turno.NombreNino!));
+            turno.NombreNino!,
+            turno.Modalidad!.Value));
     }
 
     /// <summary>

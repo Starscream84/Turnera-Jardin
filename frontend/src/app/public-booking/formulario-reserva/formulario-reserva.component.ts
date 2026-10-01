@@ -1,9 +1,9 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DocentesService } from '../../core/services/docentes.service';
-import { TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
+import { ModalidadEntrevista, TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
 
 @Component({
   selector: 'app-formulario-reserva',
@@ -25,7 +25,15 @@ export class FormularioReservaComponent implements OnInit {
   error = signal<string | null>(null);
   confirmacion = signal<TurnoConfirmado | null>(null);
 
+  /** Link que abre Google Calendar con el evento de la entrevista ya cargado, listo para guardar. */
+  enlaceGoogleCalendar = computed(() => {
+    const confirmado = this.confirmacion();
+    return confirmado ? this.armarEnlaceGoogleCalendar(confirmado) : null;
+  });
+
   form = this.fb.nonNullable.group({
+    // Arranca vacío a propósito: la familia tiene que elegir, no se asume ninguna modalidad.
+    modalidad: ['' as ModalidadEntrevista | '', [Validators.required]],
     nombrePadre: ['', [Validators.required, Validators.minLength(2)]],
     telefonoPadre: ['', [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
     nombreNino: ['', [Validators.required, Validators.minLength(2)]],
@@ -61,7 +69,10 @@ export class FormularioReservaComponent implements OnInit {
     this.enviando.set(true);
     this.error.set(null);
 
-    this.docentesService.reservarTurno(this.turnoId, this.form.getRawValue()).subscribe({
+    const valores = this.form.getRawValue();
+    const datos = { ...valores, modalidad: valores.modalidad as ModalidadEntrevista };
+
+    this.docentesService.reservarTurno(this.turnoId, datos).subscribe({
       next: (confirmado) => {
         this.confirmacion.set(confirmado);
         this.enviando.set(false);
@@ -84,5 +95,25 @@ export class FormularioReservaComponent implements OnInit {
 
   formatearHora(hora: string): string {
     return hora.slice(0, 5);
+  }
+
+  /**
+   * Usa el link público "crear evento" de Google Calendar: no requiere API ni login nuestro,
+   * el evento se guarda en la cuenta de Google que la familia tenga abierta en su teléfono.
+   */
+  private armarEnlaceGoogleCalendar(turno: TurnoConfirmado): string {
+    // Google espera "yyyyMMddTHHmmss"; fecha llega como "yyyy-MM-dd" y la hora como "HH:mm:ss".
+    const aFormatoGoogle = (hora: string) => `${turno.fecha.replaceAll('-', '')}T${hora.replaceAll(':', '').padEnd(6, '0')}`;
+
+    const parametros = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `Entrevista en el jardín con ${turno.docenteNombre}`,
+      dates: `${aFormatoGoogle(turno.horaInicio)}/${aFormatoGoogle(turno.horaFin)}`,
+      // Sin esto Google toma la hora en la zona del dispositivo, y se correría si el teléfono está en otra zona.
+      ctz: 'America/Argentina/Buenos_Aires',
+      details: `Entrevista ${turno.modalidad.toLowerCase()} por ${turno.nombreNino}. Número de turno: #${turno.id}.`
+    });
+
+    return `https://calendar.google.com/calendar/render?${parametros.toString()}`;
   }
 }

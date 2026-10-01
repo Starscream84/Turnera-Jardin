@@ -49,7 +49,7 @@ public class AdminTurnosController : ControllerBase
             .Select(t => new TurnoAdminDto(
                 t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
                 t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
-                t.ConfirmacionEnviada, t.RecordatorioEnviado))
+                t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad))
             .ToListAsync();
 
         return Ok(turnos);

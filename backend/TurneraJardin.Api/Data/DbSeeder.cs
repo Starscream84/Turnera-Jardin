@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
 
@@ -35,6 +36,7 @@ public static class DbSeeder
     public static void Seed(AppDbContext db)
     {
         db.Database.EnsureCreated();
+        AsegurarColumnaModalidad(db);
 
         if (db.Docentes.Any())
         {
@@ -95,5 +97,31 @@ public static class DbSeeder
         }
 
         db.SaveChanges();
+    }
+
+    /// <summary>
+    /// EnsureCreated() solo crea la base si no existe: no agrega columnas a una base ya creada.
+    /// Como el proyecto no usa EF Migrations, la columna Modalidad se agrega a mano acá cuando falta,
+    /// así no hay que borrar turnera.db (y perder los datos cargados) para tomar este cambio.
+    /// </summary>
+    private static void AsegurarColumnaModalidad(AppDbContext db)
+    {
+        db.Database.OpenConnection();
+        try
+        {
+            using var comando = db.Database.GetDbConnection().CreateCommand();
+            comando.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Turnos') WHERE name = 'Modalidad'";
+            var existe = Convert.ToInt64(comando.ExecuteScalar()) > 0;
+
+            if (!existe)
+            {
+                comando.CommandText = "ALTER TABLE Turnos ADD COLUMN Modalidad INTEGER NULL";
+                comando.ExecuteNonQuery();
+            }
+        }
+        finally
+        {
+            db.Database.CloseConnection();
+        }
     }
 }

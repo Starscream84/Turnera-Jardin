@@ -217,3 +217,46 @@ th {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+/* Selector presencial / virtual en la reserva */
+.grupo-modalidad {
+  border: 0;
+  padding: 0;
+  margin-inline: 0;
+  min-width: 0;
+}
+
+.grupo-modalidad legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.opciones-modalidad {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.opcion-modalidad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-borde);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.opcion-modalidad:has(input:checked) {
+  border-color: var(--color-primario);
+  background: #eef6f8;
+}
+
+.acciones-confirmacion {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}

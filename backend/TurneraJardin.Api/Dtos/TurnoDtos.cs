@@ -21,6 +21,11 @@ public class ReservaTurnoDto
 
     [MaxLength(500)]
     public string? Observaciones { get; set; }
+
+    /// <summary>"Presencial" o "Virtual". Es nullable solo para que, si no viene, falle la validación en vez de asumir Presencial.</summary>
+    [Required(ErrorMessage = "Elegí si la entrevista es presencial o virtual.")]
+    [EnumDataType(typeof(ModalidadEntrevista))]
+    public ModalidadEntrevista? Modalidad { get; set; }
 }
 
 /// <summary>Confirmación devuelta al padre/madre luego de reservar con éxito.</summary>
@@ -30,7 +35,8 @@ public record TurnoConfirmadoDto(
     DateOnly Fecha,
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
-    string NombreNino
+    string NombreNino,
+    ModalidadEntrevista Modalidad
 );
 
 /// <summary>Vista completa de un turno para el panel de administración / docente.</summary>
@@ -47,7 +53,8 @@ public record TurnoAdminDto(
     string? NombreNino,
     string? Observaciones,
     bool ConfirmacionEnviada,
-    bool RecordatorioEnviado
+    bool RecordatorioEnviado,
+    ModalidadEntrevista? Modalidad
 );
 
 /// <summary>Pedido para generar turnos disponibles en bloque para un docente.</summary>
