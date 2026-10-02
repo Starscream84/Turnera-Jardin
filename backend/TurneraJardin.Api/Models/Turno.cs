@@ -21,13 +21,27 @@ public class Turno
 
     public EstadoTurno Estado { get; set; } = EstadoTurno.Disponible;
 
-    // Datos completados al reservar
+    // Datos completados al reservar - Adulto/Padre/Madre
+    /// <summary>Nombre del padre o persona responsable.</summary>
     public string? NombrePadre { get; set; }
+    /// <summary>Apellido del padre o persona responsable.</summary>
+    public string? ApellidoPadre { get; set; }
 
     /// <summary>Teléfono en formato internacional E.164 sin "+" (ej: 5492235551234), listo para WhatsApp Cloud API.</summary>
     public string? TelefonoPadre { get; set; }
+    /// <summary>
+    /// Correo electrónico del padre.
+    /// </summary>
+    public string? EmailPadre { get; set; }
+    public string Modalidad { get; set; } = "Presencial";
+    public string? LinkMeet { get; set; }
+    public string? GoogleEventId { get; set; }
 
+    // Datos del niño/a
+    /// <summary>Nombre del niño/a.</summary>
     public string? NombreNino { get; set; }
+    /// <summary>Apellido del niño/a.</summary>
+    public string? ApellidoNino { get; set; }
     public string? Observaciones { get; set; }
 
     public DateTime? FechaReserva { get; set; }
