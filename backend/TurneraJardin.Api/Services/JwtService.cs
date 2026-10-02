@@ -2,48 +2,78 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using TurneraJardin.Api.Models;
+using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Options;
 
 namespace TurneraJardin.Api.Services;
 
+/// <summary>
+/// Representa el resultado de la generación de un token JWT.
+/// </summary>
+public class TokenResult
+{
+    public string Token { get; set; }
+    public DateTime ExpiraUtc { get; set; }
+
+    public TokenResult(string token, DateTime expiraUtc)
+    {
+        Token = token;
+        ExpiraUtc = expiraUtc;
+    }
+}
+
+/// <summary>
+/// Interfaz para el servicio de generación de tokens JWT.
+/// </summary>
+public interface IJwtService
+{
+    TokenResult GenerarToken(Usuario usuario);
+}
+
+/// <summary>
+/// Implementación del servicio de generación de tokens JWT.
+/// </summary>
 public class JwtService : IJwtService
 {
-    private readonly IConfiguration _config;
+    private readonly JwtOptions _options;
 
-    public JwtService(IConfiguration config)
+    public JwtService(IOptions<JwtOptions> options)
     {
-        _config = config;
+        _options = options.Value;
     }
 
-    public (string Token, DateTime ExpiraUtc) GenerarToken(Usuario usuario)
+    public TokenResult GenerarToken(Usuario usuario)
     {
-        var secretKey = _config["Jwt:SecretKey"] ?? "TuSuperClaveSecretaQueDebeSerLarga123!";
-        var issuer = _config["Jwt:Issuer"] ?? "TurneraJardinApi";
-        var audience = _config["Jwt:Audience"] ?? "TurneraJardinClient";
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var expiraUtc = DateTime.UtcNow.AddMinutes(_options.ExpirationMinutes);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            new Claim(ClaimTypes.Email, usuario.Email),
-            new Claim(ClaimTypes.Name, usuario.NombreCompleto),
-            new Claim(ClaimTypes.Role, usuario.Rol.ToString())
+            new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
+            new(ClaimTypes.Email, usuario.Email),
+            new(ClaimTypes.Name, usuario.NombreCompleto),
+            new(ClaimTypes.Role, usuario.Rol.ToString()),
+            new("sv", usuario.VersionSesion.ToString())
         };
 
-        var expiraUtc = DateTime.UtcNow.AddHours(8);
+        if (usuario.DocenteId.HasValue)
+        {
+            claims.Add(new Claim("docenteId", usuario.DocenteId.Value.ToString()));
+        }
 
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
+            issuer: _options.Issuer,
+            audience: _options.Audience,
             claims: claims,
             expires: expiraUtc,
-            signingCredentials: creds
+            signingCredentials: credentials
         );
 
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return (tokenString, expiraUtc);
+        var tokenHandler = new JwtSecurityTokenHandler();
+        return new TokenResult(tokenHandler.WriteToken(token), expiraUtc);
     }
 }

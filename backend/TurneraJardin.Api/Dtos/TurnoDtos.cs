@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Utilities;
 
 namespace TurneraJardin.Api.Dtos;
 
@@ -12,10 +13,38 @@ public record ReservaTurnoDto(
     DateOnly Fecha,
     TimeOnly HoraInicio,
     string NombrePadre,
+    string ApellidoPadre,
     string TelefonoPadre,
     string NombreNino,
+    string ApellidoNino,
     string? Observaciones
-);
+)
+{
+    /// <summary>Valida que los datos de la reserva sean correctos.</summary>
+    /// <returns>Mensaje de error o null si es válido</returns>
+    public string? ValidarDatos()
+    {
+        if (string.IsNullOrWhiteSpace(NombrePadre))
+            return "El nombre del adulto es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(ApellidoPadre))
+            return "El apellido del adulto es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(TelefonoPadre))
+            return "El teléfono del adulto es obligatorio.";
+
+        if (!PhoneValidator.EsValido(TelefonoPadre))
+            return PhoneValidator.GetMensajeError(TelefonoPadre);
+
+        if (string.IsNullOrWhiteSpace(NombreNino))
+            return "El nombre del niño/a es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(ApellidoNino))
+            return "El apellido del niño/a es obligatorio.";
+
+        return null; // Válido
+    }
+};
 
 /// <summary>Confirmación devuelta al padre/madre luego de reservar con éxito.</summary>
 public record TurnoConfirmadoDto(
@@ -24,7 +53,8 @@ public record TurnoConfirmadoDto(
     DateOnly Fecha,
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
-    string NombreNino
+    string NombreNino,
+    string ApellidoNino
 );
 
 /// <summary>Vista completa de un turno para el panel de administración / docente.</summary>
@@ -37,8 +67,10 @@ public record TurnoAdminDto(
     TimeOnly HoraFin,
     EstadoTurno Estado,
     string? NombrePadre,
+    string? ApellidoPadre,
     string? TelefonoPadre,
     string? NombreNino,
+    string? ApellidoNino,
     string? Observaciones,
     bool ConfirmacionEnviada,
     bool RecordatorioEnviado
@@ -74,12 +106,4 @@ public class TurnoSlotDto
     public TimeOnly HoraInicio { get; set; }
     public TimeOnly HoraFin { get; set; }
     public bool Disponible { get; set; }
-}
-
-public class CrearDisponibilidadDto
-{
-    public DayOfWeek DiaSemana { get; set; }
-    public TimeSpan HoraInicio { get; set; }
-    public TimeSpan HoraFin { get; set; }
-    public int DuracionBloqueMinutos { get; set; } = 30;
 }

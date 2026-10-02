@@ -1,15 +1,17 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using TurneraJardin.Api.Auth;
 using TurneraJardin.Api.Data;
+using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Options;
 using TurneraJardin.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Registrar Controladores y Serialización de Enums como Strings
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -18,25 +20,24 @@ builder.Services.AddControllers()
 
 builder.Services.AddEndpointsApiExplorer();
 
-// --- Base de datos (MySQL) ---
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(
         connectionString,
         ServerVersion.AutoDetect(connectionString)
     ));
 
-// --- Servicios Propios ---
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+
 builder.Services.AddScoped<ITurnosService, TurnosService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuditoriaService, AuditoriaService>();
 builder.Services.AddHostedService<RecordatorioBackgroundService>();
 
-// --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppCloudApiService>();
 
-// --- Configuración de Autenticación JWT ---
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? "TuSuperClaveSecretaQueDebeSerLarga123!";
 
 builder.Services.AddAuthentication(options =>
@@ -58,13 +59,24 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// --- Configuración Única de Swagger con Bearer ---
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(Politicas.SoloSuperAdmin, policy =>
+        policy.RequireRole(nameof(RolUsuario.SuperAdmin)));
+
+    options.AddPolicy(Politicas.Direccion, policy =>
+        policy.RequireRole(nameof(RolUsuario.Admin), nameof(RolUsuario.SuperAdmin)));
+
+    options.AddPolicy(Politicas.Personal, policy =>
+        policy.RequireAuthenticatedUser());
+});
+
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Turnera Jardín API", 
-        Version = "v1" 
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Turnera JardÃ­n API",
+        Version = "v1"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -74,7 +86,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Ingresá el token con el formato: Bearer {tu_token}"
+        Description = "IngresÃ¡ el token con el formato: Bearer {tu_token}"
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -93,7 +105,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// --- Política de CORS ---
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -107,18 +118,16 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// --- Ejecutar DbSeeder una sola vez al iniciar ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     DbSeeder.Seed(db);
 }
 
-// Habilitar Swagger UI
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Turnera Jardín API v1");
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Turnera JardÃ­n API v1");
     c.RoutePrefix = "swagger";
 });
 
