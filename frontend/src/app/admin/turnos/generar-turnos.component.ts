@@ -2,8 +2,12 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { concatMap, from, reduce } from 'rxjs';
 import { AdminDocentesService } from '../../core/services/admin-docentes.service';
 import { DocenteAdmin } from '../../core/models/docente.model';
+
+/** Valor del desplegable para generar los mismos turnos a todos los docentes activos. */
+const TODOS = 'todos';
 
 interface DiaSemana {
   numero: number; // 0=Domingo .. 6=Sábado, igual que System.DayOfWeek en el backend
@@ -25,6 +29,9 @@ export class GenerarTurnosComponent implements OnInit {
   guardando = signal(false);
   error = signal<string | null>(null);
   resultado = signal<number | null>(null);
+  /** A cuántos docentes se les generaron turnos en el último pedido (para el mensaje de éxito). */
+  docentesProcesados = signal(0);
+  readonly TODOS = TODOS;
 
   readonly dias: DiaSemana[] = [
     { numero: 1, etiqueta: 'Lunes' },
@@ -62,8 +69,11 @@ export class GenerarTurnosComponent implements OnInit {
   }
 
   generar(): void {
+    this.resultado.set(null);
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.error.set('Faltan datos: elegí el docente (o "Todos") y completá las fechas, el horario y la duración.');
       return;
     }
 
@@ -76,24 +86,41 @@ export class GenerarTurnosComponent implements OnInit {
       this.error.set('Elegí al menos un día de la semana.');
       return;
     }
+    if (valores.fechaHasta < valores.fechaDesde) {
+      this.error.set('La fecha "hasta" no puede ser anterior a la fecha "desde".');
+      return;
+    }
+    if (valores.horaFin <= valores.horaInicio) {
+      this.error.set('La hora de fin tiene que ser posterior a la hora de inicio.');
+      return;
+    }
+
+    const datos = {
+      fechaDesde: valores.fechaDesde,
+      fechaHasta: valores.fechaHasta,
+      diasSemana,
+      horaInicio: this.horaConSegundos(valores.horaInicio),
+      horaFin: this.horaConSegundos(valores.horaFin),
+      duracionMinutos: valores.duracionMinutos
+    };
+
+    const ids =
+      valores.docenteId === TODOS ? this.docentes().map((d) => d.id) : [Number(valores.docenteId)];
 
     this.guardando.set(true);
     this.error.set(null);
-    this.resultado.set(null);
 
-    this.docentesService
-      .generarTurnos(Number(valores.docenteId), {
-        fechaDesde: valores.fechaDesde,
-        fechaHasta: valores.fechaHasta,
-        diasSemana,
-        horaInicio: this.horaConSegundos(valores.horaInicio),
-        horaFin: this.horaConSegundos(valores.horaFin),
-        duracionMinutos: valores.duracionMinutos
-      })
+    // "Todos" = el mismo pedido una vez por docente, de a uno (SQLite no admite escrituras en paralelo).
+    from(ids)
+      .pipe(
+        concatMap((id) => this.docentesService.generarTurnos(id, datos)),
+        reduce((total, respuesta) => total + respuesta.creados, 0)
+      )
       .subscribe({
-        next: (respuesta) => {
+        next: (creados) => {
           this.guardando.set(false);
-          this.resultado.set(respuesta.creados);
+          this.docentesProcesados.set(ids.length);
+          this.resultado.set(creados);
         },
         error: (respuesta: HttpErrorResponse) => {
           this.guardando.set(false);

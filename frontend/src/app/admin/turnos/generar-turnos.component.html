@@ -2,18 +2,6 @@
   <h1>Generar turnos</h1>
   <p class="texto-suave" style="margin-bottom: 28px;">Abrí franjas horarias para que los padres puedan reservar. No se duplican turnos ya cargados en el mismo horario.</p>
 
-  @if (error()) {
-    <div class="alerta alerta-error">{{ error() }}</div>
-  }
-
-  @if (resultado() !== null) {
-    @if (resultado() === 0) {
-      <div class="alerta alerta-exito">No se generó ningún turno nuevo: ya estaban cargados esos horarios, o no hay días elegidos dentro del período.</div>
-    } @else {
-      <div class="alerta alerta-exito">Se generaron {{ resultado() }} turno(s) nuevo(s).</div>
-    }
-  }
-
   @if (cargando()) {
     <p class="texto-suave">Cargando docentes...</p>
   } @else {
@@ -23,6 +11,7 @@
         <label for="docenteId">Docente</label>
         <select id="docenteId" formControlName="docenteId">
           <option value="" disabled>Elegí un docente</option>
+          <option [value]="TODOS">Todos los docentes</option>
           @for (docente of docentes(); track docente.id) {
             <option [value]="docente.id">{{ docente.nombre }} {{ docente.apellido }}</option>
           }
@@ -67,6 +56,20 @@
           <input id="duracionMinutos" type="number" formControlName="duracionMinutos" />
         </div>
       </div>
+
+      @if (error()) {
+        <div class="alerta alerta-error" role="alert">{{ error() }}</div>
+      }
+
+      @if (resultado() !== null) {
+        <div class="alerta alerta-exito" role="status">
+          @if (resultado() === 0) {
+            No se generó ningún turno nuevo: ya estaban cargados esos horarios, o no hay días elegidos dentro del período.
+          } @else {
+            Se generaron {{ resultado() }} turno(s) nuevo(s){{ docentesProcesados() > 1 ? " para " + docentesProcesados() + " docentes" : "" }}.
+          }
+        </div>
+      }
 
       <div class="acciones" style="margin-top: 8px;">
         <button type="submit" class="btn btn-primario" [disabled]="guardando()">
