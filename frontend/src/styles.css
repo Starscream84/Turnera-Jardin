@@ -1255,20 +1255,3 @@ tbody tr:hover td { background: #fbfbfb; }
   .logo-idra { font-size: 1.6rem; }
   th, td { padding: 12px 14px; }
 }
-
-/* ---------- Paso 1: desplegable de docentes ---------- */
-
-.selector-docente {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-  max-width: 640px;
-}
-
-.selector-docente .form-grupo { flex: 1; min-width: 240px; margin-bottom: 0; }
-.selector-docente select { background: #fff; width: 100%; }
-
-@media (max-width: 600px) {
-  .selector-docente .btn { width: 100%; }
-}

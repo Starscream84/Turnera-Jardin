@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { DocentesService } from '../../core/services/docentes.service';
 import { Docente } from '../../core/models/docente.model';
 import { PublicShellComponent } from '../../shared/public-shell.component';
+import { colorAvatar, iniciales } from '../../shared/avatar.util';
 
 @Component({
   selector: 'app-seleccionar-docente',
@@ -15,13 +16,16 @@ export class SeleccionarDocenteComponent implements OnInit {
   cargando = signal(true);
   error = signal<string | null>(null);
 
-  /** Id del docente elegido en el desplegable ('' mientras no se eligió ninguno). */
-  docenteId = signal('');
+  /** Texto del buscador: filtra por nombre o sala, sin distinguir mayúsculas ni acentos. */
+  busqueda = signal('');
+  docentesFiltrados = computed(() => {
+    const texto = this.normalizar(this.busqueda());
+    if (!texto) return this.docentes();
+    return this.docentes().filter((d) => this.normalizar(`${d.nombreCompleto} ${d.sala ?? ''}`).includes(texto));
+  });
 
-  /** Lista del desplegable, ordenada alfabéticamente para encontrar el nombre rápido. */
-  docentesOrdenados = computed(() =>
-    [...this.docentes()].sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto, 'es'))
-  );
+  readonly iniciales = iniciales;
+  readonly colorAvatar = colorAvatar;
 
   constructor(private docentesService: DocentesService, private router: Router) {}
 
@@ -38,12 +42,15 @@ export class SeleccionarDocenteComponent implements OnInit {
     });
   }
 
-  seleccionar(evento: Event): void {
-    this.docenteId.set((evento.target as HTMLSelectElement).value);
+  buscar(evento: Event): void {
+    this.busqueda.set((evento.target as HTMLInputElement).value);
   }
 
-  continuar(): void {
-    if (!this.docenteId()) return;
-    this.router.navigate(['/reservar', this.docenteId()]);
+  elegir(docente: Docente): void {
+    this.router.navigate(['/reservar', docente.id]);
+  }
+
+  private normalizar(texto: string): string {
+    return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
   }
 }
