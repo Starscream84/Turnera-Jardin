@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminDocentesService } from '../../core/services/admin-docentes.service';
@@ -85,8 +86,8 @@ export class GenerarTurnosComponent implements OnInit {
         fechaDesde: valores.fechaDesde,
         fechaHasta: valores.fechaHasta,
         diasSemana,
-        horaInicio: valores.horaInicio,
-        horaFin: valores.horaFin,
+        horaInicio: this.horaConSegundos(valores.horaInicio),
+        horaFin: this.horaConSegundos(valores.horaFin),
         duracionMinutos: valores.duracionMinutos
       })
       .subscribe({
@@ -94,10 +95,30 @@ export class GenerarTurnosComponent implements OnInit {
           this.guardando.set(false);
           this.resultado.set(respuesta.creados);
         },
-        error: () => {
+        error: (respuesta: HttpErrorResponse) => {
           this.guardando.set(false);
-          this.error.set('No pudimos generar los turnos. Revisá los datos ingresados.');
+          this.error.set(this.mensajeDeError(respuesta));
         }
       });
+  }
+
+  /**
+   * <input type="time"> devuelve "HH:mm", pero el backend (TimeOnly de .NET) solo acepta
+   * "HH:mm:ss": sin los segundos responde 400 y no se genera nada.
+   */
+  private horaConSegundos(hora: string): string {
+    return hora.length === 5 ? `${hora}:00` : hora;
+  }
+
+  private mensajeDeError(respuesta: HttpErrorResponse): string {
+    if (respuesta.status === 0) {
+      return 'No pudimos conectarnos con el servidor. Si recién lo abrís, puede tardar un minuto en despertar: probá de nuevo.';
+    }
+    if (respuesta.status === 401 || respuesta.status === 403) {
+      return 'Tu sesión venció o tu usuario no tiene permiso para generar turnos. Volvé a iniciar sesión.';
+    }
+    // Los errores de validación propios del backend vienen como { mensaje: "..." }.
+    const mensaje = respuesta.error?.mensaje;
+    return typeof mensaje === 'string' ? mensaje : 'No pudimos generar los turnos. Revisá los datos ingresados.';
   }
 }

@@ -6,8 +6,12 @@
     <div class="alerta alerta-error">{{ error() }}</div>
   }
 
-  @if (resultado(); as creados) {
-    <div class="alerta alerta-exito">Se generaron {{ creados }} turno(s) nuevo(s).</div>
+  @if (resultado() !== null) {
+    @if (resultado() === 0) {
+      <div class="alerta alerta-exito">No se generó ningún turno nuevo: ya estaban cargados esos horarios, o no hay días elegidos dentro del período.</div>
+    } @else {
+      <div class="alerta alerta-exito">Se generaron {{ resultado() }} turno(s) nuevo(s).</div>
+    }
   }
 
   @if (cargando()) {
