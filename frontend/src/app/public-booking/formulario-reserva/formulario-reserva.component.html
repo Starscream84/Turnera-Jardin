@@ -1,12 +1,20 @@
-<div class="contenedor-angosto">
-  @if (confirmacion(); as c) {
-    <div class="card">
-      <div class="alerta alerta-exito">¡Turno confirmado!</div>
-      <h2>{{ formatearFecha(c.fecha) }}</h2>
-      <p>{{ formatearHora(c.horaInicio) }} hs con {{ c.docenteNombre }}</p>
-      <p>Modalidad: <strong>{{ c.modalidad }}</strong></p>
+@if (confirmacion(); as c) {
+  <app-public-shell titulo="¡Listo!">
+    <div class="card confirmado">
+      <div class="icono-ok" aria-hidden="true"></div>
+      <h2>¡Turno confirmado!</h2>
       <p class="texto-suave">Te enviamos la confirmación por WhatsApp. Un día antes te vamos a mandar un recordatorio.</p>
-      <p class="texto-suave">Número de turno: <strong>#{{ c.id }}</strong> (guardalo, lo necesitás si querés cancelar).</p>
+
+      <div class="detalle-turno">
+        <div class="dato"><span>Docente</span><strong>{{ c.docenteNombre }}</strong></div>
+        <div class="dato"><span>Fecha</span><strong>{{ formatearFecha(c.fecha) }}</strong></div>
+        <div class="dato"><span>Horario</span><strong>{{ formatearHora(c.horaInicio) }} hs</strong></div>
+        <div class="dato"><span>Modalidad</span><strong>{{ c.modalidad }}</strong></div>
+      </div>
+
+      <p>Número de turno: <span class="numero-turno">#{{ c.id }}</span></p>
+      <p class="texto-suave">Guardalo, lo necesitás si querés cancelar.</p>
+
       <div class="acciones-confirmacion">
         @if (enlaceGoogleCalendar(); as enlace) {
           <a [href]="enlace" target="_blank" rel="noopener" class="btn btn-primario">Agregar recordatorio en Google Calendar</a>
@@ -14,77 +22,98 @@
         <a routerLink="/reservar" class="btn btn-secundario">Volver al inicio</a>
       </div>
     </div>
-  } @else {
-    <a routerLink="/reservar/{{ docenteId }}" class="texto-suave">&larr; Elegir otro horario</a>
-    <h1>Completá tus datos</h1>
+  </app-public-shell>
+} @else {
+  <app-public-shell titulo="Turnos" [paso]="3">
+    <a routerLink="/reservar/{{ docenteId }}" class="enlace-volver">&larr; Elegir otro horario</a>
+
+    <div class="encabezado-paso">
+      <span class="etiqueta">Paso 3</span>
+      <h2>Completá tus datos:</h2>
+      <p class="texto-suave">Usamos tu número de WhatsApp para mandarte la confirmación y el recordatorio del turno.</p>
+    </div>
 
     @if (cargando()) {
       <p class="texto-suave">Cargando...</p>
     } @else {
       @if (turnoSeleccionado(); as turno) {
-        <div class="card" style="margin-bottom:16px;">
-          <strong>{{ formatearFecha(turno.fecha) }}</strong> — {{ formatearHora(turno.horaInicio) }} a {{ formatearHora(turno.horaFin) }} hs
-        </div>
-
         @if (error()) {
           <div class="alerta alerta-error">{{ error() }}</div>
         }
 
-        <form [formGroup]="form" (ngSubmit)="confirmar()" class="card">
-          <fieldset class="form-grupo grupo-modalidad">
-            <legend>¿Cómo querés tener la entrevista?</legend>
-            <div class="opciones-modalidad">
-              <label class="opcion-modalidad">
-                <input type="radio" formControlName="modalidad" value="Presencial" />
-                Presencial
-              </label>
-              <label class="opcion-modalidad">
-                <input type="radio" formControlName="modalidad" value="Virtual" />
-                Virtual
-              </label>
+        <div class="dos-columnas">
+          <form id="form-reserva" [formGroup]="form" (ngSubmit)="confirmar()" class="card">
+            <fieldset class="form-grupo grupo-modalidad">
+              <legend>¿Cómo querés tener la entrevista?</legend>
+              <div class="opciones-modalidad">
+                <label class="opcion-modalidad">
+                  <input type="radio" formControlName="modalidad" value="Presencial" />
+                  Presencial
+                </label>
+                <label class="opcion-modalidad">
+                  <input type="radio" formControlName="modalidad" value="Virtual" />
+                  Virtual
+                </label>
+              </div>
+              @if (form.controls.modalidad.invalid && form.controls.modalidad.touched) {
+                <span class="error-campo">Elegí si la entrevista es presencial o virtual.</span>
+              }
+            </fieldset>
+
+            <div class="form-grupo">
+              <label for="nombrePadre">Tu nombre y apellido</label>
+              <input id="nombrePadre" type="text" formControlName="nombrePadre" autocomplete="name" />
+              @if (form.controls.nombrePadre.invalid && form.controls.nombrePadre.touched) {
+                <span class="error-campo">Ingresá tu nombre completo.</span>
+              }
             </div>
-            @if (form.controls.modalidad.invalid && form.controls.modalidad.touched) {
-              <span class="error-campo">Elegí si la entrevista es presencial o virtual.</span>
-            }
-          </fieldset>
 
-          <div class="form-grupo">
-            <label for="nombrePadre">Tu nombre y apellido</label>
-            <input id="nombrePadre" type="text" formControlName="nombrePadre" />
-            @if (form.controls.nombrePadre.invalid && form.controls.nombrePadre.touched) {
-              <span class="error-campo">Ingresá tu nombre completo.</span>
-            }
-          </div>
+            <div class="form-grupo">
+              <label for="telefonoPadre">Tu WhatsApp (con código de área)</label>
+              <input id="telefonoPadre" type="tel" placeholder="Ej: 2235551234" formControlName="telefonoPadre" autocomplete="tel" />
+              @if (form.controls.telefonoPadre.invalid && form.controls.telefonoPadre.touched) {
+                <span class="error-campo">Ingresá un número de teléfono válido.</span>
+              }
+              <span class="texto-suave">A este número te vamos a mandar la confirmación y el recordatorio.</span>
+            </div>
 
-          <div class="form-grupo">
-            <label for="telefonoPadre">Tu WhatsApp (con código de área)</label>
-            <input id="telefonoPadre" type="tel" placeholder="Ej: 2235551234" formControlName="telefonoPadre" />
-            @if (form.controls.telefonoPadre.invalid && form.controls.telefonoPadre.touched) {
-              <span class="error-campo">Ingresá un número de teléfono válido.</span>
-            }
-            <span class="texto-suave">A este número te vamos a mandar la confirmación y el recordatorio.</span>
-          </div>
+            <div class="form-grupo">
+              <label for="nombreNino">Nombre y apellido del niño/a</label>
+              <input id="nombreNino" type="text" formControlName="nombreNino" />
+              @if (form.controls.nombreNino.invalid && form.controls.nombreNino.touched) {
+                <span class="error-campo">Ingresá el nombre del niño/a.</span>
+              }
+            </div>
 
-          <div class="form-grupo">
-            <label for="nombreNino">Nombre y apellido del niño/a</label>
-            <input id="nombreNino" type="text" formControlName="nombreNino" />
-            @if (form.controls.nombreNino.invalid && form.controls.nombreNino.touched) {
-              <span class="error-campo">Ingresá el nombre del niño/a.</span>
-            }
-          </div>
+            <div class="form-grupo" style="margin-bottom: 0;">
+              <label for="observaciones">Comentarios (opcional)</label>
+              <textarea id="observaciones" rows="3" formControlName="observaciones"></textarea>
+            </div>
+          </form>
 
-          <div class="form-grupo">
-            <label for="observaciones">Comentarios (opcional)</label>
-            <textarea id="observaciones" rows="3" formControlName="observaciones"></textarea>
-          </div>
+          <aside class="resumen">
+            <div class="resumen-cabecera">
+              <h3>Tu turno</h3>
+              <p>Revisá los datos antes de confirmar</p>
+            </div>
+            <div class="resumen-cuerpo">
+              @if (docente(); as d) {
+                <div class="dato"><span>Docente</span><strong>{{ d.nombreCompleto }}</strong></div>
+              }
+              <div class="dato"><span>Fecha</span><strong>{{ formatearFecha(turno.fecha) }}</strong></div>
+              <div class="dato"><span>Horario</span><strong>{{ formatearHora(turno.horaInicio) }} a {{ formatearHora(turno.horaFin) }} hs</strong></div>
+              <div class="dato"><span>Modalidad</span><strong>{{ form.controls.modalidad.value || 'A elegir' }}</strong></div>
 
-          <button type="submit" class="btn btn-primario" [disabled]="enviando()">
-            {{ enviando() ? 'Confirmando...' : 'Confirmar turno' }}
-          </button>
-        </form>
+              <button type="submit" form="form-reserva" class="btn btn-primario btn-bloque" [disabled]="enviando()">
+                {{ enviando() ? 'Confirmando...' : 'Confirmar turno' }}
+              </button>
+              <p class="nota-whatsapp">Te llega la confirmación por WhatsApp y un recordatorio un día antes.</p>
+            </div>
+          </aside>
+        </div>
       } @else if (error()) {
         <div class="alerta alerta-error">{{ error() }}</div>
       }
     }
-  }
-</div>
+  </app-public-shell>
+}

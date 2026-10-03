@@ -36,7 +36,7 @@ public static class DbSeeder
     public static void Seed(AppDbContext db)
     {
         db.Database.EnsureCreated();
-        AsegurarColumnaModalidad(db);
+        AsegurarColumnasTurnos(db);
 
         if (db.Docentes.Any())
         {
@@ -101,22 +101,33 @@ public static class DbSeeder
 
     /// <summary>
     /// EnsureCreated() solo crea la base si no existe: no agrega columnas a una base ya creada.
-    /// Como el proyecto no usa EF Migrations, la columna Modalidad se agrega a mano acá cuando falta,
-    /// así no hay que borrar turnera.db (y perder los datos cargados) para tomar este cambio.
+    /// Como el proyecto no usa EF Migrations, las columnas nuevas de Turnos se agregan a mano acá
+    /// cuando faltan, así no hay que borrar turnera.db (y perder los datos cargados) para tomar el cambio.
     /// </summary>
-    private static void AsegurarColumnaModalidad(AppDbContext db)
+    private static void AsegurarColumnasTurnos(AppDbContext db)
     {
+        // Nombre de columna -> tipo SQLite (EF Core guarda los enums como INTEGER y los DateTime como TEXT).
+        var columnas = new (string Nombre, string Tipo)[]
+        {
+            ("Modalidad", "INTEGER NULL"),
+            ("ConfirmacionSolicitada", "TEXT NULL"),
+        };
+
         db.Database.OpenConnection();
         try
         {
             using var comando = db.Database.GetDbConnection().CreateCommand();
-            comando.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Turnos') WHERE name = 'Modalidad'";
-            var existe = Convert.ToInt64(comando.ExecuteScalar()) > 0;
 
-            if (!existe)
+            foreach (var (nombre, tipo) in columnas)
             {
-                comando.CommandText = "ALTER TABLE Turnos ADD COLUMN Modalidad INTEGER NULL";
-                comando.ExecuteNonQuery();
+                comando.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('Turnos') WHERE name = '{nombre}'";
+                var existe = Convert.ToInt64(comando.ExecuteScalar()) > 0;
+
+                if (!existe)
+                {
+                    comando.CommandText = $"ALTER TABLE Turnos ADD COLUMN {nombre} {tipo}";
+                    comando.ExecuteNonQuery();
+                }
             }
         }
         finally

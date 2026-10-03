@@ -49,7 +49,7 @@ public class AdminTurnosController : ControllerBase
             .Select(t => new TurnoAdminDto(
                 t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
                 t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
-                t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad))
+                t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad, t.ConfirmacionSolicitada))
             .ToListAsync();
 
         return Ok(turnos);
@@ -70,6 +70,35 @@ public class AdminTurnosController : ControllerBase
         }
 
         turno.Estado = EstadoTurno.Cancelado;
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Deja registrado que se le pidió a la familia que confirme la asistencia. El mensaje en sí
+    /// sale desde el WhatsApp de quien toca el botón (link wa.me armado en el frontend), así que
+    /// acá solo se guarda cuándo se pidió, para que el listado muestre a quién ya se le escribió.
+    /// </summary>
+    [HttpPost("{id:int}/solicitar-confirmacion")]
+    public async Task<IActionResult> SolicitarConfirmacion(int id)
+    {
+        var turno = await _db.Turnos.FindAsync(id);
+        if (turno is null)
+        {
+            return NotFound();
+        }
+
+        if (EsDocente(out var docenteIdPropio) && turno.DocenteId != docenteIdPropio)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        if (turno.Estado != EstadoTurno.Reservado)
+        {
+            return BadRequest(new { mensaje = "Solo se puede pedir confirmación de turnos reservados." });
+        }
+
+        turno.ConfirmacionSolicitada = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return NoContent();
     }

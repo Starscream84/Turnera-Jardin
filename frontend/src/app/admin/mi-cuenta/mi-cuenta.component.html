@@ -1,29 +1,27 @@
 <div class="contenedor-angosto">
-  <h1>Mi cuenta</h1>
+  <h1 style="margin-bottom: 28px;">Mi cuenta</h1>
 
-  <h2>Foto de perfil</h2>
-  <div class="card" style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+  <h2 style="font-size: 1.4rem;">Foto de perfil</h2>
+  <div class="card foto-perfil" style="margin-bottom: 36px;">
     @if (auth.fotoUrlCompleta()) {
-      <img [src]="auth.fotoUrlCompleta()" alt="Foto de perfil" style="width:64px;height:64px;border-radius:50%;object-fit:cover;" />
+      <img [src]="auth.fotoUrlCompleta()" alt="Foto de perfil" class="avatar avatar-mediano" />
     } @else {
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--color-borde);display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
-        {{ auth.nombreUsuario().charAt(0) }}
-      </div>
+      <span class="avatar avatar-mediano" aria-hidden="true">{{ iniciales(auth.nombreUsuario()) }}</span>
     }
     <div>
       <label for="foto" class="btn btn-secundario btn-chico" style="cursor:pointer;">
         {{ subiendoFoto() ? 'Subiendo...' : 'Cambiar foto' }}
       </label>
       <input id="foto" type="file" accept="image/jpeg,image/png,image/webp" style="display:none;" [disabled]="subiendoFoto()" (change)="seleccionarFoto($event)" />
-      <p class="texto-suave" style="margin:4px 0 0;">JPG, PNG o WEBP, hasta 2 MB.</p>
+      <p class="texto-suave" style="margin:8px 0 0;">JPG, PNG o WEBP, hasta 2 MB.</p>
       @if (errorFoto()) {
-        <p class="alerta alerta-error" style="margin-top:8px;">{{ errorFoto() }}</p>
+        <p class="alerta alerta-error" style="margin: 8px 0 0;">{{ errorFoto() }}</p>
       }
     </div>
   </div>
 
-  <h2>Contraseña</h2>
-  <p class="texto-suave">Cambiá tu contraseña de acceso al panel.</p>
+  <h2 style="font-size: 1.4rem; margin-bottom: 4px;">Contraseña</h2>
+  <p class="texto-suave" style="margin: 0 0 16px;">Cambiá tu contraseña de acceso al panel.</p>
 
   @if (error()) {
     <div class="alerta alerta-error">{{ error() }}</div>

@@ -4,11 +4,13 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DocentesService } from '../../core/services/docentes.service';
 import { ModalidadEntrevista, TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
+import { Docente } from '../../core/models/docente.model';
+import { PublicShellComponent } from '../../shared/public-shell.component';
 
 @Component({
   selector: 'app-formulario-reserva',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PublicShellComponent],
   templateUrl: './formulario-reserva.component.html'
 })
 export class FormularioReservaComponent implements OnInit {
@@ -19,6 +21,8 @@ export class FormularioReservaComponent implements OnInit {
   docenteId!: number;
   turnoId!: number;
   turnoSeleccionado = signal<TurnoDisponible | null>(null);
+  /** Docente elegido, para mostrarlo en el resumen del turno. */
+  docente = signal<Docente | null>(null);
 
   cargando = signal(true);
   enviando = signal(false);
@@ -43,6 +47,11 @@ export class FormularioReservaComponent implements OnInit {
   ngOnInit(): void {
     this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));
     this.turnoId = Number(this.route.snapshot.paramMap.get('turnoId'));
+
+    // Solo para mostrar el nombre en el resumen: si falla, la reserva sigue funcionando igual.
+    this.docentesService.listar().subscribe({
+      next: (docentes) => this.docente.set(docentes.find((d) => d.id === this.docenteId) ?? null)
+    });
 
     this.docentesService.turnosDisponibles(this.docenteId).subscribe({
       next: (turnos) => {

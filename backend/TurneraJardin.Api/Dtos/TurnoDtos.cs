@@ -54,7 +54,8 @@ public record TurnoAdminDto(
     string? Observaciones,
     bool ConfirmacionEnviada,
     bool RecordatorioEnviado,
-    ModalidadEntrevista? Modalidad
+    ModalidadEntrevista? Modalidad,
+    DateTime? ConfirmacionSolicitada
 );
 
 /// <summary>Pedido para generar turnos disponibles en bloque para un docente.</summary>

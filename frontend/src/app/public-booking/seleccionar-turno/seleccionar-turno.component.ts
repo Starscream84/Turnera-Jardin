@@ -2,6 +2,9 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DocentesService } from '../../core/services/docentes.service';
 import { TurnoDisponible } from '../../core/models/turno.model';
+import { Docente } from '../../core/models/docente.model';
+import { PublicShellComponent } from '../../shared/public-shell.component';
+import { colorAvatar, iniciales } from '../../shared/avatar.util';
 
 interface GrupoPorFecha {
   fecha: string;
@@ -11,14 +14,19 @@ interface GrupoPorFecha {
 @Component({
   selector: 'app-seleccionar-turno',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, PublicShellComponent],
   templateUrl: './seleccionar-turno.component.html'
 })
 export class SeleccionarTurnoComponent implements OnInit {
   docenteId!: number;
+  /** Docente elegido en el paso anterior, para mostrarlo arriba de los horarios. */
+  docente = signal<Docente | null>(null);
   grupos = signal<GrupoPorFecha[]>([]);
   cargando = signal(true);
   error = signal<string | null>(null);
+
+  readonly iniciales = iniciales;
+  readonly colorAvatar = colorAvatar;
 
   constructor(
     private route: ActivatedRoute,
@@ -28,6 +36,11 @@ export class SeleccionarTurnoComponent implements OnInit {
 
   ngOnInit(): void {
     this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));
+
+    // Solo para mostrar el nombre: si falla, la pantalla sigue funcionando igual.
+    this.docentesService.listar().subscribe({
+      next: (docentes) => this.docente.set(docentes.find((d) => d.id === this.docenteId) ?? null)
+    });
 
     this.docentesService.turnosDisponibles(this.docenteId).subscribe({
       next: (turnos) => {

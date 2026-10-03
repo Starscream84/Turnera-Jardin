@@ -43,6 +43,8 @@ export interface TurnoAdmin {
   recordatorioEnviado: boolean;
   /** null mientras el turno está disponible (todavía nadie eligió). */
   modalidad: ModalidadEntrevista | null;
+  /** Fecha/hora (UTC, ISO) en que se le pidió a la familia que confirme por WhatsApp. null si todavía no. */
+  confirmacionSolicitada: string | null;
 }
 
 export interface GenerarTurnos {

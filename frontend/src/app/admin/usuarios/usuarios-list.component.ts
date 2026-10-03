@@ -6,6 +6,7 @@ import { AdminDocentesService } from '../../core/services/admin-docentes.service
 import { UsuarioAdmin } from '../../core/models/usuario.model';
 import { DocenteAdmin } from '../../core/models/docente.model';
 import { environment } from '../../../environments/environment';
+import { colorAvatar, iniciales } from '../../shared/avatar.util';
 
 /**
  * Pantalla de dirección para gestionar los accesos al panel: crear el login individual
@@ -28,6 +29,9 @@ export class UsuariosListComponent implements OnInit {
   creando = signal(false);
   error = signal<string | null>(null);
   credencialesGeneradas = signal<{ email: string; passwordTemporal: string } | null>(null);
+
+  readonly iniciales = iniciales;
+  readonly colorAvatar = colorAvatar;
 
   formCrear = this.fb.nonNullable.group({
     docenteId: ['', Validators.required],

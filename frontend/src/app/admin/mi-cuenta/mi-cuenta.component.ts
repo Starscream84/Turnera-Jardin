@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../core/services/auth.service';
+import { iniciales } from '../../shared/avatar.util';
 
 const TAMANO_MAXIMO_BYTES = 2 * 1024 * 1024; // 2 MB, debe coincidir con el límite del backend
 const TIPOS_VALIDOS = ['image/jpeg', 'image/png', 'image/webp'];
@@ -15,6 +16,8 @@ const TIPOS_VALIDOS = ['image/jpeg', 'image/png', 'image/webp'];
 export class MiCuentaComponent {
   private fb = inject(FormBuilder);
   auth = inject(AuthService);
+
+  readonly iniciales = iniciales;
 
   guardando = signal(false);
   error = signal<string | null>(null);

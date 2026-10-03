@@ -31,6 +31,11 @@ export class AdminTurnosService {
     return this.http.post<void>(`${this.base}/${id}/cancelar`, {});
   }
 
+  /** Deja registrado que se le pidió la confirmación a la familia (el mensaje sale por wa.me). */
+  solicitarConfirmacion(id: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/solicitar-confirmacion`, {});
+  }
+
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }

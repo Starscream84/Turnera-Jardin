@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DocentesService } from '../../core/services/docentes.service';
+import { PublicShellComponent } from '../../shared/public-shell.component';
 
 @Component({
   selector: 'app-cancelar-turno',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, PublicShellComponent],
   templateUrl: './cancelar-turno.component.html'
 })
 export class CancelarTurnoComponent {

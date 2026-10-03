@@ -1,11 +1,23 @@
-<div class="contenedor">
-  <div class="barra-superior">
-    <div>
-      <h1>Elegí un horario</h1>
-      <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
-    </div>
-    <a routerLink="/reservar" class="texto-suave">&larr; Elegir otro/a docente</a>
+<app-public-shell titulo="Turnos" [paso]="2">
+  <a routerLink="/reservar" class="enlace-volver">&larr; Elegir otro/a docente</a>
+
+  <div class="encabezado-paso">
+    <span class="etiqueta">Paso 2</span>
+    <h2>Elegí día y horario:</h2>
+    <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
   </div>
+
+  @if (docente(); as d) {
+    <div class="docente-elegido">
+      <span class="avatar avatar-mediano" [style.background]="colorAvatar(d.id)" aria-hidden="true">{{ iniciales(d.nombreCompleto) }}</span>
+      <div>
+        <strong>{{ d.nombreCompleto }}</strong>
+        @if (d.sala) {
+          <span class="texto-suave">{{ d.sala }}</span>
+        }
+      </div>
+    </div>
+  }
 
   @if (cargando()) {
     <p class="texto-suave">Cargando horarios...</p>
@@ -15,11 +27,11 @@
     <p class="texto-suave">No hay horarios disponibles por el momento para este/a docente. Probá más adelante o elegí otro/a docente.</p>
   } @else {
     @for (grupo of grupos(); track grupo.fecha) {
-      <div class="card" style="margin-bottom: 16px;">
-        <h3 style="text-transform: capitalize;">{{ formatearFecha(grupo.fecha) }}</h3>
-        <div class="grilla-tarjetas">
+      <div class="dia">
+        <h3>{{ formatearFecha(grupo.fecha) }}</h3>
+        <div class="horarios">
           @for (turno of grupo.turnos; track turno.id) {
-            <button type="button" class="tarjeta-clickeable" (click)="elegirTurno(turno)">
+            <button type="button" class="horario" (click)="elegirTurno(turno)">
               {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
             </button>
           }
@@ -27,4 +39,4 @@
       </div>
     }
   }
-</div>
+</app-public-shell>

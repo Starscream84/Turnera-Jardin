@@ -1,6 +1,6 @@
 <div class="contenedor-angosto">
-  <a routerLink="/admin/docentes" class="texto-suave">&larr; Volver</a>
-  <h1>{{ esEdicion ? 'Editar docente' : 'Nuevo docente' }}</h1>
+  <a routerLink="/admin/docentes" class="enlace-volver">&larr; Volver</a>
+  <h1 style="margin-bottom: 24px;">{{ esEdicion ? 'Editar docente' : 'Nuevo docente' }}</h1>
 
   @if (error()) {
     <div class="alerta alerta-error">{{ error() }}</div>
@@ -31,9 +31,11 @@
       </div>
 
       @if (esEdicion) {
-        <div class="form-grupo" style="flex-direction: row; align-items: center;">
-          <input id="activo" type="checkbox" formControlName="activo" style="width: auto;" />
-          <label for="activo" style="font-weight: 400;">Activo (visible en la agenda pública)</label>
+        <div class="form-grupo">
+          <label for="activo" class="check-linea">
+            <input id="activo" type="checkbox" formControlName="activo" />
+            Activo (visible en la agenda pública)
+          </label>
         </div>
       }
 

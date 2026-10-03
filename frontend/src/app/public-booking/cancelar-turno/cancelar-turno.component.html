@@ -1,12 +1,15 @@
-<div class="contenedor-angosto">
-  <a routerLink="/reservar" class="texto-suave">&larr; Volver al inicio</a>
-  <h1>Cancelar un turno</h1>
+<app-public-shell titulo="Cancelar un turno" [angosto]="true">
+  <a routerLink="/reservar" class="enlace-volver">&larr; Volver al inicio</a>
 
   @if (cancelado()) {
-    <div class="alerta alerta-exito">Tu turno fue cancelado correctamente.</div>
-    <a routerLink="/reservar" class="btn btn-primario">Sacar un nuevo turno</a>
+    <div class="card" style="text-align: center;">
+      <div class="icono-ok" aria-hidden="true"></div>
+      <h2>Turno cancelado</h2>
+      <p class="texto-suave">Tu turno fue cancelado correctamente.</p>
+      <a routerLink="/reservar" class="btn btn-primario">Sacar un nuevo turno</a>
+    </div>
   } @else {
-    <p class="texto-suave">Ingresá el número de turno (te lo mostramos al confirmar la reserva) y el mismo WhatsApp con el que lo sacaste.</p>
+    <p class="texto-suave" style="margin-bottom: 20px;">Ingresá el número de turno (te lo mostramos al confirmar la reserva) y el mismo WhatsApp con el que lo sacaste.</p>
 
     @if (error()) {
       <div class="alerta alerta-error">{{ error() }}</div>
@@ -23,9 +26,9 @@
         <input id="telefono" type="tel" formControlName="telefono" />
       </div>
 
-      <button type="submit" class="btn btn-peligro" [disabled]="enviando()">
+      <button type="submit" class="btn btn-peligro btn-bloque" [disabled]="enviando()">
         {{ enviando() ? 'Cancelando...' : 'Cancelar turno' }}
       </button>
     </form>
   }
-</div>
+</app-public-shell>

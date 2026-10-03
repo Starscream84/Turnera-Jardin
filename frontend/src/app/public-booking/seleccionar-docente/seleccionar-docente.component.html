@@ -1,10 +1,12 @@
-<div class="contenedor">
-  <div class="barra-superior">
-    <div>
-      <h1>Turnos de entrevista</h1>
-      <p class="texto-suave">Elegí el/la docente con quien querés coordinar la entrevista de tu hijo/a.</p>
-    </div>
-    <a routerLink="/cancelar" class="texto-suave">¿Ya tenés un turno reservado? Cancelalo acá</a>
+<app-public-shell
+  titulo="Turnos"
+  bajada="Reservá una entrevista con la docente de tu hijo o hija en pocos pasos. Elegí la docente, el día y el horario que te quede cómodo."
+  [paso]="1"
+>
+  <div class="encabezado-paso">
+    <span class="etiqueta">Paso 1</span>
+    <h2>Elegí la docente:</h2>
+    <p class="texto-suave">Elegí el/la docente con quien querés coordinar la entrevista de tu hijo/a.</p>
   </div>
 
   @if (cargando()) {
@@ -14,15 +16,50 @@
   } @else if (docentes().length === 0) {
     <p class="texto-suave">Por el momento no hay docentes disponibles para reservar turnos.</p>
   } @else {
+    <input
+      type="search"
+      class="buscador"
+      placeholder="Buscar por nombre o sala"
+      aria-label="Buscar docente por nombre o sala"
+      [value]="busqueda()"
+      (input)="buscar($event)"
+    />
+
+    @if (docentesFiltrados().length === 0) {
+      <p class="texto-suave">No encontramos docentes con ese nombre o sala.</p>
+    }
+
     <div class="grilla-tarjetas">
-      @for (docente of docentes(); track docente.id) {
-        <button type="button" class="tarjeta-clickeable" (click)="elegir(docente)">
-          <strong>{{ docente.nombreCompleto }}</strong>
-          @if (docente.sala) {
-            <div class="texto-suave">{{ docente.sala }}</div>
-          }
+      @for (docente of docentesFiltrados(); track docente.id) {
+        <button type="button" class="tarjeta-clickeable tarjeta-docente" (click)="elegir(docente)">
+          <span class="avatar avatar-grande" [style.background]="colorAvatar(docente.id)" aria-hidden="true">{{ iniciales(docente.nombreCompleto) }}</span>
+          <span class="datos-docente">
+            <strong>{{ docente.nombreCompleto }}</strong>
+            @if (docente.sala) {
+              <div class="texto-suave">{{ docente.sala }}</div>
+            }
+          </span>
+          <span class="pastilla">Elegir</span>
         </button>
       }
     </div>
   }
-</div>
+
+  <section style="margin-top: 72px;">
+    <h2>Preguntas frecuentes:</h2>
+    <div class="acordeon">
+      <details>
+        <summary>¿Puedo cancelar mi turno?</summary>
+        <p>Sí. Entrá a "Cancelar turno" e ingresá el número de turno y el mismo WhatsApp con el que lo reservaste. El horario vuelve a quedar libre para otra familia.</p>
+      </details>
+      <details>
+        <summary>¿La entrevista puede ser virtual?</summary>
+        <p>Sí. Al completar tus datos elegís si la entrevista es presencial o virtual.</p>
+      </details>
+      <details>
+        <summary>¿Para qué sirve el número de turno?</summary>
+        <p>Te lo mostramos al confirmar la reserva. Guardalo: lo vas a necesitar si después querés cancelar el turno.</p>
+      </details>
+    </div>
+  </section>
+</app-public-shell>

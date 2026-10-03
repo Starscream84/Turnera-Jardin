@@ -1,24 +1,54 @@
 <div class="contenedor">
-    <h1>Turnos</h1>
+    <div class="barra-superior">
+        <div>
+            <h1>Turnos</h1>
+            <p class="texto-suave">Entrevistas reservadas y franjas disponibles.</p>
+        </div>
+        @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
+            <a routerLink="/admin/turnos/generar" class="btn btn-primario">+ Generar turnos</a>
+        }
+    </div>
 
     @if (error()) {
         <div class="alerta alerta-error">{{ error() }}</div>
     }
 
-    <form
-        [formGroup]="filtro"
-        (ngSubmit)="buscar()"
-        class="card"
-        style="
-            margin-bottom: 16px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: flex-end;
-        "
-    >
+    @if (!cargando() && turnos().length > 0) {
+        <div class="kpis">
+            <div class="kpi">
+                <div>
+                    <span class="etiqueta etiqueta-chica">Reservados</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-numero verde">{{ resumen().reservados }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="etiqueta etiqueta-chica etiqueta-azul">Disponibles</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-numero azul">{{ resumen().disponibles }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="etiqueta etiqueta-chica etiqueta-naranja">Cancelados</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-numero naranja">{{ resumen().cancelados }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="etiqueta etiqueta-chica etiqueta-magenta">Asistencia pedida</span>
+                    <small>por WhatsApp</small>
+                </div>
+                <span class="kpi-numero magenta">{{ resumen().asistenciaPedida }}</span>
+            </div>
+        </div>
+    }
+
+    <form [formGroup]="filtro" (ngSubmit)="buscar()" class="card filtros">
         @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
-            <div class="form-grupo" style="min-width: 200px">
+            <div class="form-grupo">
                 <label for="docenteId">Docente</label>
                 <select id="docenteId" formControlName="docenteId">
                     <option value="">Todos</option>
@@ -60,7 +90,7 @@
     } @else if (turnos().length === 0) {
         <p class="texto-suave">No hay turnos que coincidan con el filtro.</p>
     } @else {
-        <div class="card">
+        <div class="tabla-card">
             <table>
                 <thead>
                     <tr>
@@ -73,7 +103,7 @@
                         <th>Modalidad</th>
                         <th>Familia</th>
                         <th>WhatsApp</th>
-                        <th></th>
+                        <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -82,7 +112,9 @@
                             <td>{{ formatearFecha(turno.fecha) }}</td>
                             <td>{{ formatearHora(turno.horaInicio) }}</td>
                             @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
-                                <td>{{ turno.docenteNombre }}</td>
+                                <td>
+                                    <strong style="font-weight: 500">{{ turno.docenteNombre }}</strong>
+                                </td>
                             }
                             <td>
                                 <span class="badge" [class]="claseBadge(turno.estado)">{{
@@ -99,22 +131,47 @@
                             <td>
                                 @if (turno.nombreNino) {
                                     {{ turno.nombreNino }}
-                                    <span class="texto-suave">({{ turno.nombrePadre }})</span>
+                                    <small>{{ turno.nombrePadre }}</small>
                                 } @else {
                                     <span class="texto-suave">—</span>
                                 }
                             </td>
                             <td>
                                 @if (turno.estado === "Reservado") {
-                                    {{
-                                        turno.confirmacionEnviada
-                                            ? "Confirmación enviada"
-                                            : "Confirmación pendiente"
-                                    }}
+                                    <span
+                                        class="badge"
+                                        [class]="
+                                            turno.confirmacionEnviada
+                                                ? 'badge-reservado'
+                                                : 'badge-pendiente'
+                                        "
+                                    >
+                                        {{
+                                            turno.confirmacionEnviada
+                                                ? "Confirmación enviada"
+                                                : "Confirmación pendiente"
+                                        }}
+                                    </span>
+                                    @if (turno.confirmacionSolicitada) {
+                                        <small>
+                                            Asistencia pedida el
+                                            {{ formatearFechaHora(turno.confirmacionSolicitada) }}
+                                        </small>
+                                    }
+                                } @else {
+                                    <span class="texto-suave">—</span>
                                 }
                             </td>
-                            <td style="white-space: nowrap">
+                            <td class="celda-acciones">
                                 @if (turno.estado === "Reservado") {
+                                    <button
+                                        type="button"
+                                        class="btn btn-verde btn-chico"
+                                        title="Abre WhatsApp con un mensaje para la familia recordando el turno y pidiendo que confirme"
+                                        (click)="pedirConfirmacion(turno)"
+                                    >
+                                        Confirmación
+                                    </button>
                                     <button
                                         type="button"
                                         class="btn btn-peligro btn-chico"

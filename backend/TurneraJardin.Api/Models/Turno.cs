@@ -41,5 +41,11 @@ public class Turno
     /// <summary>Se pone en true cuando el job de recordatorios ya mandó el WhatsApp del día anterior.</summary>
     public bool RecordatorioEnviado { get; set; } = false;
 
+    /// <summary>
+    /// Momento (UTC) en que la docente tocó "Confirmación" en su listado y se abrió el WhatsApp
+    /// a la familia pidiendo que confirme la asistencia. Null si todavía no se pidió.
+    /// </summary>
+    public DateTime? ConfirmacionSolicitada { get; set; }
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }
