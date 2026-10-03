@@ -16,32 +16,21 @@
   } @else if (docentes().length === 0) {
     <p class="texto-suave">Por el momento no hay docentes disponibles para reservar turnos.</p>
   } @else {
-    <input
-      type="search"
-      class="buscador"
-      placeholder="Buscar por nombre o sala"
-      aria-label="Buscar docente por nombre o sala"
-      [value]="busqueda()"
-      (input)="buscar($event)"
-    />
-
-    @if (docentesFiltrados().length === 0) {
-      <p class="texto-suave">No encontramos docentes con ese nombre o sala.</p>
-    }
-
-    <div class="grilla-tarjetas">
-      @for (docente of docentesFiltrados(); track docente.id) {
-        <button type="button" class="tarjeta-clickeable tarjeta-docente" (click)="elegir(docente)">
-          <span class="avatar avatar-grande" [style.background]="colorAvatar(docente.id)" aria-hidden="true">{{ iniciales(docente.nombreCompleto) }}</span>
-          <span class="datos-docente">
-            <strong>{{ docente.nombreCompleto }}</strong>
-            @if (docente.sala) {
-              <div class="texto-suave">{{ docente.sala }}</div>
-            }
-          </span>
-          <span class="pastilla">Elegir</span>
-        </button>
-      }
+    <div class="selector-docente">
+      <div class="form-grupo">
+        <label for="docente">Docente</label>
+        <select id="docente" [value]="docenteId()" (change)="seleccionar($event)">
+          <option value="" disabled [selected]="!docenteId()">Elegí una docente</option>
+          @for (docente of docentesOrdenados(); track docente.id) {
+            <option [value]="docente.id">
+              {{ docente.nombreCompleto }}{{ docente.sala ? " — " + docente.sala : "" }}
+            </option>
+          }
+        </select>
+      </div>
+      <button type="button" class="btn btn-primario" [disabled]="!docenteId()" (click)="continuar()">
+        Ver horarios
+      </button>
     </div>
   }
 
