@@ -61,15 +61,15 @@ public class DocentesController : ControllerBase
         return Ok(turnos);
     }
 
-    [HttpPut("{id}/disponibilidad")]
-public async Task<IActionResult> ActualizarDisponibilidad(int id, [FromBody] List<CrearDisponibilidadDto> nuevasReglas)
-{
-    if (id <= 0 || nuevasReglas == null)
-    {
-        return BadRequest("Datos de solicitud inválidos.");
-    }
+//    [HttpPut("{id}/disponibilidad")]
+//public async Task<IActionResult> ActualizarDisponibilidad(int id, [FromBody] List<CrearDisponibilidadDto> nuevasReglas)
+//{
+//    if (id <= 0 || nuevasReglas == null)
+//    {
+//        return BadRequest("Datos de solicitud inválidos.");
+//    }
 
-    await _turnosService.ActualizarDisponibilidadDocenteAsync(id, nuevasReglas);
-    return NoContent();
-}
+//    await _turnosService.ActualizarDisponibilidadDocenteAsync(id, nuevasReglas);
+ //   return NoContent();
+//}
 }

@@ -50,7 +50,8 @@ public class TurnosController(AppDbContext db, IWhatsAppService whatsApp, ILogge
                 turno.Fecha,
                 turno.HoraInicio,
                 turno.HoraFin,
-                turno.NombreNino!));
+                turno.NombreNino!,
+                turno.ApellidoNino!));
         }
         catch (InvalidOperationException ex)
         {

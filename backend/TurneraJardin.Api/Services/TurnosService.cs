@@ -67,7 +67,7 @@ public class TurnosService : ITurnosService
     }
 
     // 2. Gestión de Disponibilidad por la Dirección (Opción 3)
-    public async Task ActualizarDisponibilidadDocenteAsync(int docenteId, List<CrearDisponibilidadDto> nuevasReglas)
+/* public async Task ActualizarDisponibilidadDocenteAsync(int docenteId, List<CrearDisponibilidadDto> nuevasReglas)
     {
         var asignacionesAnteriores = await _context.Disponibilidades
             .Where(d => d.DocenteId == docenteId)
@@ -89,7 +89,7 @@ public class TurnosService : ITurnosService
 
         await _context.SaveChangesAsync();
     }
-
+*/
 
 public async Task<Turno> ReservarTurnoAsync(ReservaTurnoDto dto)
 {

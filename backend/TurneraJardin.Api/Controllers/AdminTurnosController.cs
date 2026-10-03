@@ -48,7 +48,7 @@ public class AdminTurnosController : ControllerBase
             .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
             .Select(t => new TurnoAdminDto(
                 t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
-                t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
+                t.Estado, t.NombrePadre, t.ApellidoPadre, t.TelefonoPadre, t.NombreNino, t.ApellidoNino, t.Observaciones,
                 t.ConfirmacionEnviada, t.RecordatorioEnviado))
             .ToListAsync();
 
