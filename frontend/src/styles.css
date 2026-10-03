@@ -427,6 +427,138 @@ a {
   color: #fff;
 }
 
+/* ---------- Calendario de la reserva (paso 2) ---------- */
+
+.agenda {
+  display: grid;
+  grid-template-columns: 440px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.calendario,
+.horarios-dia {
+  background: var(--color-superficie);
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra);
+  padding: 28px;
+}
+
+.horarios-dia { min-height: 100%; }
+
+.horarios-dia h3 {
+  color: var(--azul);
+  font-size: 1.35rem;
+  margin-bottom: 4px;
+}
+
+.horarios-dia h3::first-letter { text-transform: uppercase; }
+
+.horarios-titulo {
+  margin: 20px 0 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.calendario-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.calendario-cabecera h3 {
+  color: var(--azul);
+  font-size: 1.35rem;
+  margin: 0;
+}
+
+.calendario-flechas {
+  display: flex;
+  gap: 8px;
+}
+
+.calendario-flechas button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--color-borde);
+  background: #fff;
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.calendario-flechas button:hover:not(:disabled) { border-color: var(--azul); }
+.calendario-flechas button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.calendario-grilla {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.calendario-dia-semana {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-texto-suave);
+  padding: 6px 0;
+}
+
+.calendario-dia {
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  color: #b0b0b0;
+  cursor: default;
+}
+
+.calendario-dia.disponible {
+  background: var(--verde-claro);
+  color: #4c7322;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendario-dia.disponible:hover { background: #d9e8c2; }
+
+.calendario-dia.seleccionado,
+.calendario-dia.seleccionado:hover {
+  background: var(--verde-oscuro);
+  color: #fff;
+}
+
+.calendario-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 14px;
+  font-size: 0.82rem;
+  color: var(--color-texto-suave);
+}
+
+.calendario-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.punto {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-borde);
+}
+
+.punto-disponible { background: #c5dba3; }
+.punto-seleccionado { background: var(--verde-oscuro); }
+
 /* ---------- Botones ---------- */
 
 .btn {
@@ -1073,6 +1205,7 @@ tbody tr:hover td { background: #fbfbfb; }
 
 @media (max-width: 900px) {
   .dos-columnas { grid-template-columns: minmax(0, 1fr); }
+  .agenda { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .login { grid-template-columns: minmax(0, 1fr); min-height: 0; }
   .login-lado { padding: 32px 24px; gap: 24px; }
   .login-lado p { font-size: 1rem; }
@@ -1092,7 +1225,8 @@ tbody tr:hover td { background: #fbfbfb; }
 @media (max-width: 600px) {
   .contenedor, .contenedor-angosto { padding: 24px 16px 56px; }
   .seccion { padding: 36px 16px; }
-  .card, .dia { padding: 22px 18px; }
+  .card, .dia, .calendario, .horarios-dia { padding: 22px 18px; }
+  .calendario-dia { height: 42px; }
   .confirmado { padding: 32px 20px; }
   .login-form .card { padding: 32px 22px; }
   .grilla-tarjetas { grid-template-columns: 1fr; gap: 14px; }

@@ -4,7 +4,7 @@
   <div class="encabezado-paso">
     <span class="etiqueta">Paso 2</span>
     <h2>Elegí día y horario:</h2>
-    <p class="texto-suave">Seleccioná el día y la hora que mejor te queden.</p>
+    <p class="texto-suave">Los días en verde tienen horarios libres. Podés reservar con hasta {{ mesesAnticipacion }} meses de anticipación.</p>
   </div>
 
   @if (docente(); as d) {
@@ -23,20 +23,85 @@
     <p class="texto-suave">Cargando horarios...</p>
   } @else if (error()) {
     <div class="alerta alerta-error">{{ error() }}</div>
-  } @else if (grupos().length === 0) {
+  } @else if (!hayTurnos()) {
     <p class="texto-suave">No hay horarios disponibles por el momento para este/a docente. Probá más adelante o elegí otro/a docente.</p>
   } @else {
-    @for (grupo of grupos(); track grupo.fecha) {
-      <div class="dia">
-        <h3>{{ formatearFecha(grupo.fecha) }}</h3>
-        <div class="horarios">
-          @for (turno of grupo.turnos; track turno.id) {
-            <button type="button" class="horario" (click)="elegirTurno(turno)">
-              {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
-            </button>
+    <div class="agenda">
+      <section class="calendario" aria-label="Calendario de días disponibles">
+        <div class="calendario-cabecera">
+          <h3 aria-live="polite">{{ tituloMes() }}</h3>
+          <div class="calendario-flechas">
+            <button type="button" aria-label="Mes anterior" [disabled]="!puedeIrAtras()" (click)="cambiarMes(-1)">&lsaquo;</button>
+            <button type="button" aria-label="Mes siguiente" [disabled]="!puedeIrAdelante()" (click)="cambiarMes(1)">&rsaquo;</button>
+          </div>
+        </div>
+
+        <div class="calendario-grilla" aria-hidden="true">
+          @for (dia of diasSemana; track $index) {
+            <span class="calendario-dia-semana">{{ dia }}</span>
           }
         </div>
-      </div>
-    }
+
+        @for (semana of semanas(); track $index) {
+          <div class="calendario-grilla">
+            @for (dia of semana; track $index) {
+              @if (dia.fecha === null) {
+                <span></span>
+              } @else {
+                <button
+                  type="button"
+                  class="calendario-dia"
+                  [class.disponible]="dia.cantidad > 0"
+                  [class.seleccionado]="dia.fecha === fechaSeleccionada()"
+                  [disabled]="dia.cantidad === 0"
+                  [attr.aria-label]="etiquetaDia(dia)"
+                  [attr.aria-pressed]="dia.cantidad > 0 ? dia.fecha === fechaSeleccionada() : null"
+                  (click)="elegirFecha(dia)"
+                >
+                  {{ dia.numero }}
+                </button>
+              }
+            }
+          </div>
+        }
+
+        <div class="calendario-leyenda">
+          <span><i class="punto punto-disponible"></i> Con horarios</span>
+          <span><i class="punto punto-seleccionado"></i> Elegido</span>
+          <span><i class="punto"></i> Sin turnos</span>
+        </div>
+      </section>
+
+      <section class="horarios-dia" aria-live="polite">
+        @if (fechaSeleccionada(); as fecha) {
+          <h3>{{ formatearFecha(fecha) }}</h3>
+
+          @if (turnosDelDia().manana.length > 0) {
+            <p class="horarios-titulo">Mañana</p>
+            <div class="horarios">
+              @for (turno of turnosDelDia().manana; track turno.id) {
+                <button type="button" class="horario" (click)="elegirTurno(turno)">
+                  {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
+                </button>
+              }
+            </div>
+          }
+
+          @if (turnosDelDia().tarde.length > 0) {
+            <p class="horarios-titulo">Tarde</p>
+            <div class="horarios">
+              @for (turno of turnosDelDia().tarde; track turno.id) {
+                <button type="button" class="horario" (click)="elegirTurno(turno)">
+                  {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
+                </button>
+              }
+            </div>
+          }
+        } @else {
+          <h3>Elegí un día</h3>
+          <p class="texto-suave">Este mes no tiene horarios libres. Probá con otro mes.</p>
+        }
+      </section>
+    </div>
   }
 </app-public-shell>
