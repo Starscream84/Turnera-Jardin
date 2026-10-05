@@ -13,6 +13,9 @@ public class Docente
 
     public required string Email { get; set; }
 
+    /// <summary>Teléfono de contacto del docente.</summary>
+    public string? Telefono { get; set; }
+
     /// <summary>Sala o grupo a cargo (ej: "Sala Celeste", "Sala de 2 años"). Informativo.</summary>
     public string? Sala { get; set; }
 

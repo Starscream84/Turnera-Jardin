@@ -25,7 +25,8 @@ public interface ITurnosService
     /// <param name="docenteId">ID del docente</param>
     /// <param name="nuevasReglas">Nuevas reglas de disponibilidad (por día de semana y franja horaria)</param>
     /// <returns>Tarea asincrónica</returns>
-   /// Task ActualizarDisponibilidadDocenteAsync(int docenteId, List<CrearDisponibilidadDto> nuevasReglas);
+    Task ActualizarDisponibilidadDocenteAsync(int docenteId, List<CrearDisponibilidadDto> nuevasReglas);
+
 
     /// <summary>
     /// Reserva un turno para un padre/madre con un docente.

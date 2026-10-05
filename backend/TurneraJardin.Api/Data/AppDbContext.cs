@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Turno> Turnos => Set<Turno>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Disponibilidad> Disponibilidades => Set<Disponibilidad>();
+    public DbSet<AuditoriaLog> AuditoriaLogs => Set<AuditoriaLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,11 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(u => u.DocenteId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AuditoriaLog>(entity =>
+        {
+            entity.HasIndex(a => a.FechaUtc);
         });
     }
 }

@@ -1,113 +1,131 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
-using TurneraJardin.Api.Dtos;
+using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Auth;
+using TurneraJardin.Api.Services;
 
 namespace TurneraJardin.Api.Controllers;
 
 /// <summary>
-/// Listado y gestión de turnos para el panel de administración. Un Admin ve todo;
-/// un usuario con rol Docente solo puede ver/gestionar los turnos de su propia agenda.
+/// Listado y gestión de turnos para el panel. Dirección y equipo técnico ven todo;
+/// un docente solo ve y gestiona los turnos de su propia agenda.
 /// </summary>
 [ApiController]
 [Route("api/admin/turnos")]
-[Authorize]
+[Authorize(Policy = Politicas.Personal)]
 public class AdminTurnosController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    // Un turno Reservado solo puede completarse o cancelarse. Los demás estados son finales:
+    // reabrir un turno cancelado podría pisar a otra familia que ya tomó ese horario.
+    private static readonly EstadoTurno[] DestinosDesdeReservado = { EstadoTurno.Completado, EstadoTurno.Cancelado };
 
-    public AdminTurnosController(AppDbContext db)
+    private readonly AppDbContext _context;
+    private readonly IAuditoriaService _auditoria;
+
+    public AdminTurnosController(AppDbContext context, IAuditoriaService auditoria)
     {
-        _db = db;
+        _context = context;
+        _auditoria = auditoria;
     }
 
+    /// <summary>Consulta de turnos con filtros opcionales. Un docente solo recibe los suyos.</summary>
     [HttpGet]
-    public async Task<ActionResult<List<TurnoAdminDto>>> Listar(
-        [FromQuery] int? docenteId, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] EstadoTurno? estado)
+    public async Task<IActionResult> ObtenerTurnos(
+        [FromQuery] int? docenteId,
+        [FromQuery] DateOnly? fecha,
+        [FromQuery] DateOnly? desde,
+        [FromQuery] DateOnly? hasta,
+        [FromQuery] EstadoTurno? estado)
     {
-        var query = _db.Turnos.Include(t => t.Docente).AsQueryable();
+        var query = _context.Turnos
+            .AsNoTracking()
+            .Include(t => t.Docente)
+            .AsQueryable();
 
-        if (EsDocente(out var docenteIdPropio))
+        if (User.EsDocente())
         {
-            // Un docente jamás puede ver la agenda de otro, sin importar qué pida por query string.
-            query = query.Where(t => t.DocenteId == docenteIdPropio);
+            var propio = User.GetDocenteId();
+            if (propio is null) return Forbid();
+
+            // Se ignora el docenteId pedido: un docente no puede consultar la agenda de otro.
+            query = query.Where(t => t.DocenteId == propio.Value);
         }
-        else if (docenteId is not null)
+        else if (docenteId.HasValue && docenteId > 0)
         {
-            query = query.Where(t => t.DocenteId == docenteId);
+            query = query.Where(t => t.DocenteId == docenteId.Value);
         }
 
-        if (desde is not null) query = query.Where(t => t.Fecha >= desde);
-        if (hasta is not null) query = query.Where(t => t.Fecha <= hasta);
-        if (estado is not null) query = query.Where(t => t.Estado == estado);
+        if (fecha.HasValue) query = query.Where(t => t.Fecha == fecha.Value);
+        if (desde.HasValue) query = query.Where(t => t.Fecha >= desde.Value);
+        if (hasta.HasValue) query = query.Where(t => t.Fecha <= hasta.Value);
+        if (estado.HasValue) query = query.Where(t => t.Estado == estado.Value);
 
         var turnos = await query
-            .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
-            .Select(t => new TurnoAdminDto(
-                t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
-                t.Estado, t.NombrePadre, t.ApellidoPadre, t.TelefonoPadre, t.NombreNino, t.ApellidoNino, t.Observaciones,
-                t.ConfirmacionEnviada, t.RecordatorioEnviado))
+            .OrderBy(t => t.Fecha)
+            .ThenBy(t => t.HoraInicio)
+            .Select(t => new
+            {
+                t.Id,
+                t.DocenteId,
+                DocenteNombre = t.Docente != null ? t.Docente.Nombre + " " + t.Docente.Apellido : "Sin Asignar",
+                t.Fecha,
+                t.HoraInicio,
+                t.HoraFin,
+                t.NombrePadre,
+                t.ApellidoPadre, t.TelefonoPadre,
+                t.NombreNino,
+                t.ApellidoNino, t.Observaciones,
+                t.Estado,
+                t.FechaReserva,
+                t.ConfirmacionEnviada,
+                t.RecordatorioEnviado
+            })
             .ToListAsync();
 
         return Ok(turnos);
     }
 
+    /// <summary>Cambia el estado de un turno reservado (Completado o Cancelado).</summary>
+    [HttpPatch("{id:int}/estado")]
+    public Task<IActionResult> CambiarEstado(int id, [FromBody] EstadoTurno nuevoEstado) =>
+        AplicarCambioEstadoAsync(id, nuevoEstado);
+
+    /// <summary>Cancela un turno reservado. Ruta que ya usa el frontend; equivale a PATCH estado=Cancelado.</summary>
     [HttpPost("{id:int}/cancelar")]
-    public async Task<IActionResult> Cancelar(int id)
+    public Task<IActionResult> Cancelar(int id) =>
+        AplicarCambioEstadoAsync(id, EstadoTurno.Cancelado);
+
+    private async Task<IActionResult> AplicarCambioEstadoAsync(int id, EstadoTurno nuevoEstado)
     {
-        var turno = await _db.Turnos.FindAsync(id);
-        if (turno is null)
+        var turno = await _context.Turnos.FindAsync(id);
+
+        // Para un docente, un turno ajeno se responde igual que uno inexistente.
+        if (turno is null || !PuedeGestionar(turno))
         {
-            return NotFound();
+            return NotFound(new { mensaje = "El turno no existe." });
         }
 
-        if (EsDocente(out var docenteIdPropio) && turno.DocenteId != docenteIdPropio)
+        if (turno.Estado != EstadoTurno.Reservado || !DestinosDesdeReservado.Contains(nuevoEstado))
         {
-            return StatusCode(StatusCodes.Status403Forbidden);
+            return Conflict(new { mensaje = $"No se puede pasar un turno de {turno.Estado} a {nuevoEstado}." });
         }
 
-        turno.Estado = EstadoTurno.Cancelado;
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var anterior = turno.Estado;
+        turno.Estado = nuevoEstado;
+
+        await _auditoria.RegistrarAsync("CambioEstadoTurno", "Turno", turno.Id.ToString(), $"{anterior} → {nuevoEstado}");
+
+        return Ok(new { mensaje = "Estado actualizado correctamente.", turnoId = turno.Id, nuevoEstado = turno.Estado });
     }
 
-    /// <summary>Elimina una franja "Disponible" que todavía nadie reservó (por ejemplo, para corregir un error de carga).</summary>
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Eliminar(int id)
+    private bool PuedeGestionar(Turno turno)
     {
-        var turno = await _db.Turnos.FindAsync(id);
-        if (turno is null)
-        {
-            return NotFound();
-        }
+        if (!User.EsDocente()) return true;
 
-        if (EsDocente(out var docenteIdPropio) && turno.DocenteId != docenteIdPropio)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden);
-        }
-
-        if (turno.Estado != EstadoTurno.Disponible)
-        {
-            return BadRequest(new { mensaje = "Solo se pueden eliminar turnos que todavía no fueron reservados. Si ya tiene una familia asignada, cancelalo en vez de eliminarlo." });
-        }
-
-        _db.Turnos.Remove(turno);
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
-
-    private bool EsDocente(out int docenteId)
-    {
-        docenteId = 0;
-        if (!User.IsInRole(nameof(RolUsuario.Docente)))
-        {
-            return false;
-        }
-
-        var claim = User.FindFirstValue("docenteId");
-        return claim is not null && int.TryParse(claim, out docenteId);
+        var propio = User.GetDocenteId();
+        return propio.HasValue && propio.Value == turno.DocenteId;
     }
 }

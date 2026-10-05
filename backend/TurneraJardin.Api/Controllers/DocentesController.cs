@@ -14,12 +14,10 @@ namespace TurneraJardin.Api.Controllers;
 public class DocentesController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly ITurnosService _turnosService;
 
-    public DocentesController(AppDbContext db, ITurnosService turnosService)
+    public DocentesController(AppDbContext db)
     {
         _db = db;
-        _turnosService = turnosService;
     }
 
     [HttpGet]
