@@ -40,6 +40,7 @@ export class FormularioReservaComponent implements OnInit {
     modalidad: ['' as ModalidadEntrevista | '', [Validators.required]],
     nombrePadre: ['', [Validators.required, Validators.minLength(2)]],
     telefonoPadre: ['', [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
+    emailPadre: ['', [Validators.required, Validators.email, Validators.maxLength(200)]],
     nombreNino: ['', [Validators.required, Validators.minLength(2)]],
     observaciones: ['']
   });

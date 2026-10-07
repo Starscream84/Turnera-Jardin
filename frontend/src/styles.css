@@ -1255,3 +1255,8 @@ tbody tr:hover td { background: #fbfbfb; }
   .logo-idra { font-size: 1.6rem; }
   th, td { padding: 12px 14px; }
 }
+
+/* ---------- Generar turnos: franjas horarias ---------- */
+
+.franja-horaria { align-items: flex-end; }
+.franja-horaria .quitar-franja { margin-bottom: 20px; }

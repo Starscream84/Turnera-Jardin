@@ -42,19 +42,37 @@
       </div>
 
       <h3 style="margin-top: 12px;">3. Horario y duración</h3>
-      <div class="fila-campos">
-        <div class="form-grupo">
-          <label for="horaInicio">Hora inicio</label>
-          <input id="horaInicio" type="time" formControlName="horaInicio" />
-        </div>
-        <div class="form-grupo">
-          <label for="horaFin">Hora fin</label>
-          <input id="horaFin" type="time" formControlName="horaFin" />
-        </div>
-        <div class="form-grupo">
-          <label for="duracionMinutos">Duración (min)</label>
-          <input id="duracionMinutos" type="number" formControlName="duracionMinutos" />
-        </div>
+      <p class="texto-suave" style="margin-bottom: 16px;">
+        Para dejar un corte en el medio (por ejemplo, el mediodía), cargá dos franjas: 08:00 a 12:00 y 13:00 a 18:00.
+      </p>
+
+      <div formArrayName="franjas">
+        @for (franja of form.controls.franjas.controls; track franja; let i = $index) {
+          <div class="fila-campos franja-horaria" [formGroupName]="i">
+            <div class="form-grupo">
+              <label [for]="'horaInicio' + i">Franja {{ i + 1 }}: desde</label>
+              <input [id]="'horaInicio' + i" type="time" formControlName="horaInicio" />
+            </div>
+            <div class="form-grupo">
+              <label [for]="'horaFin' + i">Hasta</label>
+              <input [id]="'horaFin' + i" type="time" formControlName="horaFin" />
+            </div>
+            @if (form.controls.franjas.length > 1) {
+              <button type="button" class="btn btn-secundario btn-chico quitar-franja" (click)="quitarFranja(i)">
+                Quitar
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <button type="button" class="btn btn-secundario btn-chico" style="margin-bottom: 20px;" (click)="agregarFranja()">
+        + Agregar franja horaria
+      </button>
+
+      <div class="form-grupo" style="max-width: 220px;">
+        <label for="duracionMinutos">Duración de cada turno (min)</label>
+        <input id="duracionMinutos" type="number" formControlName="duracionMinutos" />
       </div>
 
       @if (error()) {

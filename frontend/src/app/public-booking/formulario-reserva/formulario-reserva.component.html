@@ -3,7 +3,7 @@
     <div class="card confirmado">
       <div class="icono-ok" aria-hidden="true"></div>
       <h2>¡Turno confirmado!</h2>
-      <p class="texto-suave">Te enviamos la confirmación por WhatsApp. Un día antes te vamos a mandar un recordatorio.</p>
+      <p class="texto-suave">Te enviamos la confirmación por email. Si no la ves, revisá la carpeta de correo no deseado.</p>
 
       <div class="detalle-turno">
         <div class="dato"><span>Docente</span><strong>{{ c.docenteNombre }}</strong></div>
@@ -30,7 +30,7 @@
     <div class="encabezado-paso">
       <span class="etiqueta">Paso 3</span>
       <h2>Completá tus datos:</h2>
-      <p class="texto-suave">Usamos tu número de WhatsApp para mandarte la confirmación y el recordatorio del turno.</p>
+      <p class="texto-suave">Te mandamos la confirmación del turno por email. El WhatsApp lo usa la docente para recordarte la entrevista.</p>
     </div>
 
     @if (cargando()) {
@@ -74,7 +74,16 @@
               @if (form.controls.telefonoPadre.invalid && form.controls.telefonoPadre.touched) {
                 <span class="error-campo">Ingresá un número de teléfono válido.</span>
               }
-              <span class="texto-suave">A este número te vamos a mandar la confirmación y el recordatorio.</span>
+              <span class="texto-suave">La docente te va a escribir a este número para recordarte la entrevista.</span>
+            </div>
+
+            <div class="form-grupo">
+              <label for="emailPadre">Tu email</label>
+              <input id="emailPadre" type="email" placeholder="Ej: nombre@gmail.com" formControlName="emailPadre" autocomplete="email" />
+              @if (form.controls.emailPadre.invalid && form.controls.emailPadre.touched) {
+                <span class="error-campo">Ingresá un email válido.</span>
+              }
+              <span class="texto-suave">A este email te mandamos la confirmación del turno.</span>
             </div>
 
             <div class="form-grupo">
@@ -107,7 +116,7 @@
               <button type="submit" form="form-reserva" class="btn btn-primario btn-bloque" [disabled]="enviando()">
                 {{ enviando() ? 'Confirmando...' : 'Confirmar turno' }}
               </button>
-              <p class="nota-whatsapp">Te llega la confirmación por WhatsApp y un recordatorio un día antes.</p>
+              <p class="nota-whatsapp">Te llega la confirmación por email.</p>
             </div>
           </aside>
         </div>

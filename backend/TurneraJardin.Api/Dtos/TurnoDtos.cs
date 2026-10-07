@@ -16,6 +16,12 @@ public class ReservaTurnoDto
     [Required, Phone, MaxLength(30)]
     public required string TelefonoPadre { get; set; }
 
+    /// <summary>Email al que se manda la confirmación de la reserva.</summary>
+    [Required(ErrorMessage = "Ingresá un email para recibir la confirmación.")]
+    [EmailAddress(ErrorMessage = "El email no es válido.")]
+    [MaxLength(200)]
+    public required string EmailPadre { get; set; }
+
     [Required, MaxLength(120)]
     public required string NombreNino { get; set; }
 
@@ -55,7 +61,8 @@ public record TurnoAdminDto(
     bool ConfirmacionEnviada,
     bool RecordatorioEnviado,
     ModalidadEntrevista? Modalidad,
-    DateTime? ConfirmacionSolicitada
+    DateTime? ConfirmacionSolicitada,
+    string? EmailPadre
 );
 
 /// <summary>Pedido para generar turnos disponibles en bloque para un docente.</summary>

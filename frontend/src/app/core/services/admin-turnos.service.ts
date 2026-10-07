@@ -36,6 +36,17 @@ export class AdminTurnosService {
     return this.http.post<void>(`${this.base}/${id}/solicitar-confirmacion`, {});
   }
 
+  /** Borra en bloque todos los turnos que coincidan con el filtro (sin filtro: todos). No se puede deshacer. */
+  eliminarVarios(filtro: FiltroTurnosAdmin): Observable<{ eliminados: number }> {
+    let params = new HttpParams();
+    if (filtro.docenteId) params = params.set('docenteId', filtro.docenteId);
+    if (filtro.desde) params = params.set('desde', filtro.desde);
+    if (filtro.hasta) params = params.set('hasta', filtro.hasta);
+    if (filtro.estado) params = params.set('estado', filtro.estado);
+
+    return this.http.delete<{ eliminados: number }>(this.base, { params });
+  }
+
   eliminar(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
   }

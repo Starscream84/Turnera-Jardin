@@ -27,6 +27,9 @@ public class Turno
     /// <summary>Teléfono en formato internacional E.164 sin "+" (ej: 5492235551234), listo para WhatsApp Cloud API.</summary>
     public string? TelefonoPadre { get; set; }
 
+    /// <summary>Email al que se manda la confirmación de la reserva.</summary>
+    public string? EmailPadre { get; set; }
+
     public string? NombreNino { get; set; }
     public string? Observaciones { get; set; }
 
@@ -35,7 +38,7 @@ public class Turno
 
     public DateTime? FechaReserva { get; set; }
 
-    /// <summary>Se pone en true apenas se envía (o se intenta enviar) el WhatsApp de confirmación.</summary>
+    /// <summary>Se pone en true cuando se envió el email de confirmación de la reserva.</summary>
     public bool ConfirmacionEnviada { get; set; } = false;
 
     /// <summary>Se pone en true cuando el job de recordatorios ya mandó el WhatsApp del día anterior.</summary>

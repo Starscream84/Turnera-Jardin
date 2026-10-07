@@ -13,13 +13,13 @@ namespace TurneraJardin.Api.Controllers;
 public class TurnosController : ControllerBase
 {
     private readonly AppDbContext _db;
-    private readonly IWhatsAppService _whatsApp;
+    private readonly IEmailService _email;
     private readonly ILogger<TurnosController> _logger;
 
-    public TurnosController(AppDbContext db, IWhatsAppService whatsApp, ILogger<TurnosController> logger)
+    public TurnosController(AppDbContext db, IEmailService email, ILogger<TurnosController> logger)
     {
         _db = db;
-        _whatsApp = whatsApp;
+        _email = email;
         _logger = logger;
     }
 
@@ -43,6 +43,7 @@ public class TurnosController : ControllerBase
 
         turno.NombrePadre = dto.NombrePadre.Trim();
         turno.TelefonoPadre = dto.TelefonoPadre.Trim();
+        turno.EmailPadre = dto.EmailPadre.Trim();
         turno.NombreNino = dto.NombreNino.Trim();
         turno.Observaciones = dto.Observaciones?.Trim();
         turno.Modalidad = dto.Modalidad;
@@ -52,13 +53,13 @@ public class TurnosController : ControllerBase
         await _db.SaveChangesAsync();
         await transaccion.CommitAsync();
 
-        var enviado = await _whatsApp.EnviarConfirmacionAsync(turno);
+        var enviado = await _email.EnviarConfirmacionAsync(turno);
         turno.ConfirmacionEnviada = enviado;
         await _db.SaveChangesAsync();
 
         if (!enviado)
         {
-            _logger.LogWarning("El turno {TurnoId} se reservó pero no se pudo mandar el WhatsApp de confirmación.", turno.Id);
+            _logger.LogWarning("El turno {TurnoId} se reservó pero no se pudo mandar el email de confirmación.", turno.Id);
         }
 
         return Ok(new TurnoConfirmadoDto(

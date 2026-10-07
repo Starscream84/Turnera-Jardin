@@ -10,6 +10,7 @@ export type ModalidadEntrevista = 'Presencial' | 'Virtual';
 export interface ReservaTurno {
   nombrePadre: string;
   telefonoPadre: string;
+  emailPadre: string;
   nombreNino: string;
   observaciones?: string;
   modalidad: ModalidadEntrevista;
@@ -45,6 +46,7 @@ export interface TurnoAdmin {
   modalidad: ModalidadEntrevista | null;
   /** Fecha/hora (UTC, ISO) en que se le pidió a la familia que confirme por WhatsApp. null si todavía no. */
   confirmacionSolicitada: string | null;
+  emailPadre: string | null;
 }
 
 export interface GenerarTurnos {

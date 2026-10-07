@@ -17,9 +17,14 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connect
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppCloudApiService>();
 
+// --- Email de confirmación de la reserva (API HTTP de Brevo) ---
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SeccionConfig));
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>();
+
 // --- Servicios propios ---
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddHostedService<RecordatorioBackgroundService>();
+// El recordatorio del día anterior no es automático: lo manda la docente con el botón "Confirmación"
+// del listado de turnos. RecordatorioBackgroundService (envío automático por WhatsApp) queda sin registrar.
 
 // --- Autenticación JWT ---
 var jwtSection = builder.Configuration.GetSection("Jwt");

@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { AdminTurnosService } from '../../core/services/admin-turnos.service';
+import { AdminTurnosService, FiltroTurnosAdmin } from '../../core/services/admin-turnos.service';
 import { AdminDocentesService } from '../../core/services/admin-docentes.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TurnoAdmin, EstadoTurno } from '../../core/models/turno.model';
@@ -23,6 +23,11 @@ export class TurnosListComponent implements OnInit {
   docentes = signal<DocenteAdmin[]>([]);
   cargando = signal(true);
   error = signal<string | null>(null);
+  aviso = signal<string | null>(null);
+  eliminando = signal(false);
+
+  /** Filtro con el que se cargó el listado en pantalla (no lo que esté tipeado sin buscar todavía). */
+  private filtroAplicado: FiltroTurnosAdmin = {};
 
   /** Totales del listado que está en pantalla (según el filtro aplicado), para los indicadores de arriba. */
   resumen = computed(() => {
@@ -54,14 +59,16 @@ export class TurnosListComponent implements OnInit {
     this.cargando.set(true);
     this.error.set(null);
     const valores = this.filtro.getRawValue();
+    const filtro: FiltroTurnosAdmin = {
+      docenteId: valores.docenteId ? Number(valores.docenteId) : undefined,
+      desde: valores.desde || undefined,
+      hasta: valores.hasta || undefined,
+      estado: valores.estado || undefined
+    };
+    this.filtroAplicado = filtro;
 
     this.service
-      .listar({
-        docenteId: valores.docenteId ? Number(valores.docenteId) : undefined,
-        desde: valores.desde || undefined,
-        hasta: valores.hasta || undefined,
-        estado: valores.estado || undefined
-      })
+      .listar(filtro)
       .subscribe({
         next: (turnos) => {
           this.turnos.set(turnos);
@@ -72,6 +79,40 @@ export class TurnosListComponent implements OnInit {
           this.cargando.set(false);
         }
       });
+  }
+
+  /**
+   * Borra todos los turnos del listado en pantalla (los que trajo el último "Buscar").
+   * Sin filtros, eso es todos los turnos del sistema.
+   */
+  eliminarListados(): void {
+    const total = this.turnos().length;
+    if (total === 0) return;
+
+    const reservados = this.resumen().reservados;
+    const advertencia = reservados
+      ? `\n\nATENCIÓN: ${reservados} tienen una familia asignada. Se borran igual y NO se les avisa.`
+      : '';
+    const confirmado = confirm(
+      `¿Eliminar los ${total} turnos de este listado?${advertencia}\n\nEsta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+
+    this.eliminando.set(true);
+    this.error.set(null);
+    this.aviso.set(null);
+
+    this.service.eliminarVarios(this.filtroAplicado).subscribe({
+      next: (respuesta) => {
+        this.eliminando.set(false);
+        this.aviso.set(`Se eliminaron ${respuesta.eliminados} turno(s).`);
+        this.buscar();
+      },
+      error: () => {
+        this.eliminando.set(false);
+        this.error.set('No pudimos eliminar los turnos.');
+      }
+    });
   }
 
   cancelar(turno: TurnoAdmin): void {

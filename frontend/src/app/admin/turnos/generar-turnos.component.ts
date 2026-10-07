@@ -50,10 +50,25 @@ export class GenerarTurnosComponent implements OnInit {
     diasSeleccionados: this.fb.nonNullable.group({
       1: [true], 2: [true], 3: [true], 4: [true], 5: [true], 6: [false], 0: [false]
     }),
-    horaInicio: ['08:00', Validators.required],
-    horaFin: ['12:00', Validators.required],
+    // Una o más franjas por día (ej. 08:00–12:00 y 13:00–18:00, con el corte del mediodía en el medio).
+    franjas: this.fb.nonNullable.array([this.nuevaFranja('08:00', '12:00')]),
     duracionMinutos: [20, [Validators.required, Validators.min(5), Validators.max(240)]]
   });
+
+  private nuevaFranja(horaInicio = '', horaFin = '') {
+    return this.fb.nonNullable.group({
+      horaInicio: [horaInicio, Validators.required],
+      horaFin: [horaFin, Validators.required]
+    });
+  }
+
+  agregarFranja(): void {
+    this.form.controls.franjas.push(this.nuevaFranja());
+  }
+
+  quitarFranja(indice: number): void {
+    this.form.controls.franjas.removeAt(indice);
+  }
 
   ngOnInit(): void {
     this.docentesService.listar().subscribe({
@@ -73,7 +88,7 @@ export class GenerarTurnosComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Faltan datos: elegí el docente (o "Todos") y completá las fechas, el horario y la duración.');
+      this.error.set('Faltan datos: elegí el docente (o "Todos") y completá las fechas, los horarios de cada franja y la duración.');
       return;
     }
 
@@ -90,19 +105,25 @@ export class GenerarTurnosComponent implements OnInit {
       this.error.set('La fecha "hasta" no puede ser anterior a la fecha "desde".');
       return;
     }
-    if (valores.horaFin <= valores.horaInicio) {
-      this.error.set('La hora de fin tiene que ser posterior a la hora de inicio.');
+    const franjas = [...valores.franjas].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
+    if (franjas.some((f) => f.horaFin <= f.horaInicio)) {
+      this.error.set('En cada franja, la hora de fin tiene que ser posterior a la hora de inicio.');
+      return;
+    }
+    if (franjas.some((f, i) => i > 0 && f.horaInicio < franjas[i - 1].horaFin)) {
+      this.error.set('Las franjas horarias se superponen. Revisá los horarios.');
       return;
     }
 
-    const datos = {
+    // Un pedido por cada combinación docente + franja.
+    const pedidos = franjas.map((f) => ({
       fechaDesde: valores.fechaDesde,
       fechaHasta: valores.fechaHasta,
       diasSemana,
-      horaInicio: this.horaConSegundos(valores.horaInicio),
-      horaFin: this.horaConSegundos(valores.horaFin),
+      horaInicio: this.horaConSegundos(f.horaInicio),
+      horaFin: this.horaConSegundos(f.horaFin),
       duracionMinutos: valores.duracionMinutos
-    };
+    }));
 
     const ids =
       valores.docenteId === TODOS ? this.docentes().map((d) => d.id) : [Number(valores.docenteId)];
@@ -110,10 +131,12 @@ export class GenerarTurnosComponent implements OnInit {
     this.guardando.set(true);
     this.error.set(null);
 
-    // "Todos" = el mismo pedido una vez por docente, de a uno (SQLite no admite escrituras en paralelo).
-    from(ids)
+    // Se manda de a un pedido por vez (SQLite no admite escrituras en paralelo).
+    const tareas = ids.flatMap((id) => pedidos.map((datos) => ({ id, datos })));
+
+    from(tareas)
       .pipe(
-        concatMap((id) => this.docentesService.generarTurnos(id, datos)),
+        concatMap(({ id, datos }) => this.docentesService.generarTurnos(id, datos)),
         reduce((total, respuesta) => total + respuesta.creados, 0)
       )
       .subscribe({

@@ -49,7 +49,7 @@ public class AdminTurnosController : ControllerBase
             .Select(t => new TurnoAdminDto(
                 t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
                 t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
-                t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad, t.ConfirmacionSolicitada))
+                t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad, t.ConfirmacionSolicitada, t.EmailPadre))
             .ToListAsync();
 
         return Ok(turnos);
@@ -101,6 +101,27 @@ public class AdminTurnosController : ControllerBase
         turno.ConfirmacionSolicitada = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    /// <summary>
+    /// Elimina en bloque todos los turnos que coincidan con el filtro (los mismos parámetros que el listado).
+    /// Sin filtros borra TODOS los turnos, incluidos los reservados: no avisa a las familias y no se puede deshacer.
+    /// Solo para dirección (Admin / Coordinador), nunca para un docente.
+    /// </summary>
+    [HttpDelete]
+    [Authorize(Roles = $"{nameof(RolUsuario.Admin)},{nameof(RolUsuario.Coordinador)}")]
+    public async Task<ActionResult<object>> EliminarVarios(
+        [FromQuery] int? docenteId, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] EstadoTurno? estado)
+    {
+        var query = _db.Turnos.AsQueryable();
+
+        if (docenteId is not null) query = query.Where(t => t.DocenteId == docenteId);
+        if (desde is not null) query = query.Where(t => t.Fecha >= desde);
+        if (hasta is not null) query = query.Where(t => t.Fecha <= hasta);
+        if (estado is not null) query = query.Where(t => t.Estado == estado);
+
+        var eliminados = await query.ExecuteDeleteAsync();
+        return Ok(new { eliminados });
     }
 
     /// <summary>Elimina una franja "Disponible" que todavía nadie reservó (por ejemplo, para corregir un error de carga).</summary>

@@ -111,6 +111,7 @@ public static class DbSeeder
         {
             ("Modalidad", "INTEGER NULL"),
             ("ConfirmacionSolicitada", "TEXT NULL"),
+            ("EmailPadre", "TEXT NULL"),
         };
 
         db.Database.OpenConnection();

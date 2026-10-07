@@ -5,12 +5,27 @@
             <p class="texto-suave">Entrevistas reservadas y franjas disponibles.</p>
         </div>
         @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
-            <a routerLink="/admin/turnos/generar" class="btn btn-primario">+ Generar turnos</a>
+            <div class="acciones">
+                <button
+                    type="button"
+                    class="btn btn-peligro"
+                    title="Borra todos los turnos que se ven en este listado. Usá el filtro para acotar."
+                    [disabled]="eliminando() || cargando() || turnos().length === 0"
+                    (click)="eliminarListados()"
+                >
+                    {{ eliminando() ? "Eliminando..." : "Eliminar turnos listados (" + turnos().length + ")" }}
+                </button>
+                <a routerLink="/admin/turnos/generar" class="btn btn-primario">+ Generar turnos</a>
+            </div>
         }
     </div>
 
     @if (error()) {
         <div class="alerta alerta-error">{{ error() }}</div>
+    }
+
+    @if (aviso()) {
+        <div class="alerta alerta-exito" role="status">{{ aviso() }}</div>
     }
 
     @if (!cargando() && turnos().length > 0) {
@@ -102,7 +117,7 @@
                         <th>Estado</th>
                         <th>Modalidad</th>
                         <th>Familia</th>
-                        <th>WhatsApp</th>
+                        <th>Avisos</th>
                         <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
                     </tr>
                 </thead>
@@ -132,6 +147,9 @@
                                 @if (turno.nombreNino) {
                                     {{ turno.nombreNino }}
                                     <small>{{ turno.nombrePadre }}</small>
+                                    @if (turno.emailPadre) {
+                                        <small>{{ turno.emailPadre }}</small>
+                                    }
                                 } @else {
                                     <span class="texto-suave">—</span>
                                 }
@@ -148,8 +166,8 @@
                                     >
                                         {{
                                             turno.confirmacionEnviada
-                                                ? "Confirmación enviada"
-                                                : "Confirmación pendiente"
+                                                ? "Email enviado"
+                                                : "Email no enviado"
                                         }}
                                     </span>
                                     @if (turno.confirmacionSolicitada) {
