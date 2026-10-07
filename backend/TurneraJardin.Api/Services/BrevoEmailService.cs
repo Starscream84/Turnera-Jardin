@@ -33,15 +33,26 @@ public class BrevoEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task<bool> EnviarConfirmacionAsync(Turno turno, CancellationToken ct = default)
+    public Task<bool> EnviarConfirmacionAsync(Turno turno, CancellationToken ct = default)
+    {
+        var asunto = $"Turno confirmado: {FormatearFecha(turno.Fecha)} a las {FormatearHora(turno.HoraInicio)} hs";
+        return EnviarAsync(turno, "confirmación", asunto, () => ArmarHtml(turno), ct);
+    }
+
+    public Task<bool> EnviarCancelacionAsync(Turno turno, CancellationToken ct = default)
+    {
+        var asunto = $"Turno cancelado: {FormatearFecha(turno.Fecha)} a las {FormatearHora(turno.HoraInicio)} hs";
+        return EnviarAsync(turno, "cancelación", asunto, () => ArmarHtmlCancelacion(turno), ct);
+    }
+
+    /// <summary>Envío común a todos los mails: valida el destinatario, respeta Email:Habilitado y llama a Brevo.</summary>
+    private async Task<bool> EnviarAsync(Turno turno, string tipo, string asunto, Func<string> armarHtml, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(turno.EmailPadre))
         {
-            _logger.LogWarning("Turno {TurnoId} no tiene email cargado, no se envía la confirmación", turno.Id);
+            _logger.LogWarning("Turno {TurnoId} no tiene email cargado, no se envía el mail de {Tipo}", turno.Id, tipo);
             return false;
         }
-
-        var asunto = $"Turno confirmado: {FormatearFecha(turno.Fecha)} a las {FormatearHora(turno.HoraInicio)} hs";
 
         if (!_options.Habilitado)
         {
@@ -55,7 +66,7 @@ public class BrevoEmailService : IEmailService
             sender = new { name = _options.RemitenteNombre, email = _options.RemitenteEmail },
             to = new[] { new { email = turno.EmailPadre, name = turno.NombrePadre ?? turno.EmailPadre } },
             subject = asunto,
-            htmlContent = ArmarHtml(turno)
+            htmlContent = armarHtml()
         };
 
         try
@@ -73,8 +84,8 @@ public class BrevoEmailService : IEmailService
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogError(
-                    "Falló el envío del email de confirmación del turno {TurnoId}: {Status} - {Body}",
-                    turno.Id, response.StatusCode, body);
+                    "Falló el envío del email de {Tipo} del turno {TurnoId}: {Status} - {Body}",
+                    tipo, turno.Id, response.StatusCode, body);
                 return false;
             }
 
@@ -82,9 +93,34 @@ public class BrevoEmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Excepción enviando el email de confirmación del turno {TurnoId}", turno.Id);
+            _logger.LogError(ex, "Excepción enviando el email de {Tipo} del turno {TurnoId}", tipo, turno.Id);
             return false;
         }
+    }
+
+    private string ArmarHtmlCancelacion(Turno turno)
+    {
+        static string E(string? texto) => WebUtility.HtmlEncode(texto ?? "");
+
+        var urlFrontend = _options.UrlFrontend.TrimEnd('/');
+        var reservar = string.IsNullOrWhiteSpace(urlFrontend)
+            ? ""
+            : $"<p>Podés reservar un nuevo turno desde <a href=\"{E(urlFrontend)}\">{E(urlFrontend)}</a>.</p>";
+
+        return $"""
+            <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
+              <h2 style="color: #1a3a74;">Turno cancelado</h2>
+              <p>Hola {E(turno.NombrePadre)}, te avisamos que el jardín canceló la entrevista que tenías reservada.</p>
+              <table style="border-collapse: collapse;">
+                <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(turno.NombreNino)}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Docente</td><td><strong>{E(turno.Docente?.NombreCompleto)}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Fecha</td><td><strong>{E(FormatearFecha(turno.Fecha))}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatearHora(turno.HoraInicio)} a {FormatearHora(turno.HoraFin)} hs</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{turno.Id}</strong></td></tr>
+              </table>
+              {reservar}
+            </div>
+            """;
     }
 
     private string ArmarHtml(Turno turno)

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Services;
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -18,10 +19,14 @@ namespace TurneraJardin.Api.Controllers;
 public class AdminTurnosController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IEmailService _email;
+    private readonly ILogger<AdminTurnosController> _logger;
 
-    public AdminTurnosController(AppDbContext db)
+    public AdminTurnosController(AppDbContext db, IEmailService email, ILogger<AdminTurnosController> logger)
     {
         _db = db;
+        _email = email;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -55,10 +60,14 @@ public class AdminTurnosController : ControllerBase
         return Ok(turnos);
     }
 
+    /// <summary>
+    /// Cancela un turno desde el panel. Si el turno tenía una familia asignada, se le avisa por email.
+    /// Si el mail falla, el turno queda cancelado igual y el error va al log.
+    /// </summary>
     [HttpPost("{id:int}/cancelar")]
     public async Task<IActionResult> Cancelar(int id)
     {
-        var turno = await _db.Turnos.FindAsync(id);
+        var turno = await _db.Turnos.Include(t => t.Docente).FirstOrDefaultAsync(t => t.Id == id);
         if (turno is null)
         {
             return NotFound();
@@ -69,8 +78,20 @@ public class AdminTurnosController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden);
         }
 
+        var estabaReservado = turno.Estado == EstadoTurno.Reservado;
+
         turno.Estado = EstadoTurno.Cancelado;
         await _db.SaveChangesAsync();
+
+        if (estabaReservado)
+        {
+            var enviado = await _email.EnviarCancelacionAsync(turno);
+            if (!enviado)
+            {
+                _logger.LogWarning("El turno {TurnoId} se canceló pero no se pudo mandar el email de aviso a la familia.", turno.Id);
+            }
+        }
+
         return NoContent();
     }
 
