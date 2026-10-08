@@ -1,8 +1,8 @@
-cat > Controllers/AdminDocentesController.cs << 'EOF'
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Models;
+using TurneraJardin.Api.Models.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace TurneraJardin.Api.Controllers;
@@ -75,13 +75,15 @@ public class AdminDocentesController : ControllerBase
             var turnos = new List<Turno>();
             var fecha = DateOnly.FromDateTime(request.FechaDesde);
             var fechaHasta = DateOnly.FromDateTime(request.FechaHasta);
-            var diasSemana = request.DiasSemanA ?? new int[] { };
+            var diasSemanaValidos = request.DiasSemanA ?? new int[] { };
 
             while (fecha <= fechaHasta)
             {
-                int diaSemana = ((int)fecha.DayOfWeek + 6) % 7 + 1; // Convertir a 1=Lunes, 7=Domingo
+                // Convertir DayOfWeek (0=Domingo) a formato esperado (1=Lunes, 7=Domingo)
+                int diaSemana = ((int)fecha.DayOfWeek + 6) % 7 + 1;
 
-                if (diasSemana >= 1 && diasSemana <= 7 && diasSemana <= diasSemana)
+                // Verificar si el día de la semana actual está en la lista de días válidos
+                if (diasSemanaValidos.Contains(diaSemana))
                 {
                     var horaInicio = request.HoraInicio ?? new TimeOnly(9, 0);
                     var horaFin = request.HoraFin ?? new TimeOnly(17, 0);
@@ -96,7 +98,7 @@ public class AdminDocentesController : ControllerBase
                             Fecha = fecha,
                             HoraInicio = hora,
                             HoraFin = hora.AddMinutes(duracion),
-                            Estado = Models.Enums.EstadoTurno.Disponible,
+                            Estado = EstadoTurno.Disponible,
                             Modalidad = "Presencial"
                         };
                         turnos.Add(turno);
@@ -176,4 +178,3 @@ public class ActualizarDocenteRequest
     public string? Nombre { get; set; }
     public string? Email { get; set; }
 }
-EOF
