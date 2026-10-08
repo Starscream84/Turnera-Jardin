@@ -53,4 +53,9 @@ public class Turno
     public bool RecordatorioEnviado { get; set; } = false;
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    public string? EmailPadre { get; set; }
+    public ModalidadEntrevista? Modalidad { get; set; }
+    public DateTime? ConfirmacionSolicitada { get; set; }
+    public string? GoogleEventId { get; set; }
 }
