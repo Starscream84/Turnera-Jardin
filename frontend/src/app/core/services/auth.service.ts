@@ -1,8 +1,14 @@
+
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse } from '../models/auth.model';
+
+export interface CambiarPasswordRequest {
+  passwordActual: string;
+  passwordNueva: string;
+}
 
 const STORAGE_KEY = 'turnera_jardin_sesion';
 
@@ -12,10 +18,10 @@ export class AuthService {
 
   fotoUrl = signal<string | null>(null);
 
-fotoUrlCompleta = computed(() => {
-  const foto = this.fotoUrl();
-  return foto ? `${this.apiUrl}/fotos/${foto}` : null;
-});
+  fotoUrlCompleta = computed(() => {
+    const foto = this.fotoUrl();
+    return foto ? `${environment.apiUrl}/fotos/${foto}` : null;
+  });
 
   readonly estaLogueado = computed(() => this.sesion() !== null);
   readonly nombreUsuario = computed(() => this.sesion()?.nombreCompleto ?? '');
@@ -41,6 +47,16 @@ fotoUrlCompleta = computed(() => {
     return this.sesion()?.token ?? null;
   }
 
+  cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/cambiar-password`, datos);
+  }
+
+  subirFoto(archivo: File): Observable<{ fotoUrl: string }> {
+    const formData = new FormData();
+    formData.append('foto', archivo);
+    return this.http.post<{ fotoUrl: string }>(`${environment.apiUrl}/auth/subir-foto`, formData);
+  }
+
   private leerDeStorage(): LoginResponse | null {
     const crudo = localStorage.getItem(STORAGE_KEY);
     if (!crudo) return null;
@@ -55,15 +71,4 @@ fotoUrlCompleta = computed(() => {
       return null;
     }
   }
-
-  cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
-  return this.http.post<void>(`${this.apiUrl}/auth/cambiar-password`, datos);
-}
-
-subirFoto(archivo: File): Observable<{ fotoUrl: string }> {
-  const formData = new FormData();
-  formData.append('foto', archivo);
-  return this.http.post<{ fotoUrl: string }>(`${this.apiUrl}/auth/subir-foto`, formData);
-}
-
 }
