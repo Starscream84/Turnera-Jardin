@@ -1,9 +1,8 @@
+cat > Controllers/AdminDocentesController.cs << 'EOF'
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Models;
-using TurneraJardin.Api.Models.Enums;
-using TurneraJardin.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace TurneraJardin.Api.Controllers;
@@ -14,19 +13,13 @@ namespace TurneraJardin.Api.Controllers;
 public class AdminDocentesController : ControllerBase
 {
     private readonly AppDbContext _context;
-    private readonly ITurnosService _turnosService;
-    private readonly SlotCalculator _slotCalculator;
     private readonly ILogger<AdminDocentesController> _logger;
 
     public AdminDocentesController(
         AppDbContext context,
-        ITurnosService turnosService,
-        SlotCalculator slotCalculator,
         ILogger<AdminDocentesController> logger)
     {
         _context = context;
-        _turnosService = turnosService;
-        _slotCalculator = slotCalculator;
         _logger = logger;
     }
 
@@ -58,17 +51,15 @@ public class AdminDocentesController : ControllerBase
         if (mes.HasValue && año.HasValue)
         {
             query = query.Where(t =>
-                t.FechaTurno.Month == mes.Value &&
-                t.FechaTurno.Year == año.Value);
+                t.Fecha.Month == mes.Value &&
+                t.Fecha.Year == año.Value);
         }
 
-        var turnos = await query.OrderBy(t => t.FechaTurno).ToListAsync();
+        var turnos = await query.OrderBy(t => t.Fecha).ToListAsync();
         return Ok(turnos);
     }
 
     // POST: api/admindocentes/{docenteId}/generar-turnos
-    // Body: { "fechaDesde": "2026-10-15", "fechaHasta": "2026-12-15", 
-    //         "diasSemana": [1,3,5], "duracionMinutos": 30 }
     [HttpPost("{docenteId}/generar-turnos")]
     public async Task<ActionResult> GenerarTurnos(int docenteId, [FromBody] GenerarTurnosRequest request)
     {
@@ -81,39 +72,45 @@ public class AdminDocentesController : ControllerBase
             if (request.FechaDesde >= request.FechaHasta)
                 return BadRequest("Fecha desde debe ser menor a fecha hasta");
 
-            // Usar SlotCalculator para generar slots
-            var reglasHorarias = new List<ReglaHoraria>
+            var turnos = new List<Turno>();
+            var fecha = DateOnly.FromDateTime(request.FechaDesde);
+            var fechaHasta = DateOnly.FromDateTime(request.FechaHasta);
+            var diasSemana = request.DiasSemanA ?? new int[] { };
+
+            while (fecha <= fechaHasta)
             {
-                new ReglaHoraria
+                int diaSemana = ((int)fecha.DayOfWeek + 6) % 7 + 1; // Convertir a 1=Lunes, 7=Domingo
+
+                if (diasSemana >= 1 && diasSemana <= 7 && diasSemana <= diasSemana)
                 {
-                    DiasSemana = request.DiasSemanaByte,
-                    HoraInicio = request.HoraInicio ?? new TimeSpan(9, 0, 0),
-                    HoraFin = request.HoraFin ?? new TimeSpan(17, 0, 0),
-                    DuracionMinutos = request.DuracionMinutos
+                    var horaInicio = request.HoraInicio ?? new TimeOnly(9, 0);
+                    var horaFin = request.HoraFin ?? new TimeOnly(17, 0);
+                    var duracion = request.DuracionMinutos;
+
+                    var hora = horaInicio;
+                    while (hora.AddMinutes(duracion) <= horaFin)
+                    {
+                        var turno = new Turno
+                        {
+                            DocenteId = docenteId,
+                            Fecha = fecha,
+                            HoraInicio = hora,
+                            HoraFin = hora.AddMinutes(duracion),
+                            Estado = Models.Enums.EstadoTurno.Disponible,
+                            Modalidad = "Presencial"
+                        };
+                        turnos.Add(turno);
+                        hora = hora.AddMinutes(duracion);
+                    }
                 }
-            };
 
-            var slotsGenerados = _slotCalculator.CalcularSlotsDisponibles(
-                request.FechaDesde,
-                request.FechaHasta,
-                reglasHorarias);
-
-            // Crear turnos a partir de slots calculados
-            var turnos = slotsGenerados.Select(slot => new Turno
-            {
-                DocenteId = docenteId,
-                FechaTurno = slot.Fecha,
-                HoraDesde = slot.Hora,
-                HoraHasta = slot.Hora.AddMinutes(request.DuracionMinutos),
-                Estado = EstadoTurno.Disponible,
-                Modalidad = ModalidadEntrevista.Presencial
-            }).ToList();
+                fecha = fecha.AddDays(1);
+            }
 
             _context.Turnos.AddRange(turnos);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation(
-                $"Generados {turnos.Count} turnos para docente {docenteId}");
+            _logger.LogInformation($"Generados {turnos.Count} turnos para docente {docenteId}");
 
             return Ok(new { message = $"Generados {turnos.Count} turnos", turnos });
         }
@@ -167,12 +164,10 @@ public class GenerarTurnosRequest
 {
     public DateTime FechaDesde { get; set; }
     public DateTime FechaHasta { get; set; }
-    public int[] DiasSemanA { get; set; }  // 1=Lunes, 7=Domingo
+    public int[]? DiasSemanA { get; set; }
     public int DuracionMinutos { get; set; }
-    public TimeSpan? HoraInicio { get; set; }
-    public TimeSpan? HoraFin { get; set; }
-
-    public byte DiasSemanaByte => (byte)(DiasSemanA?.Aggregate(0, (acc, d) => acc | (1 << (d - 1))) ?? 0);
+    public TimeOnly? HoraInicio { get; set; }
+    public TimeOnly? HoraFin { get; set; }
 }
 
 public class ActualizarDocenteRequest
@@ -181,3 +176,4 @@ public class ActualizarDocenteRequest
     public string? Nombre { get; set; }
     public string? Email { get; set; }
 }
+EOF
