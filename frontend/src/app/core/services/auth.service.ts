@@ -10,6 +10,13 @@ const STORAGE_KEY = 'turnera_jardin_sesion';
 export class AuthService {
   private sesion = signal<LoginResponse | null>(this.leerDeStorage());
 
+  fotoUrl = signal<string | null>(null);
+
+fotoUrlCompleta = computed(() => {
+  const foto = this.fotoUrl();
+  return foto ? `${this.apiUrl}/fotos/${foto}` : null;
+});
+
   readonly estaLogueado = computed(() => this.sesion() !== null);
   readonly nombreUsuario = computed(() => this.sesion()?.nombreCompleto ?? '');
   readonly rol = computed(() => this.sesion()?.rol ?? null);
@@ -48,4 +55,15 @@ export class AuthService {
       return null;
     }
   }
+
+  cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
+  return this.http.post<void>(`${this.apiUrl}/auth/cambiar-password`, datos);
+}
+
+subirFoto(archivo: File): Observable<{ fotoUrl: string }> {
+  const formData = new FormData();
+  formData.append('foto', archivo);
+  return this.http.post<{ fotoUrl: string }>(`${this.apiUrl}/auth/subir-foto`, formData);
+}
+
 }
