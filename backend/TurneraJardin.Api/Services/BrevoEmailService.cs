@@ -8,7 +8,7 @@ namespace TurneraJardin.Api.Services;
 
 /// <summary>
 /// Envía emails con la API HTTP de Brevo (https://api.brevo.com/v3/smtp/email).
-/// Se usa una API por HTTPS y no SMTP porque el plan gratis de Render bloquea los puertos SMTP salientes.
+/// Se usa una API por HTTPS y no SMTP para no depender de que el hosting permita puertos SMTP salientes.
 /// </summary>
 public class BrevoEmailService : IEmailService
 {
