@@ -25,12 +25,16 @@ export class FormularioReservaComponent implements OnInit {
   error = signal<string | null>(null);
   confirmacion = signal<TurnoConfirmado | null>(null);
 
-  form = this.fb.nonNullable.group({
-    nombrePadre: ['', [Validators.required, Validators.minLength(2)]],
-    telefonoPadre: ['', [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
-    nombreNino: ['', [Validators.required, Validators.minLength(2)]],
-    observaciones: ['']
-  });
+this.form = this.fb.group({
+  nombrePadre: ['', [Validators.required]],
+  telefonoPadre: ['', [Validators.required, PhoneValidator.valido()]],
+  emailPadre: ['', [Validators.required, Validators.email]],  // AGREGAR
+  modalidad: ['Presencial', [Validators.required]],  // AGREGAR
+  nombreNino: ['', [Validators.required]],
+  apellidoPadre: ['', [Validators.required]],
+  apellidoNino: ['', [Validators.required]],
+  observaciones: ['']
+});
 
   ngOnInit(): void {
     this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));

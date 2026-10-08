@@ -1,14 +1,27 @@
+
 import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse } from '../models/auth.model';
 
+export interface CambiarPasswordRequest {
+  passwordActual: string;
+  passwordNueva: string;
+}
+
 const STORAGE_KEY = 'turnera_jardin_sesion';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private sesion = signal<LoginResponse | null>(this.leerDeStorage());
+
+  fotoUrl = signal<string | null>(null);
+
+  fotoUrlCompleta = computed(() => {
+    const foto = this.fotoUrl();
+    return foto ? `${environment.apiUrl}/fotos/${foto}` : null;
+  });
 
   readonly estaLogueado = computed(() => this.sesion() !== null);
   readonly nombreUsuario = computed(() => this.sesion()?.nombreCompleto ?? '');
@@ -32,6 +45,16 @@ export class AuthService {
 
   get token(): string | null {
     return this.sesion()?.token ?? null;
+  }
+
+  cambiarPassword(datos: CambiarPasswordRequest): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/auth/cambiar-password`, datos);
+  }
+
+  subirFoto(archivo: File): Observable<{ fotoUrl: string }> {
+    const formData = new FormData();
+    formData.append('foto', archivo);
+    return this.http.post<{ fotoUrl: string }>(`${environment.apiUrl}/auth/subir-foto`, formData);
   }
 
   private leerDeStorage(): LoginResponse | null {
