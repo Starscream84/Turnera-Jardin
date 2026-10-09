@@ -54,8 +54,6 @@ public class Turno
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
-    public string? EmailPadre { get; set; }
-    public ModalidadEntrevista? Modalidad { get; set; }
+    /// <summary>Fecha en que se solicitó la confirmación del turno.</summary>
     public DateTime? ConfirmacionSolicitada { get; set; }
-    public string? GoogleEventId { get; set; }
 }
