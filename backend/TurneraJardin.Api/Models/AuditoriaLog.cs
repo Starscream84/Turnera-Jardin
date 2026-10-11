@@ -10,5 +10,5 @@ public class AuditoriaLog
     public Usuario? Usuario { get; set; }
     public string Accion { get; set; } = string.Empty;
     public string? Detalles { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime FechaUtc { get; set; } = DateTime.UtcNow;
 }
