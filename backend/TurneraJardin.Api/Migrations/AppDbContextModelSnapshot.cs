@@ -32,29 +32,13 @@ namespace TurneraJardin.Api.Migrations
 
                     b.Property<string>("Accion")
                         .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("varchar(60)");
+                        .HasColumnType("longtext");
 
-                    b.Property<string>("Detalle")
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
-
-                    b.Property<string>("Entidad")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("varchar(60)");
-
-                    b.Property<string>("EntidadId")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)");
+                    b.Property<string>("Detalles")
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("FechaUtc")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<string>("UsuarioEmail")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("varchar(160)");
 
                     b.Property<int?>("UsuarioId")
                         .HasColumnType("int");
@@ -62,6 +46,8 @@ namespace TurneraJardin.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FechaUtc");
+
+                    b.HasIndex("UsuarioId");
 
                     b.ToTable("AuditoriaLogs");
                 });
@@ -154,6 +140,9 @@ namespace TurneraJardin.Api.Migrations
                     b.Property<bool>("ConfirmacionEnviada")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<DateTime?>("ConfirmacionSolicitada")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<int>("DocenteId")
                         .HasColumnType("int");
 
@@ -231,12 +220,21 @@ namespace TurneraJardin.Api.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FotoUrl")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("NombreCompleto")
                         .IsRequired()
                         .HasColumnType("longtext");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PasswordTemporalHash")
                         .HasColumnType("longtext");
 
                     b.Property<DateTime?>("PasswordTemporalVenceUtc")
@@ -256,6 +254,15 @@ namespace TurneraJardin.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("TurneraJardin.Api.Models.AuditoriaLog", b =>
+                {
+                    b.HasOne("TurneraJardin.Api.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("TurneraJardin.Api.Models.Disponibilidad", b =>
