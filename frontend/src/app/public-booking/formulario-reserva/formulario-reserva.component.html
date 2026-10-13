@@ -4,7 +4,7 @@
       <div class="alerta alerta-exito">¡Turno confirmado!</div>
       <h2>{{ formatearFecha(c.fecha) }}</h2>
       <p>{{ formatearHora(c.horaInicio) }} hs con {{ c.docenteNombre }}</p>
-      <p *ngIf="turnoConfirmado">vConfirmación enviada al email: <strong>{{ turnoConfirmado.emailPadre }}</strong> </p>
+      <p *ngIf="confirmacion()">Confirmación enviada al email: <strong>{{ c.emailPadre }}</strong></p>
       <p class="texto-suave">Número de turno: <strong>#{{ c.id }}</strong> (guardalo, lo necesitás si querés cancelar).</p>
       <a routerLink="/reservar" class="btn btn-secundario">Volver al inicio</a>
     </div>
@@ -42,40 +42,27 @@
             <span class="texto-suave">A este número te vamos a mandar la confirmación y el recordatorio.</span>
           </div>
 
-          <!-- Campo Email -->
-          <div class="form-group">
-           <label for="emailPadre">Email *</label>
-          <input 
-              type="email" 
-              id="emailPadre"
-              formControlName="emailPadre" 
-              required
-              placeholder="tu@email.com"
-              />
-              </div>
+          <div class="form-grupo">
+            <label for="emailPadre">Email</label>
+            <input id="emailPadre" type="email" formControlName="emailPadre" placeholder="tu@email.com" />
+            @if (form.controls.emailPadre.invalid && form.controls.emailPadre.touched) {
+              <span class="error-campo">Ingresá un email válido.</span>
+            }
+          </div>
 
-<!-- Modalidad de Entrevista -->
-        <div class="form-group">
-          <label>Modalidad de Entrevista *</label>
-          <div class="radio-group">
-<label>
-      <input 
-        type="radio" 
-        value="Presencial" 
-        formControlName="modalidad"
-      />
-      Presencial
-      </label>
-    <label>
-      <input 
-        type="radio" 
-        value="Virtual" 
-        formControlName="modalidad"
-      />
-      Virtual
-    </label>
-  </div>
-</div>
+          <div class="form-grupo">
+            <label>Modalidad de Entrevista</label>
+            <div class="radio-group">
+              <label>
+                <input type="radio" value="Presencial" formControlName="modalidad" />
+                Presencial
+              </label>
+              <label>
+                <input type="radio" value="Virtual" formControlName="modalidad" />
+                Virtual
+              </label>
+            </div>
+          </div>
 
           <div class="form-grupo">
             <label for="nombreNino">Nombre y apellido del niño/a</label>
