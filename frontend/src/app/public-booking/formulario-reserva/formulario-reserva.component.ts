@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DocentesService } from '../../core/services/docentes.service';
 import { TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
@@ -8,7 +9,7 @@ import { TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model'
 @Component({
   selector: 'app-formulario-reserva',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, CommonModule],
   templateUrl: './formulario-reserva.component.html'
 })
 export class FormularioReservaComponent implements OnInit {
@@ -16,6 +17,7 @@ export class FormularioReservaComponent implements OnInit {
   private docentesService = inject(DocentesService);
   private fb = inject(FormBuilder);
 
+  form!: FormGroup;
   docenteId!: number;
   turnoId!: number;
   turnoSeleccionado = signal<TurnoDisponible | null>(null);
@@ -25,16 +27,18 @@ export class FormularioReservaComponent implements OnInit {
   error = signal<string | null>(null);
   confirmacion = signal<TurnoConfirmado | null>(null);
 
-  form = this.fb.nonNullable.group({
-    nombrePadre: ['', [Validators.required, Validators.minLength(2)]],
-    telefonoPadre: ['', [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
-    nombreNino: ['', [Validators.required, Validators.minLength(2)]],
-    observaciones: ['']
-  });
-
   ngOnInit(): void {
     this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));
     this.turnoId = Number(this.route.snapshot.paramMap.get('turnoId'));
+
+    this.form = this.fb.group({
+      nombrePadre: ['', [Validators.required]],
+      telefonoPadre: ['', [Validators.required, Validators.pattern(/^\d{10,}$/)]],
+      emailPadre: ['', [Validators.required, Validators.email]],
+      modalidad: ['Presencial', [Validators.required]],
+      nombreNino: ['', [Validators.required]],
+      observaciones: ['']
+    });
 
     this.docentesService.turnosDisponibles(this.docenteId).subscribe({
       next: (turnos) => {

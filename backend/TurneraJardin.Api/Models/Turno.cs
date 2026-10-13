@@ -53,4 +53,7 @@ public class Turno
     public bool RecordatorioEnviado { get; set; } = false;
 
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Fecha en que se solicitó la confirmación del turno.</summary>
+    public DateTime? ConfirmacionSolicitada { get; set; }
 }

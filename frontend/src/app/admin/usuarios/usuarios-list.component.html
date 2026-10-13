@@ -1,0 +1,104 @@
+<div class="contenedor">
+  <div class="barra-superior">
+    <div>
+      <h1>Usuarios</h1>
+      <p class="texto-suave" style="max-width: 760px;">Cada docente necesita su propio usuario para entrar al panel y ver solo sus propios turnos. Dirección puede crear esos accesos acá y restablecer contraseñas cuando haga falta.</p>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alerta alerta-error">{{ error() }}</div>
+  }
+
+  @if (credencialesGeneradas(); as credenciales) {
+    <div class="card credenciales" role="status">
+      <strong>Contraseña generada para {{ credenciales.email }}:</strong>
+      <div><span class="password-temporal">{{ credenciales.passwordTemporal }}</span></div>
+      <p class="texto-suave" style="margin: 0 0 14px;">Compartila con la persona por un medio seguro (no queda guardada en ningún otro lado) y pedile que la cambie apenas entre, desde "Mi contraseña".</p>
+      <button type="button" class="btn btn-secundario btn-chico" (click)="cerrarCredenciales()">Cerrar</button>
+    </div>
+  }
+
+  @if (cargando()) {
+    <p class="texto-suave">Cargando...</p>
+  } @else {
+    <div class="card" style="margin-bottom: 28px;">
+      <span class="etiqueta etiqueta-chica etiqueta-naranja">Docentes sin acceso: {{ docentesSinUsuario().length }}</span>
+      <h2 style="font-size: 1.4rem;">Crear login para un docente</h2>
+
+      @if (docentesSinUsuario().length === 0) {
+        <p class="texto-suave" style="margin: 0;">Todos los docentes activos ya tienen un usuario creado.</p>
+      } @else {
+        <form [formGroup]="formCrear" (ngSubmit)="crearParaDocente()" class="filtros" style="padding: 0; margin: 0;">
+          <div class="form-grupo" style="min-width: 220px;">
+            <label for="docenteId">Docente</label>
+            <select id="docenteId" formControlName="docenteId">
+              <option value="" disabled>Elegí un docente</option>
+              @for (docente of docentesSinUsuario(); track docente.id) {
+                <option [value]="docente.id">{{ docente.nombre }} {{ docente.apellido }} ({{ docente.email }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-grupo" style="min-width: 220px;">
+            <label for="password">Contraseña inicial (opcional)</label>
+            <input id="password" type="text" formControlName="password" placeholder="Vacío = se genera una automática" />
+          </div>
+          <button type="submit" class="btn btn-primario" [disabled]="creando()">
+            {{ creando() ? 'Creando...' : 'Crear usuario' }}
+          </button>
+        </form>
+      }
+    </div>
+
+    <h2 style="font-size: 1.4rem;">Accesos existentes</h2>
+    <div class="tabla-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Docente vinculado</th>
+            <th>Estado</th>
+            <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of usuarios(); track usuario.id) {
+            <tr>
+              <td>
+                <div class="celda-usuario">
+                  @if (fotoCompleta(usuario); as foto) {
+                    <img [src]="foto" alt="" class="avatar" />
+                  } @else {
+                    <span class="avatar" [style.background]="colorAvatar(usuario.id)" aria-hidden="true">{{ iniciales(usuario.nombreCompleto) }}</span>
+                  }
+                  <div>
+                    <strong>{{ usuario.nombreCompleto }}</strong>
+                    <span class="texto-suave">{{ usuario.email }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge" [class]="usuario.rol === 'Docente' ? 'badge-reservado' : 'badge-admin'">{{ etiquetaRol(usuario) }}</span>
+              </td>
+              <td>{{ usuario.docenteNombre || '—' }}</td>
+              <td>
+                @if (usuario.activo) {
+                  <span class="badge badge-reservado">Activo</span>
+                } @else {
+                  <span class="badge badge-inactivo">Inactivo</span>
+                }
+              </td>
+              <td class="celda-acciones">
+                <button type="button" class="btn btn-secundario btn-chico" (click)="restablecer(usuario)">Restablecer contraseña</button>
+                <button type="button" class="btn btn-chico" [class]="usuario.activo ? 'btn-peligro' : 'btn-verde'" (click)="alternarActivo(usuario)">
+                  {{ usuario.activo ? 'Desactivar' : 'Activar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

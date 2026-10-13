@@ -9,4 +9,5 @@ export interface LoginResponse {
   nombreCompleto: string;
   rol: 'Admin' | 'Docente';
   docenteId: number | null;
+  fotoUrl: string | null;
 }
