@@ -4,7 +4,16 @@ using TurneraJardin.Api.Models.Enums;
 namespace TurneraJardin.Api.Dtos;
 
 /// <summary>Franja disponible, tal como la ve un padre/madre antes de reservar.</summary>
-public record TurnoDisponibleDto(int Id, DateOnly Fecha, TimeOnly HoraInicio, TimeOnly HoraFin);
+public record TurnoDisponibleDto(
+    int Id,
+    int DocenteId,
+    string NombreDocente,
+    string SalaDocente,
+    DateOnly Fecha,
+    TimeOnly HoraInicio,
+    TimeOnly HoraFin,
+    string Estado
+);
 
 /// <summary>Datos que completa el padre/madre para reservar un turno ya elegido.</summary>
 public class ReservaTurnoDto

@@ -23,6 +23,40 @@ public class TurnosController : ControllerBase
         _logger = logger;
     }
 
+    [HttpGet("disponibles")]
+    public async Task<ActionResult<IEnumerable<TurnoDisponibleDto>>> ObtenerDisponibles(
+        [FromQuery] int? docenteId, 
+        [FromQuery] DateOnly? fecha)
+    {
+        var query = _db.Turnos
+            .Where(t => t.Estado == EstadoTurno.Disponible);
+        
+        if (docenteId.HasValue)
+            query = query.Where(t => t.DocenteId == docenteId.Value);
+        
+        if (fecha != default)
+            query = query.Where(t => t.Fecha == fecha);
+        
+        var turnos = await query
+            .Include(t => t.Docente)
+            .OrderBy(t => t.Fecha)
+            .ThenBy(t => t.HoraInicio)
+            .ToListAsync();
+        
+        var dtos = turnos.Select(t => new TurnoDisponibleDto(
+            t.Id,
+            t.DocenteId,
+            t.Docente!.NombreCompleto,
+            t.Docente!.Sala ?? "Sin asignar",
+            t.Fecha,
+            t.HoraInicio,
+            t.HoraFin,
+            t.Estado.ToString()
+        )).ToList();
+        
+        return Ok(dtos);
+    }
+
     [HttpPost("{id:int}/reservar")]
     public async Task<ActionResult<TurnoConfirmadoDto>> Reservar(int id, ReservaTurnoDto dto)
     {

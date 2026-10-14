@@ -50,8 +50,17 @@ public class DocentesController : ControllerBase
                         && t.Estado == EstadoTurno.Disponible
                         && t.Fecha >= fechaDesde
                         && t.Fecha <= fechaHasta)
+            .Include(t => t.Docente)
             .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
-            .Select(t => new TurnoDisponibleDto(t.Id, t.Fecha, t.HoraInicio, t.HoraFin))
+            .Select(t => new TurnoDisponibleDto(
+                t.Id,
+                t.DocenteId,
+                t.Docente!.NombreCompleto,
+                t.Docente!.Sala ?? "Sin asignar",
+                t.Fecha,
+                t.HoraInicio,
+                t.HoraFin,
+                t.Estado.ToString()))
             .ToListAsync();
 
         return Ok(turnos);
