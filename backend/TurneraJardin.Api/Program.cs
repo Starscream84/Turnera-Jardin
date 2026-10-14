@@ -11,9 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // --- Base de datos (MySQL) ---
 var connectionString = builder.Configuration.GetConnectionString("Default") 
-    ?? "Server=localhost;Database=TurneraJardin;User=root;Password=Trabalenguas2026;";
+    ?? throw new InvalidOperationException("Falta ConnectionStrings:Default");
+
+var csb = new MySqlConnector.MySqlConnectionStringBuilder(connectionString);
+    Console.WriteLine($"[DB] Host: {csb.Server} | Puerto: {csb.Port} | Base: {csb.Database}");
 builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)),
+    mysql => mysql.EnableRetryOnFailure()));
     
 // --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));

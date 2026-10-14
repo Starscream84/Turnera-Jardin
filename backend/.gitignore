@@ -5,3 +5,4 @@ obj/
 *.db-wal
 appsettings.Production.json
 .vs/
+backend/TurneraJardin.Api/appsettings.Development.json
