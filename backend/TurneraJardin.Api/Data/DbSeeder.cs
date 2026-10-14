@@ -36,7 +36,7 @@ public static class DbSeeder
     public static void Seed(AppDbContext db)
     {
         db.Database.EnsureCreated();
-        AsegurarColumnasTurnos(db);
+        // AsegurarColumnasTurnos(db); // Solo necesario en SQLite, no en MySQL
 
         if (db.Docentes.Any())
         {

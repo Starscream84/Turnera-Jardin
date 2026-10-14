@@ -9,10 +9,12 @@ using TurneraJardin.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Base de datos (SQLite, un solo archivo, sin instalar ningún motor aparte) ---
-var connectionString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=turnera.db";
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(connectionString));
-
+// --- Base de datos (MySQL) ---
+var connectionString = builder.Configuration.GetConnectionString("Default") 
+    ?? "Server=localhost;Database=TurneraJardin;User=root;Password=Trabalenguas2026;";
+builder.Services.AddDbContext<AppDbContext>(options => 
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    
 // --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppCloudApiService>();
@@ -63,8 +65,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy(CorsPolicyFrontend, policy =>
     {
         policy.WithOrigins(origenesPermitidos)
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
