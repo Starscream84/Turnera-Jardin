@@ -73,7 +73,8 @@ public class TurnosController : ControllerBase
     }
 
     /// <summary>
-    /// Cancela un turno reservado. Por seguridad básica, se exige el mismo teléfono con el que se reservó.
+    /// Cancela un turno reservado y lo libera como disponible para que otra familia lo pueda reservar.
+    /// Por seguridad básica, se exige el mismo teléfono con el que se reservó.
     /// </summary>
     [HttpPost("{id:int}/cancelar")]
     public async Task<IActionResult> Cancelar(int id, [FromQuery] string telefono)
@@ -93,7 +94,20 @@ public class TurnosController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { mensaje = "El teléfono no coincide con el de la reserva." });
         }
 
-        turno.Estado = EstadoTurno.Cancelado;
+        // Liberar el turno para que otra familia lo pueda reservar
+        turno.Estado = EstadoTurno.Disponible;
+        
+        // Limpiar todos los datos de la reserva para que el slot quede disponible nuevamente
+        turno.NombrePadre = null;
+        turno.TelefonoPadre = null;
+        turno.EmailPadre = null;
+        turno.NombreNino = null;
+        turno.Observaciones = null;
+        turno.Modalidad = null;
+        turno.FechaReserva = null;
+        turno.ConfirmacionEnviada = false;
+        turno.RecordatorioEnviado = false;
+        turno.ConfirmacionSolicitada = null;
         await _db.SaveChangesAsync();
 
         return NoContent();

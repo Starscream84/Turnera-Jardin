@@ -61,8 +61,9 @@ public class AdminTurnosController : ControllerBase
     }
 
     /// <summary>
-    /// Cancela un turno desde el panel. Si el turno tenía una familia asignada, se le avisa por email.
-    /// Si el mail falla, el turno queda cancelado igual y el error va al log.
+    /// Cancela un turno desde el panel y lo libera como disponible para que otra familia lo pueda reservar.
+    /// Si el turno tenía una familia asignada, se le avisa por email que su reserva fue cancelada.
+    /// Si el mail falla, el turno queda liberado igual y el error va al log.
     /// </summary>
     [HttpPost("{id:int}/cancelar")]
     public async Task<IActionResult> Cancelar(int id)
@@ -80,7 +81,24 @@ public class AdminTurnosController : ControllerBase
 
         var estabaReservado = turno.Estado == EstadoTurno.Reservado;
 
-        turno.Estado = EstadoTurno.Cancelado;
+        // Liberar el turno para que otra familia lo pueda reservar
+        turno.Estado = EstadoTurno.Disponible;
+        
+        // Limpiar todos los datos de la reserva para que el slot quede disponible nuevamente
+        if (estabaReservado)
+        {
+            turno.NombrePadre = null;
+            turno.TelefonoPadre = null;
+            turno.EmailPadre = null;
+            turno.NombreNino = null;
+            turno.Observaciones = null;
+            turno.Modalidad = null;
+            turno.FechaReserva = null;
+            turno.ConfirmacionEnviada = false;
+            turno.RecordatorioEnviado = false;
+            turno.ConfirmacionSolicitada = null;
+        }
+        
         await _db.SaveChangesAsync();
 
         if (estabaReservado)
