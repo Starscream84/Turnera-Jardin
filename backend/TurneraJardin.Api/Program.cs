@@ -33,7 +33,9 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 
 // --- Autenticación JWT ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Falta configurar Jwt:Key en appsettings.json");
+var jwtKey = jwtSection["Key"] ;
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException("Falta configurar Jwt:Key (variable de entorno Jwt__Key) o tiene menos de 32 caracteres.");
 
 builder.Services.AddAuthentication(options =>
 {
