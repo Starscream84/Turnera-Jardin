@@ -81,6 +81,14 @@ public class AdminTurnosController : ControllerBase
 
         var estabaReservado = turno.Estado == EstadoTurno.Reservado;
 
+        if(estabaReservado)
+        {
+            var enviado = await _email.EnviarCancelacionAsync(turno);
+            if(!enviado)
+            {
+                _logger.LogWarning("El turno {TurnoId} se cancelo pero no se pudo mandar el email de aviso a la familia.", turno.Id);
+            }
+        }
         // Liberar el turno para que otra familia lo pueda reservar
         turno.Estado = EstadoTurno.Disponible;
         
@@ -100,15 +108,6 @@ public class AdminTurnosController : ControllerBase
         }
         
         await _db.SaveChangesAsync();
-
-        if (estabaReservado)
-        {
-            var enviado = await _email.EnviarCancelacionAsync(turno);
-            if (!enviado)
-            {
-                _logger.LogWarning("El turno {TurnoId} se canceló pero no se pudo mandar el email de aviso a la familia.", turno.Id);
-            }
-        }
 
         return NoContent();
     }
