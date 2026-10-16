@@ -16,8 +16,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 var csb = new MySqlConnector.MySqlConnectionStringBuilder(connectionString);
     Console.WriteLine($"[DB] Host: {csb.Server} | Puerto: {csb.Port} | Base: {csb.Database}");
 builder.Services.AddDbContext<AppDbContext>(options => 
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)),
-    mysql => mysql.EnableRetryOnFailure()));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 11))));
     
 // --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));

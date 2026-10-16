@@ -263,13 +263,13 @@ a {
   margin: 64px 0 0;
 }
 
-.hero-linea {
+/* .hero-linea {
   display: block;
   width: 2px;
   height: 64px;
   background: #fff;
   margin: 26px auto;
-}
+} */
 
 .hero-bajada {
   max-width: 760px;
