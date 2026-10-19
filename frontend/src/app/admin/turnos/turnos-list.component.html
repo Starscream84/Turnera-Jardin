@@ -4,8 +4,17 @@
             <h1>Turnos</h1>
             <p class="texto-suave">Entrevistas reservadas y franjas disponibles.</p>
         </div>
-        @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
-            <div class="acciones">
+        <div class="acciones">
+            <button
+                type="button"
+                class="btn btn-secundario"
+                title="Imprime los turnos reservados de este listado. Usa el filtro de fechas para acotar."
+                [disabled]="cargando() || reservadosParaImprimir().length === 0"
+                (click)="imprimir()"
+            >
+                Imprimir listado ({{ reservadosParaImprimir().length }})
+            </button>
+            @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
                 <button
                     type="button"
                     class="btn btn-peligro"
@@ -13,11 +22,15 @@
                     [disabled]="eliminando() || cargando() || turnos().length === 0"
                     (click)="eliminarListados()"
                 >
-                    {{ eliminando() ? "Eliminando..." : "Eliminar turnos listados (" + turnos().length + ")" }}
+                    {{
+                        eliminando()
+                            ? "Eliminando..."
+                            : "Eliminar turnos listados (" + turnos().length + ")"
+                    }}
                 </button>
                 <a routerLink="/admin/turnos/generar" class="btn btn-primario">+ Generar turnos</a>
-            </div>
-        }
+            }
+        </div>
     </div>
 
     @if (error()) {
@@ -118,7 +131,7 @@
                         <th>Modalidad</th>
                         <th>Familia</th>
                         <th>Avisos</th>
-                        <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
+                        <th><span style="position: absolute; left: -9999px">Acciones</span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -128,7 +141,9 @@
                             <td>{{ formatearHora(turno.horaInicio) }}</td>
                             @if (auth.rol() === "Admin" || auth.rol() === "Coordinador") {
                                 <td>
-                                    <strong style="font-weight: 500">{{ turno.docenteNombre }}</strong>
+                                    <strong style="font-weight: 500">{{
+                                        turno.docenteNombre
+                                    }}</strong>
                                 </td>
                             }
                             <td>
@@ -213,4 +228,62 @@
             </table>
         </div>
     }
+
+    <section class="solo-impresion">
+        <header class="impresion-encabezado">
+            <div>
+                <strong>Colegio IDRA - Nivel Inicial</strong>
+                <h1>Entrevistas reservadas</h1>
+                <p>
+                    @if (docenteImpresion(); as docente) {
+                        Docente: {{ docente }}
+                    } @else {
+                        Todas las docentes
+                    }
+                    - {{ rangoImpresion() }}
+                </p>
+            </div>
+            <p>Impreso el {{ fechaImpresion }}</p>
+        </header>
+
+        <table class="tabla-impresion">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    @if (!docenteImpresion()) {
+                        <th>Docente</th>
+                    }
+                    <th>Modalidad</th>
+                    <th>Niño/a</th>
+                    <th>Padre/madre</th>
+                    <th class="col-observaciones">Asistio / Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (turno of reservadosParaImprimir(); track turno.id) {
+                    <tr>
+                        <td>
+                            {{ formatearFecha(turno.fecha) }}
+                        </td>
+                        <td>
+                            {{ formatearHora(turno.horaInicio) }}
+                        </td>
+                        @if (!docenteImpresion()) {
+                            <td>{{ turno.docenteNombre }}</td>
+                        }
+                        <td>{{ turno.modalidad }}</td>
+                        <td>{{ turno.nombreNino }}</td>
+                        <td>{{ turno.nombrePadre }}</td>
+                        <td></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="impresion-total">
+            Total:
+            {{ reservadosParaImprimir().length }} entrevista(s)
+        </p>
+    </section>
 </div>
