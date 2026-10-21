@@ -6,3 +6,5 @@ obj/
 appsettings.Production.json
 .vs/
 TurneraJardin.Api/appsettings.Development.json
+TurneraJardin.Api/wwwroot/fotos-perfil/*
+!TurneraJardin.Api/wwwroot/fotos-perfil/.gitkeep
