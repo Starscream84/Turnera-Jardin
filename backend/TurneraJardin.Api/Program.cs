@@ -6,6 +6,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Services;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +101,42 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
 
+// -- IP real del cliente detras del proxy de Railway
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =  ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// -- Limites de pedidos por IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Reservar y cancelar: 5 pedidos cada 10 minutos por IP
+    options.AddPolicy("publico", context =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0
+        }));
+
+    // Login: 10 intentos cada 5 minutos por IP
+    options.AddPolicy("login", context => 
+    RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+    _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = 10,
+        Window = TimeSpan.FromMinutes(5),
+        QueueLimit = 0
+    }));
+});
+
+
 var app = builder.Build();
 
 // --- Crea la base de datos y carga los datos de ejemplo la primera vez que arranca ---
@@ -107,6 +146,8 @@ using (var scope = app.Services.CreateScope())
     DbSeeder.Seed(db);
 }
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -115,6 +156,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles(); // sirve wwwroot/fotos-perfil (fotos de perfil de los usuarios)
 app.UseCors(CorsPolicyFrontend);
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

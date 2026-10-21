@@ -4,6 +4,7 @@ using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models.Enums;
 using TurneraJardin.Api.Services;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -57,6 +58,7 @@ public class TurnosController : ControllerBase
         return Ok(dtos);
     }
 
+    [EnableRateLimiting("publico")]
     [HttpPost("{id:int}/reservar")]
     public async Task<ActionResult<TurnoConfirmadoDto>> Reservar(int id, ReservaTurnoDto dto)
     {
@@ -110,6 +112,7 @@ public class TurnosController : ControllerBase
     /// Cancela un turno reservado y lo libera como disponible para que otra familia lo pueda reservar.
     /// Por seguridad básica, se exige el mismo teléfono con el que se reservó.
     /// </summary>
+    [EnableRateLimiting("publico")]
     [HttpPost("{id:int}/cancelar")]
     public async Task<IActionResult> Cancelar(int id, [FromQuery] string telefono)
     {

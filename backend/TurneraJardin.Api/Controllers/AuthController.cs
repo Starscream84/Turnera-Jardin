@@ -7,6 +7,7 @@ using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Services;
 using System.Linq;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -24,6 +25,7 @@ public class AuthController : ControllerBase
         _jwtService = jwtService;
     }
 
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponseDto>> Login(LoginDto dto)
     {
