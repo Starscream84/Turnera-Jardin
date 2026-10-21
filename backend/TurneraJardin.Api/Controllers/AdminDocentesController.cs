@@ -26,7 +26,7 @@ public class AdminDocentesController : ControllerBase
     {
         var docentes = await _db.Docentes
             .OrderBy(d => d.Apellido).ThenBy(d => d.Nombre)
-            .Select(d => new DocenteAdminDto(d.Id, d.Nombre, d.Apellido, d.Email, d.Sala, d.Activo))
+            .Select(d => new DocenteAdminDto(d.Id, d.Nombre, d.Apellido, d.Email, d.Sala, d.Activo, d.Ciclo))
             .ToListAsync();
 
         return Ok(docentes);
@@ -47,13 +47,14 @@ public class AdminDocentesController : ControllerBase
             Apellido = dto.Apellido.Trim(),
             Email = dto.Email.Trim(),
             Sala = dto.Sala?.Trim(),
+            Ciclo = dto.Ciclo,
             Activo = true
         };
 
         _db.Docentes.Add(docente);
         await _db.SaveChangesAsync();
 
-        var resultado = new DocenteAdminDto(docente.Id, docente.Nombre, docente.Apellido, docente.Email, docente.Sala, docente.Activo);
+        var resultado = new DocenteAdminDto(docente.Id, docente.Nombre, docente.Apellido, docente.Email, docente.Sala, docente.Activo, docente.Ciclo);
         return CreatedAtAction(nameof(Listar), new { id = docente.Id }, resultado);
     }
 
@@ -70,6 +71,7 @@ public class AdminDocentesController : ControllerBase
         docente.Apellido = dto.Apellido.Trim();
         docente.Email = dto.Email.Trim();
         docente.Sala = dto.Sala?.Trim();
+        docente.Ciclo = dto.Ciclo;
         docente.Activo = dto.Activo;
 
         await _db.SaveChangesAsync();

@@ -11,26 +11,24 @@ namespace TurneraJardin.Api.Data;
 /// </summary>
 public static class DbSeeder
 {
-    private static readonly (string Nombre, string Apellido, string Sala)[] DocentesDemo =
+    private static readonly (string Nombre, string Apellido, string Sala, CicloDocente? Ciclo, string Email)[] DocentesDemo =
     {
-        ("Ana",      "Gómez",     "Sala Celeste (Lactantes)"),
-        ("Bruno",    "Rodríguez", "Sala Celeste (Lactantes)"),
-        ("Carla",    "Fernández", "Sala Verde (1 año)"),
-        ("Diego",    "López",     "Sala Verde (1 año)"),
-        ("Elena",    "Martínez",  "Sala Verde (1 año)"),
-        ("Franco",   "García",    "Sala Amarilla (2 años)"),
-        ("Gisela",   "Pérez",     "Sala Amarilla (2 años)"),
-        ("Hernán",   "Sánchez",   "Sala Amarilla (2 años)"),
-        ("Ivana",    "Romero",    "Sala Naranja (3 años)"),
-        ("Julián",   "Torres",    "Sala Naranja (3 años)"),
-        ("Karina",   "Flores",    "Sala Naranja (3 años)"),
-        ("Lucas",    "Acosta",    "Sala Roja (4 años)"),
-        ("Marina",   "Benítez",   "Sala Roja (4 años)"),
-        ("Nicolás",  "Suárez",    "Sala Roja (4 años)"),
-        ("Ornella",  "Medina",    "Sala Azul (5 años)"),
-        ("Pablo",    "Castro",    "Sala Azul (5 años)"),
-        ("Quimey",   "Ríos",      "Educación Física"),
-        ("Rocío",    "Molina",    "Música"),
+        ("Lucia", "Galera", "Deambuladores A", CicloDocente.PrimerCiclo, "luciasoledadgalera@gmail.com"),
+        ("Ana Clara", "Osses", "Deambuladores B", CicloDocente.PrimerCiclo, "anaclaraosses21@gmail.com"),
+        ("Belén", "Alias", "Maternal A y B", CicloDocente.PrimerCiclo, "belenalias4453@gmail.com"),
+        ("Ana Belen", "Recchia", "Maternal D", CicloDocente.PrimerCiclo, "anabelenrecchia7@gmail.com"),
+        ("Melanie", "Jaime", "Maternal C", CicloDocente.PrimerCiclo, "jaimemelanie13@gmail.com"),
+        ("Ayelén", "Peralta", "Primera sección A y B", CicloDocente.SegundoCiclo, "ayelennperalta@gmail.com"),
+        ("Belen", "Navarro", "Primera sección C", CicloDocente.SegundoCiclo, "belenavarrov@gmail.com"),
+        ("Delfina", "Irigoyen", "Primera sección D", CicloDocente.SegundoCiclo, "irigoyendelfina9@gmail.com"),
+        ("Paula", "Oviedo", "Segunda sección A", CicloDocente.SegundoCiclo, "paulaoviedo92@gmail.com"),
+        ("Paola", "Cano", "Segunda sección B", CicloDocente.SegundoCiclo, "canopaola@gmail.com"),
+        ("Ivana", "Salinas", "Segunda sección D", CicloDocente.SegundoCiclo, "ivi_giselle@hotmail.com"),
+        ("Guadalupe", "Palavecino", "Segunda sección C", CicloDocente.SegundoCiclo, "laraguadalupepalavecino28@gmail.com"),
+        ("Belen", "Perez Pegue", "Tercera sección A", CicloDocente.SegundoCiclo, "belenperezpegue@gmail.com"),
+        ("Eugenia", "Crovetto", "Tercera sección B", CicloDocente.SegundoCiclo, "eugecrovetto@gmail.com"),
+        ("Paula", "Sanna", "Tercera sección C", CicloDocente.SegundoCiclo, "paulasanna95@gmail.com"),
+        ("Perla", "Liotine", "Tercera sección D", CicloDocente.SegundoCiclo, "liotineperla@gmail.com"),
     };
 
     public static void Seed(AppDbContext db)
@@ -47,9 +45,9 @@ public static class DbSeeder
         {
             Nombre = d.Nombre,
             Apellido = d.Apellido,
-            Email = $"{d.Nombre.ToLowerInvariant()}.{d.Apellido.ToLowerInvariant()}@jardin.edu.ar"
-                .Replace("á", "a").Replace("é", "e").Replace("í", "i").Replace("ó", "o").Replace("ú", "u"),
+            Email = d.Email,
             Sala = d.Sala,
+            Ciclo = d.Ciclo,
             Activo = true
         }).ToList();
 

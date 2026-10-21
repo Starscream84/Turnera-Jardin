@@ -24,7 +24,7 @@ public class DocentesController : ControllerBase
         var docentes = await _db.Docentes
             .Where(d => d.Activo)
             .OrderBy(d => d.Apellido).ThenBy(d => d.Nombre)
-            .Select(d => new DocenteDto(d.Id, d.Nombre + " " + d.Apellido, d.Sala))
+            .Select(d => new DocenteDto(d.Id, d.Nombre + " " + d.Apellido, d.Sala, d.Ciclo))
             .ToListAsync();
 
         return Ok(docentes);

@@ -1,3 +1,5 @@
+using TurneraJardin.Api.Models.Enums;
+
 namespace TurneraJardin.Api.Models;
 
 /// <summary>
@@ -15,6 +17,9 @@ public class Docente
 
     /// <summary>Sala o grupo a cargo (ej: "Sala Celeste", "Sala de 2 años"). Informativo.</summary>
     public string? Sala { get; set; }
+
+    /// <summary>Ciclo del docente. Null = sin ciclo: la familia elige presencial o virtual.</summary>
+    public CicloDocente? Ciclo { get; set; }
 
     /// <summary>Si está en false, no aparece en la agenda pública y no se le pueden generar turnos nuevos.</summary>
     public bool Activo { get; set; } = true;
