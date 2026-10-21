@@ -25,7 +25,6 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
                         >Cancelar turno</a
                     >
                 </div>
-                <a routerLink="/admin/login" class="btn btn-primario">Ingreso docentes</a>
             </nav>
 
             <h1 class="hero-titulo">{{ titulo }}</h1>
@@ -68,7 +67,6 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
                 <h3>Links útiles</h3>
                 <div class="pie-links">
                     <a routerLink="/cancelar">Cancelar un turno</a>
-                    <a routerLink="/admin/login">Ingreso docentes</a>
                 </div>
             </div>
         </footer>
