@@ -126,7 +126,7 @@ export class TurnosListComponent implements OnInit {
 
     cancelar(turno: TurnoAdmin): void {
         const confirmado = confirm(
-            `¿Cancelar el turno de ${turno.nombreNino} (${turno.nombrePadre})?`,
+            `¿Cancelar el turno de ${turno.nombreNino} ${turno.apellidoNino} (responsable: ${turno.nombreResponsable} ${turno.apellidoResponsable})?`,
         );
         if (!confirmado) return;
 
@@ -177,11 +177,13 @@ export class TurnosListComponent implements OnInit {
             day: "numeric",
             month: "long",
         });
-        const saludo = turno.nombrePadre ? `Hola ${turno.nombrePadre}` : "Hola";
+        const responsable = `${turno.nombreResponsable ?? ""} ${turno.apellidoResponsable ?? ""}`.trim();
+        const saludo = responsable ? `Hola ${responsable}` : "Hola";
+        const nino = `${turno.nombreNino ?? ""} ${turno.apellidoNino ?? ""}`.trim() || "tu hijo/a";
         const modalidad = turno.modalidad ? ` (${turno.modalidad.toLowerCase()})` : "";
 
         return (
-            `${saludo}, te escribimos del jardín para recordarte la entrevista por ${turno.nombreNino ?? "tu hijo/a"} ` +
+            `${saludo}, te escribimos del jardín para recordarte la entrevista por ${nino} ` +
             `con ${turno.docenteNombre}: ${fecha} a las ${this.formatearHora(turno.horaInicio)} hs${modalidad}.\n\n` +
             `¿Nos confirmás si vas a poder asistir? Respondé este mensaje con SÍ o NO.\n\n` +
             `Turno N.º ${turno.id}. ¡Gracias!`

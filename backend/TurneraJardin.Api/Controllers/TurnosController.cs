@@ -77,10 +77,23 @@ public class TurnosController : ControllerBase
             return Conflict(new { mensaje = "Este turno ya no está disponible. Elegí otro horario." });
         }
 
-        turno.NombrePadre = dto.NombrePadre.Trim();
+        // Primer ciclo y especialistas: las entrevistas son siempre presenciales y la familia no elige.
+        if (turno.Docente!.Ciclo is CicloDocente.PrimerCiclo or CicloDocente.Especialista)
+        {
+            if (dto.Modalidad == ModalidadEntrevista.Virtual)
+            {
+                return BadRequest(new { mensaje = "Esta docente solo atiende entrevistas presenciales." });
+            }
+
+            dto.Modalidad = ModalidadEntrevista.Presencial;
+        }
+
+        turno.NombreResponsable = dto.NombreResponsable.Trim();
+        turno.ApellidoResponsable = dto.ApellidoResponsable.Trim();
         turno.TelefonoPadre = dto.TelefonoPadre.Trim();
         turno.EmailPadre = dto.EmailPadre.Trim();
         turno.NombreNino = dto.NombreNino.Trim();
+        turno.ApellidoNino = dto.ApellidoNino.Trim();
         turno.Observaciones = dto.Observaciones?.Trim();
         turno.Modalidad = dto.Modalidad;
         turno.Estado = EstadoTurno.Reservado;
@@ -105,6 +118,7 @@ public class TurnosController : ControllerBase
             turno.HoraInicio,
             turno.HoraFin,
             turno.NombreNino!,
+            turno.ApellidoNino!,
             turno.Modalidad!.Value));
     }
 
@@ -135,10 +149,12 @@ public class TurnosController : ControllerBase
         turno.Estado = EstadoTurno.Disponible;
         
         // Limpiar todos los datos de la reserva para que el slot quede disponible nuevamente
-        turno.NombrePadre = null;
+        turno.NombreResponsable = null;
+        turno.ApellidoResponsable = null;
         turno.TelefonoPadre = null;
         turno.EmailPadre = null;
         turno.NombreNino = null;
+        turno.ApellidoNino = null;
         turno.Observaciones = null;
         turno.Modalidad = null;
         turno.FechaReserva = null;

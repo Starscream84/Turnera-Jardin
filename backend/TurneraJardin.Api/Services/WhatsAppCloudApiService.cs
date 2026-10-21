@@ -29,7 +29,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         var parametros = new[]
         {
-            turno.NombreNino ?? "",
+            $"{turno.NombreNino} {turno.ApellidoNino}".Trim(),
             turno.Docente?.NombreCompleto ?? "",
             FormatearFecha(turno.Fecha),
             turno.HoraInicio.ToString("HH:mm", CultureInfo.InvariantCulture)
@@ -42,7 +42,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         var parametros = new[]
         {
-            turno.NombreNino ?? "",
+            $"{turno.NombreNino} {turno.ApellidoNino}".Trim(),
             turno.Docente?.NombreCompleto ?? "",
             turno.HoraInicio.ToString("HH:mm", CultureInfo.InvariantCulture)
         };

@@ -22,7 +22,11 @@ public class Turno
     public EstadoTurno Estado { get; set; } = EstadoTurno.Disponible;
 
     // Datos completados al reservar
-    public string? NombrePadre { get; set; }
+    /// <summary>Nombre del responsable (padre/madre) que reservó.</summary>
+    public string? NombreResponsable { get; set; }
+
+    /// <summary>Apellido del responsable (padre/madre) que reservó.</summary>
+    public string? ApellidoResponsable { get; set; }
 
     /// <summary>Teléfono en formato internacional E.164 sin "+" (ej: 5492235551234), listo para WhatsApp Cloud API.</summary>
     public string? TelefonoPadre { get; set; }
@@ -30,7 +34,11 @@ public class Turno
     /// <summary>Email al que se manda la confirmación de la reserva.</summary>
     public string? EmailPadre { get; set; }
 
+    /// <summary>Nombre del niño/a.</summary>
     public string? NombreNino { get; set; }
+
+    /// <summary>Apellido del niño/a.</summary>
+    public string? ApellidoNino { get; set; }
     public string? Observaciones { get; set; }
 
     /// <summary>Presencial o virtual. Queda en null mientras el turno está disponible (todavía nadie eligió).</summary>
