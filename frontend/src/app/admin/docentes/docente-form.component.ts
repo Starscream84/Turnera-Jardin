@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AdminDocentesService } from '../../core/services/admin-docentes.service';
+import { CicloDocente } from '../../core/models/docente.model';
 
 @Component({
   selector: 'app-docente-form',
@@ -27,6 +28,7 @@ export class DocenteFormComponent implements OnInit {
     apellido: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
     sala: [''],
+    ciclo: ['' as CicloDocente | ''],
     activo: [true]
   });
 
@@ -43,7 +45,7 @@ export class DocenteFormComponent implements OnInit {
         next: (docentes) => {
           const docente = docentes.find((d) => d.id === this.docenteId);
           if (docente) {
-            this.form.patchValue({ ...docente, sala: docente.sala ?? '' });
+            this.form.patchValue({ ...docente, sala: docente.sala ?? '', ciclo: docente.ciclo ?? '' });
           }
           this.cargando.set(false);
         },
@@ -63,7 +65,8 @@ export class DocenteFormComponent implements OnInit {
 
     this.guardando.set(true);
     this.error.set(null);
-    const datos = this.form.getRawValue();
+    const { ciclo, ...resto } = this.form.getRawValue();
+    const datos = { ...resto, ciclo: ciclo || null };
 
     const peticion: Observable<unknown> = this.esEdicion
       ? this.service.actualizar(this.docenteId!, datos)

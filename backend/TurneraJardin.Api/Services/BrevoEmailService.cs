@@ -64,7 +64,7 @@ public class BrevoEmailService : IEmailService
         var payload = new
         {
             sender = new { name = _options.RemitenteNombre, email = _options.RemitenteEmail },
-            to = new[] { new { email = turno.EmailPadre, name = turno.NombrePadre ?? turno.EmailPadre } },
+            to = new[] { new { email = turno.EmailPadre, name = NombreCompletoResponsable(turno) is { Length: > 0 } nombre ? nombre : turno.EmailPadre } },
             subject = asunto,
             htmlContent = armarHtml()
         };
@@ -110,12 +110,12 @@ public class BrevoEmailService : IEmailService
         return $"""
             <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
               <h2 style="color: #1a3a74;">Turno cancelado</h2>
-              <p>Hola {E(turno.NombrePadre)}, te avisamos que el jardín canceló la entrevista que tenías reservada.</p>
+              <p>Hola {E(NombreCompletoResponsable(turno))}, te avisamos que el jardín canceló la entrevista que tenías reservada.</p>
               <table style="border-collapse: collapse;">
-                <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(turno.NombreNino)}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(NombreCompletoNino(turno))}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Docente</td><td><strong>{E(turno.Docente?.NombreCompleto)}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Fecha</td><td><strong>{E(FormatearFecha(turno.Fecha))}</strong></td></tr>
-                <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatearHora(turno.HoraInicio)} a {FormatearHora(turno.HoraFin)} hs</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatearHora(turno.HoraInicio)} hs</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{turno.Id}</strong></td></tr>
               </table>
               {reservar}
@@ -136,12 +136,12 @@ public class BrevoEmailService : IEmailService
         return $"""
             <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
               <h2 style="color: #1a3a74;">¡Turno confirmado!</h2>
-              <p>Hola {E(turno.NombrePadre)}, tu entrevista quedó reservada.</p>
+              <p>Hola {E(NombreCompletoResponsable(turno))}, tu entrevista quedó reservada.</p>
               <table style="border-collapse: collapse;">
-                <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(turno.NombreNino)}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(NombreCompletoNino(turno))}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Docente</td><td><strong>{E(turno.Docente?.NombreCompleto)}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Fecha</td><td><strong>{E(FormatearFecha(turno.Fecha))}</strong></td></tr>
-                <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatearHora(turno.HoraInicio)} a {FormatearHora(turno.HoraFin)} hs</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatearHora(turno.HoraInicio)} hs</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Modalidad</td><td><strong>{E(turno.Modalidad?.ToString())}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{turno.Id}</strong></td></tr>
               </table>
@@ -155,4 +155,8 @@ public class BrevoEmailService : IEmailService
         $"{Dias[(int)fecha.DayOfWeek]} {fecha.Day} de {Meses[fecha.Month - 1]} de {fecha.Year}";
 
     private static string FormatearHora(TimeOnly hora) => hora.ToString("HH:mm", CultureInfo.InvariantCulture);
+
+    private static string NombreCompletoResponsable(Turno t) => $"{t.NombreResponsable} {t.ApellidoResponsable}".Trim();
+
+    private static string NombreCompletoNino(Turno t) => $"{t.NombreNino} {t.ApellidoNino}".Trim();
 }

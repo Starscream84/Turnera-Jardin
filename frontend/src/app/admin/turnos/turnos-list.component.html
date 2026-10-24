@@ -160,8 +160,8 @@
                             </td>
                             <td>
                                 @if (turno.nombreNino) {
-                                    {{ turno.nombreNino }}
-                                    <small>{{ turno.nombrePadre }}</small>
+                                    {{ turno.nombreNino }} {{ turno.apellidoNino }}
+                                    <small>{{ turno.nombreResponsable }} {{ turno.apellidoResponsable }}</small>
                                     @if (turno.emailPadre) {
                                         <small>{{ turno.emailPadre }}</small>
                                     }
@@ -273,8 +273,8 @@
                             <td>{{ turno.docenteNombre }}</td>
                         }
                         <td>{{ turno.modalidad }}</td>
-                        <td>{{ turno.nombreNino }}</td>
-                        <td>{{ turno.nombrePadre }}</td>
+                        <td>{{ turno.nombreNino }} {{ turno.apellidoNino }}</td>
+                        <td>{{ turno.nombreResponsable }} {{ turno.apellidoResponsable }}</td>
                         <td></td>
                     </tr>
                 }

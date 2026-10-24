@@ -77,15 +77,28 @@ public class TurnosController : ControllerBase
             return Conflict(new { mensaje = "Este turno ya no está disponible. Elegí otro horario." });
         }
 
-        if(turno.Fecha < ArgentinaDate.PrimerDiaReservable())
+        if (turno.Fecha < ArgentinaDate.PrimerDiaReservable())
         {
-            return BadRequest(new {mensaje = "Los turnos se reservan con al menos un dia de anticipación. Elegí un turno a partir de mañana."});
+            return BadRequest(new { mensaje = "Los turnos se reservan con al menos un día de anticipación. Elegí un turno a partir de mañana." });
         }
 
-        turno.NombrePadre = dto.NombrePadre.Trim();
+        // Primer ciclo y especialistas: las entrevistas son siempre presenciales y la familia no elige.
+        if (turno.Docente!.Ciclo is CicloDocente.PrimerCiclo or CicloDocente.Especialista)
+        {
+            if (dto.Modalidad == ModalidadEntrevista.Virtual)
+            {
+                return BadRequest(new { mensaje = "Esta docente solo atiende entrevistas presenciales." });
+            }
+
+            dto.Modalidad = ModalidadEntrevista.Presencial;
+        }
+
+        turno.NombreResponsable = dto.NombreResponsable.Trim();
+        turno.ApellidoResponsable = dto.ApellidoResponsable.Trim();
         turno.TelefonoPadre = dto.TelefonoPadre.Trim();
         turno.EmailPadre = dto.EmailPadre.Trim();
         turno.NombreNino = dto.NombreNino.Trim();
+        turno.ApellidoNino = dto.ApellidoNino.Trim();
         turno.Observaciones = dto.Observaciones?.Trim();
         turno.Modalidad = dto.Modalidad;
         turno.Estado = EstadoTurno.Reservado;
@@ -110,6 +123,7 @@ public class TurnosController : ControllerBase
             turno.HoraInicio,
             turno.HoraFin,
             turno.NombreNino!,
+            turno.ApellidoNino!,
             turno.Modalidad!.Value));
     }
 
@@ -140,10 +154,12 @@ public class TurnosController : ControllerBase
         turno.Estado = EstadoTurno.Disponible;
         
         // Limpiar todos los datos de la reserva para que el slot quede disponible nuevamente
-        turno.NombrePadre = null;
+        turno.NombreResponsable = null;
+        turno.ApellidoResponsable = null;
         turno.TelefonoPadre = null;
         turno.EmailPadre = null;
         turno.NombreNino = null;
+        turno.ApellidoNino = null;
         turno.Observaciones = null;
         turno.Modalidad = null;
         turno.FechaReserva = null;

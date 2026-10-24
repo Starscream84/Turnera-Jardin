@@ -53,7 +53,7 @@ public class AdminTurnosController : ControllerBase
             .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
             .Select(t => new TurnoAdminDto(
                 t.Id, t.DocenteId, t.Docente!.NombreCompleto, t.Fecha, t.HoraInicio, t.HoraFin,
-                t.Estado, t.NombrePadre, t.TelefonoPadre, t.NombreNino, t.Observaciones,
+                t.Estado, t.NombreResponsable, t.ApellidoResponsable, t.TelefonoPadre, t.NombreNino, t.ApellidoNino, t.Observaciones,
                 t.ConfirmacionEnviada, t.RecordatorioEnviado, t.Modalidad, t.ConfirmacionSolicitada, t.EmailPadre))
             .ToListAsync();
 
@@ -95,10 +95,12 @@ public class AdminTurnosController : ControllerBase
         // Limpiar todos los datos de la reserva para que el slot quede disponible nuevamente
         if (estabaReservado)
         {
-            turno.NombrePadre = null;
+            turno.NombreResponsable = null;
+            turno.ApellidoResponsable = null;
             turno.TelefonoPadre = null;
             turno.EmailPadre = null;
             turno.NombreNino = null;
+            turno.ApellidoNino = null;
             turno.Observaciones = null;
             turno.Modalidad = null;
             turno.FechaReserva = null;

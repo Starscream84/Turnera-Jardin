@@ -33,6 +33,12 @@ export class FormularioReservaComponent implements OnInit {
     error = signal<string | null>(null);
     confirmacion = signal<TurnoConfirmado | null>(null);
 
+    /** Primer ciclo y especialistas no ofrecen presencial/virtual: la entrevista es siempre presencial. */
+    elegirModalidad = computed(() => {
+        const ciclo = this.docente()?.ciclo;
+        return ciclo !== "PrimerCiclo" && ciclo !== "Especialista";
+    });
+
     /** Link que abre Google Calendar con el evento de la entrevista ya cargado, listo para guardar. */
     enlaceGoogleCalendar = computed(() => {
         const confirmado = this.confirmacion();
@@ -42,10 +48,12 @@ export class FormularioReservaComponent implements OnInit {
     form = this.fb.nonNullable.group({
         // Arranca vacío a propósito: la familia tiene que elegir, no se asume ninguna modalidad.
         modalidad: ["" as ModalidadEntrevista | "", [Validators.required]],
-        nombrePadre: ["", [Validators.required, Validators.minLength(2)]],
+        nombreResponsable: ["", [Validators.required, Validators.minLength(2)]],
+        apellidoResponsable: ["", [Validators.required, Validators.minLength(2)]],
         telefonoPadre: ["", [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
         emailPadre: ["", [Validators.required, Validators.email, Validators.maxLength(200)]],
         nombreNino: ["", [Validators.required, Validators.minLength(2)]],
+        apellidoNino: ["", [Validators.required, Validators.minLength(2)]],
         observaciones: [""],
     });
 
@@ -55,8 +63,14 @@ export class FormularioReservaComponent implements OnInit {
 
         // Solo para mostrar el nombre en el resumen: si falla, la reserva sigue funcionando igual.
         this.docentesService.listar().subscribe({
-            next: (docentes) =>
-                this.docente.set(docentes.find((d) => d.id === this.docenteId) ?? null),
+            next: (docentes) => {
+                const docente = docentes.find((d) => d.id === this.docenteId) ?? null;
+                this.docente.set(docente);
+                if (docente?.ciclo === "PrimerCiclo" || docente?.ciclo === "Especialista") {
+                    // Primer ciclo y especialistas: la entrevista es siempre presencial, la familia no elige.
+                    this.form.controls.modalidad.setValue("Presencial");
+                }
+            },
         });
 
         this.docentesService.turnosDisponibles(this.docenteId).subscribe({
@@ -141,7 +155,7 @@ export class FormularioReservaComponent implements OnInit {
             dates: `${aFormatoGoogle(turno.horaInicio)}/${aFormatoGoogle(turno.horaFin)}`,
             // Sin esto Google toma la hora en la zona del dispositivo, y se correría si el teléfono está en otra zona.
             ctz: "America/Argentina/Buenos_Aires",
-            details: `Entrevista ${turno.modalidad.toLowerCase()} por ${turno.nombreNino}. Número de turno: #${turno.id}.`,
+            details: `Entrevista ${turno.modalidad.toLowerCase()} por ${turno.nombreNino} ${turno.apellidoNino}. Número de turno: #${turno.id}.`,
         });
 
         return `https://calendar.google.com/calendar/render?${parametros.toString()}`;

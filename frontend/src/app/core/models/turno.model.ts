@@ -8,10 +8,12 @@ export interface TurnoDisponible {
 export type ModalidadEntrevista = 'Presencial' | 'Virtual';
 
 export interface ReservaTurno {
-  nombrePadre: string;
+  nombreResponsable: string;
+  apellidoResponsable: string;
   telefonoPadre: string;
   emailPadre: string;
   nombreNino: string;
+  apellidoNino: string;
   observaciones?: string;
   modalidad: ModalidadEntrevista;
 }
@@ -23,6 +25,7 @@ export interface TurnoConfirmado {
   horaInicio: string;
   horaFin: string;
   nombreNino: string;
+  apellidoNino: string;
   modalidad: ModalidadEntrevista;
 }
 
@@ -36,9 +39,11 @@ export interface TurnoAdmin {
   horaInicio: string;
   horaFin: string;
   estado: EstadoTurno;
-  nombrePadre: string | null;
+  nombreResponsable: string | null;
+  apellidoResponsable: string | null;
   telefonoPadre: string | null;
   nombreNino: string | null;
+  apellidoNino: string | null;
   observaciones: string | null;
   confirmacionEnviada: boolean;
   recordatorioEnviado: boolean;

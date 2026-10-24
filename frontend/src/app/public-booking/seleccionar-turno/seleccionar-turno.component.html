@@ -81,7 +81,7 @@
             <div class="horarios">
               @for (turno of turnosDelDia().manana; track turno.id) {
                 <button type="button" class="horario" (click)="elegirTurno(turno)">
-                  {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
+                  {{ formatearHora(turno.horaInicio) }}
                 </button>
               }
             </div>
@@ -92,7 +92,7 @@
             <div class="horarios">
               @for (turno of turnosDelDia().tarde; track turno.id) {
                 <button type="button" class="horario" (click)="elegirTurno(turno)">
-                  {{ formatearHora(turno.horaInicio) }} - {{ formatearHora(turno.horaFin) }}
+                  {{ formatearHora(turno.horaInicio) }}
                 </button>
               }
             </div>

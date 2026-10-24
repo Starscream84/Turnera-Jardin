@@ -19,7 +19,10 @@ public record TurnoDisponibleDto(
 public class ReservaTurnoDto
 {
     [Required, MaxLength(120)]
-    public required string NombrePadre { get; set; }
+    public required string NombreResponsable { get; set; }
+
+    [Required, MaxLength(120)]
+    public required string ApellidoResponsable { get; set; }
 
     /// <summary>Número de WhatsApp. Se acepta con o sin "+"; el backend lo normaliza.</summary>
     [Required, Phone, MaxLength(30)]
@@ -33,6 +36,9 @@ public class ReservaTurnoDto
 
     [Required, MaxLength(120)]
     public required string NombreNino { get; set; }
+
+    [Required, MaxLength(120)]
+    public required string ApellidoNino { get; set; }
 
     [MaxLength(500)]
     public string? Observaciones { get; set; }
@@ -51,6 +57,7 @@ public record TurnoConfirmadoDto(
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
     string NombreNino,
+    string ApellidoNino,
     ModalidadEntrevista Modalidad
 );
 
@@ -63,9 +70,11 @@ public record TurnoAdminDto(
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
     EstadoTurno Estado,
-    string? NombrePadre,
+    string? NombreResponsable,
+    string? ApellidoResponsable,
     string? TelefonoPadre,
     string? NombreNino,
+    string? ApellidoNino,
     string? Observaciones,
     bool ConfirmacionEnviada,
     bool RecordatorioEnviado,
