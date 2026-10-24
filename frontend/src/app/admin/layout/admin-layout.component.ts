@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { iniciales } from '../../shared/avatar.util';
+import { initials } from '../../shared/avatar.util';
 
 @Component({
   selector: 'app-admin-layout',
@@ -10,20 +10,20 @@ import { iniciales } from '../../shared/avatar.util';
   templateUrl: './admin-layout.component.html'
 })
 export class AdminLayoutComponent {
-  readonly iniciales = iniciales;
+  readonly initials = initials;
 
   constructor(public auth: AuthService, private router: Router) {}
 
-  etiquetaRol(): string {
-    switch (this.auth.rol()) {
+  roleLabel(): string {
+    switch (this.auth.role()) {
       case 'Admin': return 'Administrador';
-      case 'Coordinador': return 'Coordinador';
-      case 'Docente': return 'Docente';
+      case 'Coordinator': return 'Coordinador';
+      case 'Teacher': return 'Docente';
       default: return '';
     }
   }
 
-  salir(): void {
+  signOut(): void {
     this.auth.logout();
     this.router.navigate(['/admin/login']);
   }

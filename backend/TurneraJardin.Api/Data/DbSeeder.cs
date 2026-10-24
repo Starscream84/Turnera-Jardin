@@ -5,90 +5,90 @@ using TurneraJardin.Api.Models.Enums;
 namespace TurneraJardin.Api.Data;
 
 /// <summary>
-/// Carga datos de ejemplo la primera vez que se crea la base (18 docentes, un usuario admin
-/// y algunos turnos disponibles) para poder probar el sistema de punta a punta sin cargar
-/// todo a mano. Ver README -> "Datos de prueba" para las credenciales generadas.
+/// Loads seed data the first time the database is created (the kindergarten's teachers, an admin user
+/// and some available appointments) so the system can be tested end to end without loading
+/// everything by hand. See README -> "Datos de prueba" for the generated credentials.
 /// </summary>
 public static class DbSeeder
 {
-    private static readonly (string Nombre, string Apellido, string Sala, CicloDocente? Ciclo, string Email)[] DocentesDemo =
+    private static readonly (string FirstName, string LastName, string Classroom, TeacherCycle? Cycle, string Email)[] SeedTeachers =
     {
-        ("Lucia", "Galera", "Deambuladores A", CicloDocente.PrimerCiclo, "luciasoledadgalera@gmail.com"),
-        ("Ana Clara", "Osses", "Deambuladores B", CicloDocente.PrimerCiclo, "anaclaraosses21@gmail.com"),
-        ("Belén", "Alias", "Maternal A y B", CicloDocente.PrimerCiclo, "belenalias4453@gmail.com"),
-        ("Ana Belen", "Recchia", "Maternal D", CicloDocente.PrimerCiclo, "anabelenrecchia7@gmail.com"),
-        ("Melanie", "Jaime", "Maternal C", CicloDocente.PrimerCiclo, "jaimemelanie13@gmail.com"),
-        ("Ayelén", "Peralta", "Primera sección A y B", CicloDocente.SegundoCiclo, "ayelennperalta@gmail.com"),
-        ("Belen", "Navarro", "Primera sección C", CicloDocente.SegundoCiclo, "belenavarrov@gmail.com"),
-        ("Delfina", "Irigoyen", "Primera sección D", CicloDocente.SegundoCiclo, "irigoyendelfina9@gmail.com"),
-        ("Paula", "Oviedo", "Segunda sección A", CicloDocente.SegundoCiclo, "paulaoviedo92@gmail.com"),
-        ("Paola", "Cano", "Segunda sección B", CicloDocente.SegundoCiclo, "canopaola@gmail.com"),
-        ("Ivana", "Salinas", "Segunda sección D", CicloDocente.SegundoCiclo, "ivi_giselle@hotmail.com"),
-        ("Guadalupe", "Palavecino", "Segunda sección C", CicloDocente.SegundoCiclo, "laraguadalupepalavecino28@gmail.com"),
-        ("Belen", "Perez Pegue", "Tercera sección A", CicloDocente.SegundoCiclo, "belenperezpegue@gmail.com"),
-        ("Eugenia", "Crovetto", "Tercera sección B", CicloDocente.SegundoCiclo, "eugecrovetto@gmail.com"),
-        ("Paula", "Sanna", "Tercera sección C", CicloDocente.SegundoCiclo, "paulasanna95@gmail.com"),
-        ("Perla", "Liotine", "Tercera sección D", CicloDocente.SegundoCiclo, "liotineperla@gmail.com"),
+        ("Lucia", "Galera", "Deambuladores A", TeacherCycle.FirstCycle, "luciasoledadgalera@gmail.com"),
+        ("Ana Clara", "Osses", "Deambuladores B", TeacherCycle.FirstCycle, "anaclaraosses21@gmail.com"),
+        ("Belén", "Alias", "Maternal A y B", TeacherCycle.FirstCycle, "belenalias4453@gmail.com"),
+        ("Ana Belen", "Recchia", "Maternal D", TeacherCycle.FirstCycle, "anabelenrecchia7@gmail.com"),
+        ("Melanie", "Jaime", "Maternal C", TeacherCycle.FirstCycle, "jaimemelanie13@gmail.com"),
+        ("Ayelén", "Peralta", "Primera sección A y B", TeacherCycle.SecondCycle, "ayelennperalta@gmail.com"),
+        ("Belen", "Navarro", "Primera sección C", TeacherCycle.SecondCycle, "belenavarrov@gmail.com"),
+        ("Delfina", "Irigoyen", "Primera sección D", TeacherCycle.SecondCycle, "irigoyendelfina9@gmail.com"),
+        ("Paula", "Oviedo", "Segunda sección A", TeacherCycle.SecondCycle, "paulaoviedo92@gmail.com"),
+        ("Paola", "Cano", "Segunda sección B", TeacherCycle.SecondCycle, "canopaola@gmail.com"),
+        ("Ivana", "Salinas", "Segunda sección D", TeacherCycle.SecondCycle, "ivi_giselle@hotmail.com"),
+        ("Guadalupe", "Palavecino", "Segunda sección C", TeacherCycle.SecondCycle, "laraguadalupepalavecino28@gmail.com"),
+        ("Belen", "Perez Pegue", "Tercera sección A", TeacherCycle.SecondCycle, "belenperezpegue@gmail.com"),
+        ("Eugenia", "Crovetto", "Tercera sección B", TeacherCycle.SecondCycle, "eugecrovetto@gmail.com"),
+        ("Paula", "Sanna", "Tercera sección C", TeacherCycle.SecondCycle, "paulasanna95@gmail.com"),
+        ("Perla", "Liotine", "Tercera sección D", TeacherCycle.SecondCycle, "liotineperla@gmail.com"),
     };
 
     public static void Seed(AppDbContext db)
     {
         db.Database.EnsureCreated();
-        // AsegurarColumnasTurnos(db); // Solo necesario en SQLite, no en MySQL
+        // EnsureAppointmentColumns(db); // Only needed on SQLite, not on MySQL
 
-        if (db.Docentes.Any())
+        if (db.Teachers.Any())
         {
-            return; // ya se sembraron datos antes
+            return; // data was already seeded
         }
 
-        var docentes = DocentesDemo.Select(d => new Docente
+        var teachers = SeedTeachers.Select(t => new Teacher
         {
-            Nombre = d.Nombre,
-            Apellido = d.Apellido,
-            Email = d.Email,
-            Sala = d.Sala,
-            Ciclo = d.Ciclo,
-            Activo = true
+            FirstName = t.FirstName,
+            LastName = t.LastName,
+            Email = t.Email,
+            Classroom = t.Classroom,
+            Cycle = t.Cycle,
+            IsActive = true
         }).ToList();
 
-        db.Docentes.AddRange(docentes);
-        db.SaveChanges(); // se guarda ya para que EF asigne el Id de cada docente antes de generarles turnos
+        db.Teachers.AddRange(teachers);
+        db.SaveChanges(); // saved now so EF assigns each teacher's Id before generating their appointments
 
-        var admin = new Usuario
+        var admin = new User
         {
             Email = "admin@jardin.edu.ar",
-            NombreCompleto = "Dirección del Jardín",
+            FullName = "Dirección del Jardín",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("CambiarEsta123!"),
-            Rol = RolUsuario.Admin,
-            Activo = true
+            Role = UserRole.Admin,
+            IsActive = true
         };
-        db.Usuarios.Add(admin);
+        db.Users.Add(admin);
 
-        // Turnos de ejemplo: de lunes a viernes, 8:00 a 12:00, en bloques de 20 minutos,
-        // para las próximas dos semanas, así se puede probar la reserva sin cargar nada a mano.
-        var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var duracion = TimeSpan.FromMinutes(20);
-        var horaInicioJornada = new TimeOnly(8, 0);
-        var horaFinJornada = new TimeOnly(12, 0);
+        // Sample appointments: Monday to Friday, 8:00 to 12:00, in 20-minute blocks,
+        // for the next two weeks, so booking can be tested without loading anything by hand.
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var duration = TimeSpan.FromMinutes(20);
+        var dayStart = new TimeOnly(8, 0);
+        var dayEnd = new TimeOnly(12, 0);
 
-        foreach (var docente in docentes)
+        foreach (var teacher in teachers)
         {
-            for (var fecha = hoy; fecha <= hoy.AddDays(14); fecha = fecha.AddDays(1))
+            for (var date = today; date <= today.AddDays(14); date = date.AddDays(1))
             {
-                if (fecha.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
                 {
                     continue;
                 }
 
-                for (var hora = horaInicioJornada; hora.Add(duracion) <= horaFinJornada; hora = hora.Add(duracion))
+                for (var time = dayStart; time.Add(duration) <= dayEnd; time = time.Add(duration))
                 {
-                    db.Turnos.Add(new Turno
+                    db.Appointments.Add(new Appointment
                     {
-                        DocenteId = docente.Id,
-                        Fecha = fecha,
-                        HoraInicio = hora,
-                        HoraFin = hora.Add(duracion),
-                        Estado = EstadoTurno.Disponible
+                        TeacherId = teacher.Id,
+                        Date = date,
+                        StartTime = time,
+                        EndTime = time.Add(duration),
+                        Status = AppointmentStatus.Available
                     });
                 }
             }
@@ -98,34 +98,34 @@ public static class DbSeeder
     }
 
     /// <summary>
-    /// EnsureCreated() solo crea la base si no existe: no agrega columnas a una base ya creada.
-    /// Como el proyecto no usa EF Migrations, las columnas nuevas de Turnos se agregan a mano acá
-    /// cuando faltan, así no hay que borrar turnera.db (y perder los datos cargados) para tomar el cambio.
+    /// EnsureCreated() only creates the database if it doesn't exist: it doesn't add columns to an existing one.
+    /// Since the project doesn't use EF Migrations, new Appointments columns were added here by hand
+    /// when missing, so turnera.db didn't have to be deleted (losing the data) to pick up the change.
     /// </summary>
-    private static void AsegurarColumnasTurnos(AppDbContext db)
+    private static void EnsureAppointmentColumns(AppDbContext db)
     {
-        // Nombre de columna -> tipo SQLite (EF Core guarda los enums como INTEGER y los DateTime como TEXT).
-        var columnas = new (string Nombre, string Tipo)[]
+        // Column name -> SQLite type (EF Core stores enums as INTEGER and DateTime as TEXT).
+        var columns = new (string Name, string Type)[]
         {
-            ("Modalidad", "INTEGER NULL"),
-            ("ConfirmacionSolicitada", "TEXT NULL"),
-            ("EmailPadre", "TEXT NULL"),
+            ("Mode", "INTEGER NULL"),
+            ("ConfirmationRequestedAt", "TEXT NULL"),
+            ("GuardianEmail", "TEXT NULL"),
         };
 
         db.Database.OpenConnection();
         try
         {
-            using var comando = db.Database.GetDbConnection().CreateCommand();
+            using var command = db.Database.GetDbConnection().CreateCommand();
 
-            foreach (var (nombre, tipo) in columnas)
+            foreach (var (name, type) in columns)
             {
-                comando.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('Turnos') WHERE name = '{nombre}'";
-                var existe = Convert.ToInt64(comando.ExecuteScalar()) > 0;
+                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('Appointments') WHERE name = '{name}'";
+                var exists = Convert.ToInt64(command.ExecuteScalar()) > 0;
 
-                if (!existe)
+                if (!exists)
                 {
-                    comando.CommandText = $"ALTER TABLE Turnos ADD COLUMN {nombre} {tipo}";
-                    comando.ExecuteNonQuery();
+                    command.CommandText = $"ALTER TABLE Appointments ADD COLUMN {name} {type}";
+                    command.ExecuteNonQuery();
                 }
             }
         }

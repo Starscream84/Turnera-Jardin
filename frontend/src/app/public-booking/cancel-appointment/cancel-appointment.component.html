@@ -1,0 +1,34 @@
+<app-public-shell heading="Cancelar un turno" [narrow]="true">
+  <a routerLink="/reservar" class="back-link">&larr; Volver al inicio</a>
+
+  @if (cancelled()) {
+    <div class="card" style="text-align: center;">
+      <div class="ok-icon" aria-hidden="true"></div>
+      <h2>Turno cancelado</h2>
+      <p class="text-muted">Tu turno fue cancelado correctamente.</p>
+      <a routerLink="/reservar" class="btn btn-primary">Sacar un nuevo turno</a>
+    </div>
+  } @else {
+    <p class="text-muted" style="margin-bottom: 20px;">Ingresá el número de turno (te lo mostramos al confirmar la reserva) y el mismo WhatsApp con el que lo sacaste.</p>
+
+    @if (error()) {
+      <div class="alert alert-error">{{ error() }}</div>
+    }
+
+    <form [formGroup]="form" (ngSubmit)="cancel()" class="card">
+      <div class="form-group">
+        <label for="appointmentId">Número de turno</label>
+        <input id="appointmentId" type="text" inputmode="numeric" formControlName="appointmentId" />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Tu WhatsApp</label>
+        <input id="phone" type="tel" formControlName="phone" />
+      </div>
+
+      <button type="submit" class="btn btn-danger btn-block" [disabled]="sending()">
+        {{ sending() ? 'Cancelando...' : 'Cancelar turno' }}
+      </button>
+    </form>
+  }
+</app-public-shell>

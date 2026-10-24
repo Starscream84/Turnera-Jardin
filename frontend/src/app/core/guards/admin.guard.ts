@@ -1,25 +1,26 @@
 import { inject } from "@angular/core";
 import { CanActivateFn, Router } from "@angular/router";
+import { UserRole } from "../models/auth.model";
 import { AuthService } from "../services/auth.service";
 
-function crearGuardPorRol(rolesPermitidos: string[]): CanActivateFn {
+function createRoleGuard(allowedRoles: UserRole[]): CanActivateFn {
     return () => {
         const auth = inject(AuthService);
         const router = inject(Router);
 
-        const rol = auth.rol();
-        if (rol !== null && rolesPermitidos.includes(rol)) {
+        const role = auth.role();
+        if (role !== null && allowedRoles.includes(role)) {
             return true;
         }
 
-        // Un rol sin permiso (por ejemplo, Docente intentando entrar por URL directa)
-        // es redirigido a su propia lista de turnos.
+        // A role without permission (e.g. a Teacher trying to enter through a direct URL)
+        // is redirected to their own appointment list.
         return router.createUrlTree(["/admin/turnos"]);
     };
 }
 
-/** Exige rol Admin exclusivamente — gestión de usuarios y contraseñas. */
-export const adminGuard: CanActivateFn = crearGuardPorRol(["Admin"]);
+/** Requires the Admin role only — user and password management. */
+export const adminGuard: CanActivateFn = createRoleGuard(["Admin"]);
 
-/** Exige rol Admin o Coordinador — gestión de docentes y turnos. */
-export const coordinadorGuard: CanActivateFn = crearGuardPorRol(["Admin", "Coordinador"]);
+/** Requires the Admin or Coordinator role — teacher and appointment management. */
+export const coordinatorGuard: CanActivateFn = createRoleGuard(["Admin", "Coordinator"]);

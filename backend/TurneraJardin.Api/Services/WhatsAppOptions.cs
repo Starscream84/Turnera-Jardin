@@ -1,30 +1,30 @@
 namespace TurneraJardin.Api.Services;
 
 /// <summary>
-/// Configuración de la integración con WhatsApp Cloud API (Meta).
-/// Se completa en appsettings.json / variables de entorno / user-secrets,
-/// nunca hardcodeada en el código. Ver el README para cómo obtener estos valores.
+/// WhatsApp Cloud API (Meta) integration settings.
+/// Filled in from appsettings.json / environment variables / user-secrets,
+/// never hardcoded. See the README for how to obtain these values.
 /// </summary>
 public class WhatsAppOptions
 {
-    public const string SeccionConfig = "WhatsApp";
+    public const string ConfigSection = "WhatsApp";
 
-    /// <summary>Si está en false, el servicio solo loguea el mensaje en vez de llamar a la API (útil para desarrollo local).</summary>
-    public bool Habilitado { get; set; } = false;
+    /// <summary>When false, the service only logs the message instead of calling the API (useful for local development).</summary>
+    public bool Enabled { get; set; } = false;
 
-    /// <summary>Access Token permanente de la app de Meta for Developers.</summary>
+    /// <summary>Permanent access token of the Meta for Developers app.</summary>
     public string AccessToken { get; set; } = string.Empty;
 
-    /// <summary>Phone Number ID del número de WhatsApp Business verificado.</summary>
+    /// <summary>Phone Number ID of the verified WhatsApp Business number.</summary>
     public string PhoneNumberId { get; set; } = string.Empty;
 
     public string ApiVersion { get; set; } = "v20.0";
 
-    /// <summary>Nombre exacto de la plantilla aprobada en Meta para el mensaje de confirmación.</summary>
-    public string TemplateConfirmacion { get; set; } = "confirmacion_turno";
+    /// <summary>Exact name of the template approved in Meta for the confirmation message.</summary>
+    public string ConfirmationTemplate { get; set; } = "confirmacion_turno";
 
-    /// <summary>Nombre exacto de la plantilla aprobada en Meta para el recordatorio del día anterior.</summary>
-    public string TemplateRecordatorio { get; set; } = "recordatorio_turno";
+    /// <summary>Exact name of the template approved in Meta for the day-before reminder.</summary>
+    public string ReminderTemplate { get; set; } = "recordatorio_turno";
 
-    public string CodigoIdiomaTemplate { get; set; } = "es_AR";
+    public string TemplateLanguageCode { get; set; } = "es_AR";
 }

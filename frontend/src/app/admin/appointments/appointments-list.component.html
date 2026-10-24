@@ -1,0 +1,289 @@
+<div class="container">
+    <div class="top-bar">
+        <div>
+            <h1>Turnos</h1>
+            <p class="text-muted">Entrevistas reservadas y franjas disponibles.</p>
+        </div>
+        <div class="actions">
+            <button
+                type="button"
+                class="btn btn-secondary"
+                title="Imprime los turnos reservados de este listado. Usa el filtro de fechas para acotar."
+                [disabled]="loading() || bookedForPrint().length === 0"
+                (click)="print()"
+            >
+                Imprimir listado ({{ bookedForPrint().length }})
+            </button>
+            @if (isManagement()) {
+                <button
+                    type="button"
+                    class="btn btn-danger"
+                    title="Borra todos los turnos que se ven en este listado. Usá el filtro para acotar."
+                    [disabled]="deleting() || loading() || appointments().length === 0"
+                    (click)="deleteListed()"
+                >
+                    {{
+                        deleting()
+                            ? "Eliminando..."
+                            : "Eliminar turnos listados (" + appointments().length + ")"
+                    }}
+                </button>
+                <a routerLink="/admin/turnos/generar" class="btn btn-primary">+ Generar turnos</a>
+            }
+        </div>
+    </div>
+
+    @if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+    }
+
+    @if (notice()) {
+        <div class="alert alert-success" role="status">{{ notice() }}</div>
+    }
+
+    @if (!loading() && appointments().length > 0) {
+        <div class="kpis">
+            <div class="kpi">
+                <div>
+                    <span class="tag tag-small">Reservados</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-number green">{{ summary().booked }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="tag tag-small tag-blue">Disponibles</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-number blue">{{ summary().available }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="tag tag-small tag-orange">Cancelados</span>
+                    <small>en este listado</small>
+                </div>
+                <span class="kpi-number orange">{{ summary().cancelled }}</span>
+            </div>
+            <div class="kpi">
+                <div>
+                    <span class="tag tag-small tag-magenta">Asistencia pedida</span>
+                    <small>por WhatsApp</small>
+                </div>
+                <span class="kpi-number magenta">{{ summary().attendanceRequested }}</span>
+            </div>
+        </div>
+    }
+
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="card filters">
+        @if (isManagement()) {
+            <div class="form-group">
+                <label for="teacherId">Docente</label>
+                <select id="teacherId" formControlName="teacherId">
+                    <option value="">Todos</option>
+                    @for (teacher of teachers(); track teacher.id) {
+                        <option [value]="teacher.id">
+                            {{ teacher.firstName }} {{ teacher.lastName }}
+                        </option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="form-group">
+            <label for="from">Desde</label>
+            <input id="from" type="date" formControlName="from" />
+        </div>
+
+        <div class="form-group">
+            <label for="to">Hasta</label>
+            <input id="to" type="date" formControlName="to" />
+        </div>
+
+        <div class="form-group">
+            <label for="status">Estado</label>
+            <select id="status" formControlName="status">
+                <option value="">Todos</option>
+                <option value="Available">Disponible</option>
+                <option value="Booked">Reservado</option>
+                <option value="Cancelled">Cancelado</option>
+                <option value="Completed">Completado</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
+    @if (loading()) {
+        <p class="text-muted">Cargando...</p>
+    } @else if (appointments().length === 0) {
+        <p class="text-muted">No hay turnos que coincidan con el filtro.</p>
+    } @else {
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        @if (isManagement()) {
+                            <th>Docente</th>
+                        }
+                        <th>Estado</th>
+                        <th>Modalidad</th>
+                        <th>Familia</th>
+                        <th>Avisos</th>
+                        <th><span style="position: absolute; left: -9999px">Acciones</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (appointment of appointments(); track appointment.id) {
+                        <tr>
+                            <td>{{ formatDate(appointment.date) }}</td>
+                            <td>{{ formatTime(appointment.startTime) }}</td>
+                            @if (isManagement()) {
+                                <td>
+                                    <strong style="font-weight: 500">{{
+                                        appointment.teacherName
+                                    }}</strong>
+                                </td>
+                            }
+                            <td>
+                                <span class="badge" [class]="badgeClass(appointment.status)">{{
+                                    statusLabel(appointment.status)
+                                }}</span>
+                            </td>
+                            <td>
+                                @if (appointment.mode) {
+                                    {{ modeLabel(appointment.mode) }}
+                                } @else {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (appointment.childFirstName) {
+                                    {{ appointment.childFirstName }} {{ appointment.childLastName }}
+                                    <small>{{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}</small>
+                                    @if (appointment.guardianEmail) {
+                                        <small>{{ appointment.guardianEmail }}</small>
+                                    }
+                                } @else {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (appointment.status === "Booked") {
+                                    <span
+                                        class="badge"
+                                        [class]="
+                                            appointment.confirmationSent
+                                                ? 'badge-booked'
+                                                : 'badge-pending'
+                                        "
+                                    >
+                                        {{
+                                            appointment.confirmationSent
+                                                ? "Email enviado"
+                                                : "Email no enviado"
+                                        }}
+                                    </span>
+                                    @if (appointment.confirmationRequestedAt) {
+                                        <small>
+                                            Asistencia pedida el
+                                            {{ formatDateTime(appointment.confirmationRequestedAt) }}
+                                        </small>
+                                    }
+                                } @else {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="actions-cell">
+                                @if (appointment.status === "Booked") {
+                                    <button
+                                        type="button"
+                                        class="btn btn-green btn-small"
+                                        title="Abre WhatsApp con un mensaje para la familia recordando el turno y pidiendo que confirme"
+                                        (click)="requestConfirmation(appointment)"
+                                    >
+                                        Confirmación
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-danger btn-small"
+                                        (click)="cancel(appointment)"
+                                    >
+                                        Cancelar
+                                    </button>
+                                } @else if (appointment.status === "Available") {
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary btn-small"
+                                        (click)="delete(appointment)"
+                                    >
+                                        Eliminar
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <section class="print-only">
+        <header class="print-header">
+            <div>
+                <strong>Colegio IDRA - Nivel Inicial</strong>
+                <h1>Entrevistas reservadas</h1>
+                <p>
+                    @if (printTeacher(); as teacherName) {
+                        Docente: {{ teacherName }}
+                    } @else {
+                        Todas las docentes
+                    }
+                    - {{ printRange() }}
+                </p>
+            </div>
+            <p>Impreso el {{ printDate }}</p>
+        </header>
+
+        <table class="print-table">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Horario</th>
+                    @if (!printTeacher()) {
+                        <th>Docente</th>
+                    }
+                    <th>Modalidad</th>
+                    <th>Niño/a</th>
+                    <th>Padre/madre</th>
+                    <th class="notes-col">Asistio / Observaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (appointment of bookedForPrint(); track appointment.id) {
+                    <tr>
+                        <td>
+                            {{ formatDate(appointment.date) }}
+                        </td>
+                        <td>
+                            {{ formatTime(appointment.startTime) }}
+                        </td>
+                        @if (!printTeacher()) {
+                            <td>{{ appointment.teacherName }}</td>
+                        }
+                        <td>{{ modeLabel(appointment.mode) }}</td>
+                        <td>{{ appointment.childFirstName }} {{ appointment.childLastName }}</td>
+                        <td>{{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}</td>
+                        <td></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <p class="print-total">
+            Total:
+            {{ bookedForPrint().length }} entrevista(s)
+        </p>
+    </section>
+</div>

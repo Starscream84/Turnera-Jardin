@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace TurneraJardin.Api.Controllers;
 
-/// <summary>Login para el panel de administración (directivos y docentes).</summary>
+/// <summary>Login for the admin panel (management and teachers).</summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -30,104 +30,105 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<LoginResponseDto>> Login(LoginDto dto)
     {
         var email = dto.Email.Trim().ToLowerInvariant();
-        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == email && u.Activo);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email && u.IsActive);
 
-        if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash))
+        if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
         {
-            return Unauthorized(new { mensaje = "Email o contraseña incorrectos." });
+            return Unauthorized(new { message = "Email o contraseña incorrectos." });
         }
 
-        var (token, expiraUtc) = _jwtService.GenerarToken(usuario);
+        var (token, expiresAtUtc) = _jwtService.GenerateToken(user);
 
-        return Ok(new LoginResponseDto(token, expiraUtc, usuario.NombreCompleto, usuario.Rol.ToString(), usuario.DocenteId, usuario.FotoUrl));
+        return Ok(new LoginResponseDto(token, expiresAtUtc, user.FullName, user.Role.ToString(), user.TeacherId, user.PhotoUrl));
     }
 
-    /// <summary>Permite a cualquier usuario logueado (dirección o docente) cambiar su propia contraseña.</summary>
+    /// <summary>Lets any logged-in user (management or teacher) change their own password.</summary>
     [Authorize]
-    [HttpPost("cambiar-password")]
-    public async Task<IActionResult> CambiarPassword(CambiarPasswordPropiaDto dto)
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangeOwnPasswordDto dto)
     {
         var idClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (idClaim is null || !int.TryParse(idClaim, out var usuarioId))
+        if (idClaim is null || !int.TryParse(idClaim, out var userId))
         {
             return Unauthorized();
         }
 
-        var usuario = await _db.Usuarios.FindAsync(usuarioId);
-        if (usuario is null)
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null)
         {
             return Unauthorized();
         }
 
-        if (!BCrypt.Net.BCrypt.Verify(dto.PasswordActual, usuario.PasswordHash))
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
         {
-            return BadRequest(new { mensaje = "La contraseña actual no es correcta." });
+            return BadRequest(new { message = "La contraseña actual no es correcta." });
         }
 
-        usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordNueva);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         await _db.SaveChangesAsync();
 
         return NoContent();
     }
 
-    /// <summary>Sube (o reemplaza) la foto de perfil del usuario logueado. Acepta JPG, PNG o WEBP, hasta 2 MB.</summary>
+    /// <summary>Uploads (or replaces) the logged-in user's profile photo. Accepts JPG, PNG or WEBP, up to 2 MB.</summary>
     [Authorize]
-    [HttpPost("mi-foto")]
-    public async Task<ActionResult<object>> SubirFoto(IFormFile archivo)
+    [HttpPost("my-photo")]
+    public async Task<ActionResult<object>> UploadPhoto(IFormFile file)
     {
-        if (archivo is null || archivo.Length == 0)
+        if (file is null || file.Length == 0)
         {
-            return BadRequest(new { mensaje = "No se recibió ningún archivo." });
+            return BadRequest(new { message = "No se recibió ningún archivo." });
         }
 
-        var extensionesValidas = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
-        if (!extensionesValidas.Contains(extension))
+        var validExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!validExtensions.Contains(extension))
         {
-            return BadRequest(new { mensaje = "Solo se aceptan imágenes JPG, PNG o WEBP." });
+            return BadRequest(new { message = "Solo se aceptan imágenes JPG, PNG o WEBP." });
         }
 
         const long maxBytes = 2 * 1024 * 1024; // 2 MB
-        if (archivo.Length > maxBytes)
+        if (file.Length > maxBytes)
         {
-            return BadRequest(new { mensaje = "La imagen no puede superar los 2 MB." });
+            return BadRequest(new { message = "La imagen no puede superar los 2 MB." });
         }
 
         var idClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-        if (idClaim is null || !int.TryParse(idClaim, out var usuarioId))
+        if (idClaim is null || !int.TryParse(idClaim, out var userId))
         {
             return Unauthorized();
         }
 
-        var usuario = await _db.Usuarios.FindAsync(usuarioId);
-        if (usuario is null)
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null)
         {
             return Unauthorized();
         }
 
-        var carpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "fotos-perfil");
-        Directory.CreateDirectory(carpeta);
+        // The folder keeps its Spanish name: it is part of the public URL already stored in Users.PhotoUrl.
+        var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "fotos-perfil");
+        Directory.CreateDirectory(folder);
 
-        // Si ya tenía una foto propia, la borramos para no acumular archivos huérfanos.
-        if (!string.IsNullOrEmpty(usuario.FotoUrl))
+        // If the user already had a photo, delete it so orphan files don't pile up.
+        if (!string.IsNullOrEmpty(user.PhotoUrl))
         {
-            var rutaVieja = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", usuario.FotoUrl.TrimStart('/'));
-            if (System.IO.File.Exists(rutaVieja))
+            var oldPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", user.PhotoUrl.TrimStart('/'));
+            if (System.IO.File.Exists(oldPath))
             {
-                System.IO.File.Delete(rutaVieja);
+                System.IO.File.Delete(oldPath);
             }
         }
 
-        var nombreArchivo = $"{Guid.NewGuid()}{extension}";
-        var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
-        using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+        var fileName = $"{Guid.NewGuid()}{extension}";
+        var fullPath = Path.Combine(folder, fileName);
+        using (var stream = new FileStream(fullPath, FileMode.Create))
         {
-            await archivo.CopyToAsync(stream);
+            await file.CopyToAsync(stream);
         }
 
-        usuario.FotoUrl = $"/fotos-perfil/{nombreArchivo}";
+        user.PhotoUrl = $"/fotos-perfil/{fileName}";
         await _db.SaveChangesAsync();
 
-        return Ok(new { fotoUrl = usuario.FotoUrl });
+        return Ok(new { photoUrl = user.PhotoUrl });
     }
 }

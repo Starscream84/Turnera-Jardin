@@ -9,37 +9,37 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<Docente> Docentes => Set<Docente>();
-    public DbSet<Turno> Turnos => Set<Turno>();
-    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Teacher> Teachers => Set<Teacher>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Docente>(entity =>
+        modelBuilder.Entity<Teacher>(entity =>
         {
-            entity.HasIndex(d => d.Email).IsUnique();
+            entity.HasIndex(t => t.Email).IsUnique();
         });
 
-        modelBuilder.Entity<Turno>(entity =>
+        modelBuilder.Entity<Appointment>(entity =>
         {
-            entity.HasOne(t => t.Docente)
-                  .WithMany(d => d.Turnos)
-                  .HasForeignKey(t => t.DocenteId)
+            entity.HasOne(a => a.Teacher)
+                  .WithMany(t => t.Appointments)
+                  .HasForeignKey(a => a.TeacherId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Un docente no puede tener dos turnos que arranquen a la misma hora el mismo día.
-            entity.HasIndex(t => new { t.DocenteId, t.Fecha, t.HoraInicio }).IsUnique();
+            // A teacher cannot have two appointments starting at the same time on the same day.
+            entity.HasIndex(a => new { a.TeacherId, a.Date, a.StartTime }).IsUnique();
         });
 
-        modelBuilder.Entity<Usuario>(entity =>
+        modelBuilder.Entity<User>(entity =>
         {
             entity.HasIndex(u => u.Email).IsUnique();
 
-            entity.HasOne(u => u.Docente)
+            entity.HasOne(u => u.Teacher)
                   .WithMany()
-                  .HasForeignKey(u => u.DocenteId)
+                  .HasForeignKey(u => u.TeacherId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
     }

@@ -15,7 +15,7 @@ export class LoginComponent {
     private auth = inject(AuthService);
     private router = inject(Router);
 
-    enviando = signal(false);
+    sending = signal(false);
     error = signal<string | null>(null);
 
     form = this.fb.nonNullable.group({
@@ -23,22 +23,22 @@ export class LoginComponent {
         password: ["", [Validators.required]],
     });
 
-    ingresar(): void {
+    signIn(): void {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             return;
         }
 
-        this.enviando.set(true);
+        this.sending.set(true);
         this.error.set(null);
 
         this.auth.login(this.form.getRawValue()).subscribe({
             next: () => {
-                this.enviando.set(false);
+                this.sending.set(false);
                 this.router.navigate(["/admin/turnos"]);
             },
             error: (err: HttpErrorResponse) => {
-                this.enviando.set(false);
+                this.sending.set(false);
                 this.error.set(
                     err.status === 429
                         ? "Demasiados intentos de ingreso. Esperá unos minutos y probá de nuevo."
