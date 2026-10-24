@@ -1,31 +1,31 @@
 <div class="panel-top">
-  <nav class="nav-flotante" aria-label="Panel">
+  <nav class="floating-nav" aria-label="Panel">
     <a routerLink="/admin/turnos" class="logo" aria-label="Panel — Turnera del Jardín">
       <span class="logo-idra">IDRA</span>
-      <span class="logo-colegio">COLEGIO</span>
+      <span class="logo-school">COLEGIO</span>
     </a>
     <div class="nav-links">
-      <a routerLink="/admin/turnos" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Turnos</a>
-      @if (auth.rol() === 'Admin' || auth.rol() === 'Coordinador') {
-        <a routerLink="/admin/turnos/generar" routerLinkActive="activo" class="nav-link">Generar turnos</a>
-        <a routerLink="/admin/docentes" routerLinkActive="activo" class="nav-link">Docentes</a>
+      <a routerLink="/admin/turnos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Turnos</a>
+      @if (auth.role() === 'Admin' || auth.role() === 'Coordinator') {
+        <a routerLink="/admin/turnos/generar" routerLinkActive="active" class="nav-link">Generar turnos</a>
+        <a routerLink="/admin/docentes" routerLinkActive="active" class="nav-link">Docentes</a>
       }
-      @if (auth.rol() === 'Admin') {
-        <a routerLink="/admin/usuarios" routerLinkActive="activo" class="nav-link">Usuarios</a>
+      @if (auth.role() === 'Admin') {
+        <a routerLink="/admin/usuarios" routerLinkActive="active" class="nav-link">Usuarios</a>
       }
-      <a routerLink="/admin/mi-cuenta" routerLinkActive="activo" class="nav-link">Mi contraseña</a>
+      <a routerLink="/admin/mi-cuenta" routerLinkActive="active" class="nav-link">Mi contraseña</a>
     </div>
-    <div class="nav-usuario">
-      @if (auth.fotoUrlCompleta()) {
-        <img [src]="auth.fotoUrlCompleta()" alt="" class="avatar" />
+    <div class="nav-user">
+      @if (auth.fullPhotoUrl()) {
+        <img [src]="auth.fullPhotoUrl()" alt="" class="avatar" />
       } @else {
-        <span class="avatar" aria-hidden="true">{{ iniciales(auth.nombreUsuario()) }}</span>
+        <span class="avatar" aria-hidden="true">{{ initials(auth.userName()) }}</span>
       }
-      <div class="nav-usuario-texto">
-        <strong>{{ auth.nombreUsuario() }}</strong>
-        <span>{{ etiquetaRol() }}</span>
+      <div class="nav-user-text">
+        <strong>{{ auth.userName() }}</strong>
+        <span>{{ roleLabel() }}</span>
       </div>
-      <button type="button" class="btn btn-secundario btn-chico" (click)="salir()">Salir</button>
+      <button type="button" class="btn btn-secondary btn-small" (click)="signOut()">Salir</button>
     </div>
   </nav>
 </div>

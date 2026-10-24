@@ -1,0 +1,100 @@
+<div class="container-narrow" style="max-width: 760px;">
+  <h1>Generar turnos</h1>
+  <p class="text-muted" style="margin-bottom: 28px;">Abrí franjas horarias para que los padres puedan reservar. No se duplican turnos ya cargados en el mismo horario.</p>
+
+  @if (loading()) {
+    <p class="text-muted">Cargando docentes...</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="generate()" class="card">
+      <h3>1. Docente y período</h3>
+      <div class="form-group">
+        <label for="teacherId">Docente</label>
+        <select id="teacherId" formControlName="teacherId">
+          <option value="" disabled>Elegí un docente</option>
+          <option [value]="ALL">Todos los docentes</option>
+          @for (teacher of teachers(); track teacher.id) {
+            <option [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field-row">
+        <div class="form-group">
+          <label for="fromDate">Desde</label>
+          <input id="fromDate" type="date" formControlName="fromDate" />
+        </div>
+        <div class="form-group">
+          <label for="toDate">Hasta</label>
+          <input id="toDate" type="date" formControlName="toDate" />
+        </div>
+      </div>
+
+      <h3 style="margin-top: 12px;">2. Días de la semana</h3>
+      <div class="form-group">
+        <div formGroupName="selectedDays" class="weekdays">
+          @for (day of days; track day.number) {
+            <label class="weekday">
+              <input type="checkbox" [formControlName]="day.number" />
+              {{ day.label }}
+            </label>
+          }
+        </div>
+      </div>
+
+      <h3 style="margin-top: 12px;">3. Horario y duración</h3>
+      <p class="text-muted" style="margin-bottom: 16px;">
+        Para dejar un corte en el medio (por ejemplo, el mediodía), cargá dos franjas: 08:00 a 12:00 y 13:00 a 18:00.
+      </p>
+
+      <div formArrayName="timeSlots">
+        @for (slot of form.controls.timeSlots.controls; track slot; let i = $index) {
+          <div class="field-row time-slot" [formGroupName]="i">
+            <div class="form-group">
+              <label [for]="'startTime' + i">Franja {{ i + 1 }}: desde</label>
+              <input [id]="'startTime' + i" type="time" formControlName="startTime" />
+            </div>
+            <div class="form-group">
+              <label [for]="'endTime' + i">Hasta</label>
+              <input [id]="'endTime' + i" type="time" formControlName="endTime" />
+            </div>
+            @if (form.controls.timeSlots.length > 1) {
+              <button type="button" class="btn btn-secondary btn-small remove-slot" (click)="removeTimeSlot(i)">
+                Quitar
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      <button type="button" class="btn btn-secondary btn-small" style="margin-bottom: 20px;" (click)="addTimeSlot()">
+        + Agregar franja horaria
+      </button>
+
+      <div class="form-group" style="max-width: 220px;">
+        <label for="durationMinutes">Duración de cada turno (min)</label>
+        <input id="durationMinutes" type="number" formControlName="durationMinutes" />
+      </div>
+
+      @if (error()) {
+        <div class="alert alert-error" role="alert">{{ error() }}</div>
+      }
+
+      @if (result() !== null) {
+        <div class="alert alert-success" role="status">
+          @if (result() === 0) {
+            No se generó ningún turno nuevo: ya estaban cargados esos horarios, o no hay días elegidos dentro del período.
+          } @else {
+            Se generaron {{ result() }} turno(s) nuevo(s){{ teachersProcessed() > 1 ? " para " + teachersProcessed() + " docentes" : "" }}.
+          }
+        </div>
+      }
+
+      <div class="actions" style="margin-top: 8px;">
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Generando...' : 'Generar turnos' }}
+        </button>
+        <a routerLink="/admin/turnos" class="btn btn-secondary">Ver turnos</a>
+      </div>
+    </form>
+  }
+</div>

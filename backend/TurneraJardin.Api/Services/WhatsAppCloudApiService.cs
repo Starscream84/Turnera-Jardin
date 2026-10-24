@@ -8,9 +8,9 @@ using TurneraJardin.Api.Models;
 namespace TurneraJardin.Api.Services;
 
 /// <summary>
-/// Envía mensajes usando la WhatsApp Cloud API oficial de Meta (gratuita dentro de su cuota mensual).
-/// Requiere que existan, y estén aprobadas por Meta, dos plantillas de mensaje ("message templates"):
-/// una para la confirmación y otra para el recordatorio. Ver README -> "Configurar WhatsApp".
+/// Sends messages through Meta's official WhatsApp Cloud API (free within its monthly quota).
+/// Requires two message templates to exist and be approved by Meta:
+/// one for the confirmation and another for the reminder. See README -> "Configurar WhatsApp".
 /// </summary>
 public class WhatsAppCloudApiService : IWhatsAppService
 {
@@ -25,60 +25,60 @@ public class WhatsAppCloudApiService : IWhatsAppService
         _logger = logger;
     }
 
-    public Task<bool> EnviarConfirmacionAsync(Turno turno, CancellationToken ct = default)
+    public Task<bool> SendConfirmationAsync(Appointment appointment, CancellationToken ct = default)
     {
-        var parametros = new[]
+        var parameters = new[]
         {
-            $"{turno.NombreNino} {turno.ApellidoNino}".Trim(),
-            turno.Docente?.NombreCompleto ?? "",
-            FormatearFecha(turno.Fecha),
-            turno.HoraInicio.ToString("HH:mm", CultureInfo.InvariantCulture)
+            $"{appointment.ChildFirstName} {appointment.ChildLastName}".Trim(),
+            appointment.Teacher?.FullName ?? "",
+            FormatDate(appointment.Date),
+            appointment.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture)
         };
 
-        return EnviarTemplateAsync(turno, _options.TemplateConfirmacion, parametros, ct);
+        return SendTemplateAsync(appointment, _options.ConfirmationTemplate, parameters, ct);
     }
 
-    public Task<bool> EnviarRecordatorioAsync(Turno turno, CancellationToken ct = default)
+    public Task<bool> SendReminderAsync(Appointment appointment, CancellationToken ct = default)
     {
-        var parametros = new[]
+        var parameters = new[]
         {
-            $"{turno.NombreNino} {turno.ApellidoNino}".Trim(),
-            turno.Docente?.NombreCompleto ?? "",
-            turno.HoraInicio.ToString("HH:mm", CultureInfo.InvariantCulture)
+            $"{appointment.ChildFirstName} {appointment.ChildLastName}".Trim(),
+            appointment.Teacher?.FullName ?? "",
+            appointment.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture)
         };
 
-        return EnviarTemplateAsync(turno, _options.TemplateRecordatorio, parametros, ct);
+        return SendTemplateAsync(appointment, _options.ReminderTemplate, parameters, ct);
     }
 
-    private async Task<bool> EnviarTemplateAsync(Turno turno, string nombreTemplate, string[] parametros, CancellationToken ct)
+    private async Task<bool> SendTemplateAsync(Appointment appointment, string templateName, string[] parameters, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(turno.TelefonoPadre))
+        if (string.IsNullOrWhiteSpace(appointment.GuardianPhone))
         {
-            _logger.LogWarning("Turno {TurnoId} no tiene teléfono cargado, no se envía WhatsApp", turno.Id);
+            _logger.LogWarning("Appointment {AppointmentId} has no phone number, WhatsApp is not sent", appointment.Id);
             return false;
         }
 
-        if (!_options.Habilitado)
+        if (!_options.Enabled)
         {
             _logger.LogInformation(
-                "[WhatsApp DESHABILITADO] Se simula envío de '{Template}' a {Telefono} con parámetros: {Parametros}",
-                nombreTemplate, turno.TelefonoPadre, string.Join(" | ", parametros));
+                "[WhatsApp DISABLED] Simulating send of '{Template}' to {Phone} with parameters: {Parameters}",
+                templateName, appointment.GuardianPhone, string.Join(" | ", parameters));
             return true;
         }
 
         var payload = new WhatsAppTemplateRequest
         {
-            To = NormalizarTelefono(turno.TelefonoPadre),
+            To = NormalizePhone(appointment.GuardianPhone),
             Template = new WhatsAppTemplate
             {
-                Name = nombreTemplate,
-                Language = new WhatsAppTemplateLanguage { Code = _options.CodigoIdiomaTemplate },
+                Name = templateName,
+                Language = new WhatsAppTemplateLanguage { Code = _options.TemplateLanguageCode },
                 Components = new[]
                 {
                     new WhatsAppTemplateComponent
                     {
                         Type = "body",
-                        Parameters = parametros.Select(p => new WhatsAppTemplateParameter { Text = p }).ToArray()
+                        Parameters = parameters.Select(p => new WhatsAppTemplateParameter { Text = p }).ToArray()
                     }
                 }
             }
@@ -100,8 +100,8 @@ public class WhatsAppCloudApiService : IWhatsAppService
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogError(
-                    "Falló el envío de WhatsApp ({Template}) a turno {TurnoId}: {Status} - {Body}",
-                    nombreTemplate, turno.Id, response.StatusCode, body);
+                    "Failed to send WhatsApp ({Template}) for appointment {AppointmentId}: {Status} - {Body}",
+                    templateName, appointment.Id, response.StatusCode, body);
                 return false;
             }
 
@@ -109,22 +109,22 @@ public class WhatsAppCloudApiService : IWhatsAppService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Excepción enviando WhatsApp ({Template}) para turno {TurnoId}", nombreTemplate, turno.Id);
+            _logger.LogError(ex, "Exception sending WhatsApp ({Template}) for appointment {AppointmentId}", templateName, appointment.Id);
             return false;
         }
     }
 
-    private static string FormatearFecha(DateOnly fecha) =>
-        fecha.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+    private static string FormatDate(DateOnly date) =>
+        date.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 
-    /// <summary>La Cloud API espera el número en formato E.164 sin el símbolo "+".</summary>
-    private static string NormalizarTelefono(string telefono)
+    /// <summary>The Cloud API expects the number in E.164 format without the "+" sign.</summary>
+    private static string NormalizePhone(string phone)
     {
-        var soloDigitos = new string(telefono.Where(char.IsDigit).ToArray());
-        return soloDigitos;
+        var digitsOnly = new string(phone.Where(char.IsDigit).ToArray());
+        return digitsOnly;
     }
 
-    // --- Modelos internos del payload de la Graph API ---
+    // --- Internal Graph API payload models ---
 
     private class WhatsAppTemplateRequest
     {

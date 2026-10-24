@@ -1,0 +1,107 @@
+<app-public-shell heading="Turnos" [step]="2">
+  <a routerLink="/reservar" class="back-link">&larr; Elegir otro/a docente</a>
+
+  <div class="step-header">
+    <span class="tag">Paso 2</span>
+    <h2>Elegí día y horario:</h2>
+    <p class="text-muted">Los días en verde tienen horarios libres. Podés reservar con hasta {{ monthsAhead }} meses de anticipación.</p>
+  </div>
+
+  @if (teacher(); as t) {
+    <div class="chosen-teacher">
+      <span class="avatar avatar-medium" [style.background]="avatarColor(t.id)" aria-hidden="true">{{ initials(t.fullName) }}</span>
+      <div>
+        <strong>{{ t.fullName }}</strong>
+        @if (t.classroom) {
+          <span class="text-muted">{{ t.classroom }}</span>
+        }
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted">Cargando horarios...</p>
+  } @else if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  } @else if (!hasAppointments()) {
+    <p class="text-muted">No hay horarios disponibles por el momento para este/a docente. Probá más adelante o elegí otro/a docente.</p>
+  } @else {
+    <div class="schedule">
+      <section class="calendar" aria-label="Calendario de días disponibles">
+        <div class="calendar-header">
+          <h3 aria-live="polite">{{ monthTitle() }}</h3>
+          <div class="calendar-arrows">
+            <button type="button" aria-label="Mes anterior" [disabled]="!canGoBack()" (click)="changeMonth(-1)">&lsaquo;</button>
+            <button type="button" aria-label="Mes siguiente" [disabled]="!canGoForward()" (click)="changeMonth(1)">&rsaquo;</button>
+          </div>
+        </div>
+
+        <div class="calendar-grid" aria-hidden="true">
+          @for (weekday of weekdays; track $index) {
+            <span class="calendar-weekday">{{ weekday }}</span>
+          }
+        </div>
+
+        @for (week of weeks(); track $index) {
+          <div class="calendar-grid">
+            @for (day of week; track $index) {
+              @if (day.date === null) {
+                <span></span>
+              } @else {
+                <button
+                  type="button"
+                  class="calendar-day"
+                  [class.available]="day.count > 0"
+                  [class.selected]="day.date === selectedDate()"
+                  [disabled]="day.count === 0"
+                  [attr.aria-label]="dayLabel(day)"
+                  [attr.aria-pressed]="day.count > 0 ? day.date === selectedDate() : null"
+                  (click)="chooseDate(day)"
+                >
+                  {{ day.number }}
+                </button>
+              }
+            }
+          </div>
+        }
+
+        <div class="calendar-legend">
+          <span><i class="dot dot-available"></i> Con horarios</span>
+          <span><i class="dot dot-selected"></i> Elegido</span>
+          <span><i class="dot"></i> Sin turnos</span>
+        </div>
+      </section>
+
+      <section class="day-times" aria-live="polite">
+        @if (selectedDate(); as date) {
+          <h3>{{ formatDate(date) }}</h3>
+
+          @if (dayAppointments().morning.length > 0) {
+            <p class="times-title">Mañana</p>
+            <div class="time-options">
+              @for (appointment of dayAppointments().morning; track appointment.id) {
+                <button type="button" class="time-option" (click)="chooseAppointment(appointment)">
+                  {{ formatTime(appointment.startTime) }}
+                </button>
+              }
+            </div>
+          }
+
+          @if (dayAppointments().afternoon.length > 0) {
+            <p class="times-title">Tarde</p>
+            <div class="time-options">
+              @for (appointment of dayAppointments().afternoon; track appointment.id) {
+                <button type="button" class="time-option" (click)="chooseAppointment(appointment)">
+                  {{ formatTime(appointment.startTime) }}
+                </button>
+              }
+            </div>
+          }
+        } @else {
+          <h3>Elegí un día</h3>
+          <p class="text-muted">Este mes no tiene horarios libres. Probá con otro mes.</p>
+        }
+      </section>
+    </div>
+  }
+</app-public-shell>

@@ -1,4 +1,4 @@
-export type Rol = 'Admin' | 'Docente' | 'Coordinador';
+export type UserRole = 'Admin' | 'Teacher' | 'Coordinator';
 
 export interface LoginRequest {
   email: string;
@@ -7,9 +7,9 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   token: string;
-  expiraUtc: string;
-  nombreCompleto: string;
-  rol: Rol;
-  docenteId: number | null;
-  fotoUrl: string | null;
+  expiresAtUtc: string;
+  fullName: string;
+  role: UserRole;
+  teacherId: number | null;
+  photoUrl: string | null;
 }

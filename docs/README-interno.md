@@ -143,7 +143,7 @@ Para que cada docente pueda entrar al panel y ver *solo sus propios turnos*, dir
 
 ## Configurar WhatsApp (Cloud API de Meta)
 
-Sin esto configurado, el sistema funciona igual (se pueden reservar y cancelar turnos), pero los mensajes de WhatsApp no se mandan: solo quedan registrados en el log de la consola (`WhatsApp:Habilitado` está en `false` por defecto en `appsettings.json`). Esto es útil para desarrollar y probar sin tener que configurar nada de Meta todavía.
+Sin esto configurado, el sistema funciona igual (se pueden reservar y cancelar turnos), pero los mensajes de WhatsApp no se mandan: solo quedan registrados en el log de la consola (`WhatsApp:Enabled` está en `false` por defecto en `appsettings.json`). Esto es útil para desarrollar y probar sin tener que configurar nada de Meta todavía.
 
 Pasos para activarlo de verdad:
 
@@ -173,13 +173,13 @@ Pasos para activarlo de verdad:
 
    ```json
    "WhatsApp": {
-     "Habilitado": true,
+     "Enabled": true,
      "AccessToken": "el-token-permanente-acá",
      "PhoneNumberId": "el-phone-number-id-acá",
      "ApiVersion": "v20.0",
-     "TemplateConfirmacion": "confirmacion_turno",
-     "TemplateRecordatorio": "recordatorio_turno",
-     "CodigoIdiomaTemplate": "es_AR"
+     "ConfirmationTemplate": "confirmacion_turno",
+     "ReminderTemplate": "recordatorio_turno",
+     "TemplateLanguageCode": "es_AR"
    }
    ```
 
@@ -242,34 +242,37 @@ Todos los endpoints devuelven/reciben JSON. Los marcados 🔒 requieren el heade
 | Método | Ruta | Descripción |
 |---|---|---|
 | POST | `/api/auth/login` | Login de dirección/docentes |
-| GET | `/api/docentes` | Lista pública de docentes activos |
-| GET | `/api/docentes/{id}/turnos-disponibles` | Horarios libres de un docente |
-| POST | `/api/turnos/{id}/reservar` | Reserva un turno (manda WhatsApp de confirmación) |
-| POST | `/api/turnos/{id}/cancelar?telefono=` | Cancela un turno (valida el teléfono) |
-| GET 🔒 | `/api/admin/docentes` | Lista completa de docentes (solo Admin) |
-| POST 🔒 | `/api/admin/docentes` | Crea un docente (solo Admin) |
-| PUT 🔒 | `/api/admin/docentes/{id}` | Edita un docente (solo Admin) |
-| DELETE 🔒 | `/api/admin/docentes/{id}` | Desactiva un docente (solo Admin) |
-| POST 🔒 | `/api/admin/docentes/{id}/generar-turnos` | Genera turnos en bloque (solo Admin) |
-| GET 🔒 | `/api/admin/turnos` | Lista turnos (filtra por docente/fecha/estado; un docente solo ve los suyos) |
-| POST 🔒 | `/api/admin/turnos/{id}/cancelar` | Cancela una reserva |
-| DELETE 🔒 | `/api/admin/turnos/{id}` | Elimina una franja libre |
-| GET 🔒 | `/api/admin/usuarios` | Lista todos los usuarios del panel (solo Admin) |
-| POST 🔒 | `/api/admin/usuarios` | Crea un login (de un docente, o de otro Admin) (solo Admin) |
-| POST 🔒 | `/api/admin/usuarios/{id}/restablecer-password` | Restablece la contraseña de un usuario (solo Admin) |
-| PUT 🔒 | `/api/admin/usuarios/{id}/activar` | Reactiva un acceso (solo Admin) |
-| POST 🔒 | `/api/admin/usuarios/{id}/desactivar` | Desactiva un acceso (solo Admin) |
-| POST 🔒 | `/api/auth/cambiar-password` | Cualquier usuario logueado cambia su propia contraseña |
+| GET | `/api/teachers` | Lista pública de docentes activos |
+| GET | `/api/teachers/{id}/available-appointments` | Horarios libres de un docente |
+| POST | `/api/appointments/{id}/book` | Reserva un turno (manda WhatsApp de confirmación) |
+| POST | `/api/appointments/{id}/cancel?phone=` | Cancela un turno (valida el teléfono) |
+| GET 🔒 | `/api/admin/teachers` | Lista completa de docentes (solo Admin) |
+| POST 🔒 | `/api/admin/teachers` | Crea un docente (solo Admin) |
+| PUT 🔒 | `/api/admin/teachers/{id}` | Edita un docente (solo Admin) |
+| DELETE 🔒 | `/api/admin/teachers/{id}` | Desactiva un docente (solo Admin) |
+| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Genera turnos en bloque (solo Admin) |
+| GET 🔒 | `/api/admin/appointments` | Lista turnos (filtra por docente/fecha/estado; un docente solo ve los suyos) |
+| POST 🔒 | `/api/admin/appointments/{id}/cancel` | Cancela una reserva |
+| POST 🔒 | `/api/admin/appointments/{id}/request-confirmation` | Registra que se pidió confirmación por WhatsApp |
+| DELETE 🔒 | `/api/admin/appointments?teacherId=&from=&to=&status=` | Elimina en bloque (exige al menos un filtro; Admin/Coordinador) |
+| DELETE 🔒 | `/api/admin/appointments/{id}` | Elimina una franja libre |
+| GET 🔒 | `/api/admin/users` | Lista todos los usuarios del panel (solo Admin) |
+| POST 🔒 | `/api/admin/users` | Crea un login (de un docente, o de otro Admin) (solo Admin) |
+| POST 🔒 | `/api/admin/users/{id}/reset-password` | Restablece la contraseña de un usuario (solo Admin) |
+| PUT 🔒 | `/api/admin/users/{id}/activate` | Reactiva un acceso (solo Admin) |
+| POST 🔒 | `/api/admin/users/{id}/deactivate` | Desactiva un acceso (solo Admin) |
+| POST 🔒 | `/api/auth/change-password` | Cualquier usuario logueado cambia su propia contraseña |
+| POST 🔒 | `/api/auth/my-photo` | Sube la foto de perfil del usuario logueado (campo `file`) |
 
 La documentación interactiva completa (Swagger) está disponible corriendo el backend y entrando a `http://localhost:5275/swagger`.
 
 ## Decisiones de diseño y por qué
 
 - **SQLite en vez de SQL Server**: cero instalación, cero costo, un solo archivo — ideal para que el jardín no tenga que mantener un servidor de base de datos.
-- **Turnos como una sola tabla** (en vez de "disponibilidad" + "reservas" separadas): simplifica mucho el modelo. Una franja horaria "vacía" (`Estado = Disponible`) se convierte en una reserva completando los mismos campos, en vez de tener dos tablas relacionadas.
-- **JWT con roles Admin/Docente**: cada docente puede tener su propio usuario (creado por dirección desde **Panel → Usuarios**) y ver solo su agenda, sin exponerle las de sus compañeros — el filtro por `docenteId` está aplicado en `AdminTurnosController`. El seed solo crea el usuario Admin inicial; los accesos de cada docente se cargan desde el panel, no hace falta tocar la base.
+- **Turnos como una sola tabla** (en vez de "disponibilidad" + "reservas" separadas): simplifica mucho el modelo. Una franja horaria "vacía" (`Status = Available`) se convierte en una reserva completando los mismos campos, en vez de tener dos tablas relacionadas.
+- **JWT con roles Admin/Docente**: cada docente puede tener su propio usuario (creado por dirección desde **Panel → Usuarios**) y ver solo su agenda, sin exponerle las de sus compañeros — el filtro por `teacherId` está aplicado en `AdminAppointmentsController`. El seed solo crea el usuario Admin inicial; los accesos de cada docente se cargan desde el panel, no hace falta tocar la base.
 - **Transacción al reservar**: evita que dos familias reserven el mismo horario si tocan "confirmar" casi al mismo tiempo.
-- **El envío de WhatsApp nunca bloquea la reserva**: si WhatsApp falla (por la razón que sea), el turno queda igual reservado, y se guarda un flag (`confirmacionEnviada = false`) para poder detectar el problema después. No quisimos que una falla de WhatsApp le impida a la familia sacar el turno.
+- **El envío de WhatsApp nunca bloquea la reserva**: si WhatsApp falla (por la razón que sea), el turno queda igual reservado, y se guarda un flag (`ConfirmationSent = false`) para poder detectar el problema después. No quisimos que una falla de WhatsApp le impida a la familia sacar el turno.
 - **El recordatorio corre dentro del mismo proceso de la API** (`BackgroundService`), revisando cada 30 minutos. Es la opción más simple para un proyecto de este tamaño; no requiere infraestructura extra. La contra es que si el proceso de la API está caído justo en ese momento, el recordatorio se manda en cuanto vuelve a levantar (no se pierde, solo se atrasa).
 
 ## Limitaciones conocidas y qué falta para producción

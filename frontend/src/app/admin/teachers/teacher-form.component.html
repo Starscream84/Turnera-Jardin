@@ -1,0 +1,57 @@
+<div class="container-narrow">
+  <a routerLink="/admin/docentes" class="back-link">&larr; Volver</a>
+  <h1 style="margin-bottom: 24px;">{{ isEdit ? 'Editar docente' : 'Nuevo docente' }}</h1>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted">Cargando...</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" class="card">
+      <div class="form-group">
+        <label for="firstName">Nombre</label>
+        <input id="firstName" type="text" formControlName="firstName" />
+      </div>
+
+      <div class="form-group">
+        <label for="lastName">Apellido</label>
+        <input id="lastName" type="text" formControlName="lastName" />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input id="email" type="email" formControlName="email" />
+      </div>
+
+      <div class="form-group">
+        <label for="classroom">Sala / grupo a cargo (opcional)</label>
+        <input id="classroom" type="text" formControlName="classroom" placeholder="Ej: Sala Verde (1 año)" />
+      </div>
+
+      <div class="form-group">
+        <label for="cycle">Ciclo</label>
+        <select id="cycle" formControlName="cycle">
+          <option value="">Sin ciclo (la familia elige presencial o virtual)</option>
+          <option value="FirstCycle">Primer ciclo (lactantes, salas 1 y 2): solo presencial</option>
+          <option value="SecondCycle">Segundo ciclo (salas 3, 4 y 5): presencial o virtual</option>
+          <option value="Specialist">Especialista (música, educación física): solo presencial</option>
+        </select>
+      </div>
+
+      @if (isEdit) {
+        <div class="form-group">
+          <label for="isActive" class="check-line">
+            <input id="isActive" type="checkbox" formControlName="isActive" />
+            Activo (visible en la agenda pública)
+          </label>
+        </div>
+      }
+
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </form>
+  }
+</div>

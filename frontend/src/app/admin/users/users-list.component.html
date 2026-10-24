@@ -1,0 +1,104 @@
+<div class="container">
+  <div class="top-bar">
+    <div>
+      <h1>Usuarios</h1>
+      <p class="text-muted" style="max-width: 760px;">Cada docente necesita su propio usuario para entrar al panel y ver solo sus propios turnos. Dirección puede crear esos accesos acá y restablecer contraseñas cuando haga falta.</p>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (generatedCredentials(); as credentials) {
+    <div class="card credentials" role="status">
+      <strong>Contraseña generada para {{ credentials.email }}:</strong>
+      <div><span class="temporary-password">{{ credentials.temporaryPassword }}</span></div>
+      <p class="text-muted" style="margin: 0 0 14px;">Compartila con la persona por un medio seguro (no queda guardada en ningún otro lado) y pedile que la cambie apenas entre, desde "Mi contraseña".</p>
+      <button type="button" class="btn btn-secondary btn-small" (click)="closeCredentials()">Cerrar</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted">Cargando...</p>
+  } @else {
+    <div class="card" style="margin-bottom: 28px;">
+      <span class="tag tag-small tag-orange">Docentes sin acceso: {{ teachersWithoutUser().length }}</span>
+      <h2 style="font-size: 1.4rem;">Crear login para un docente</h2>
+
+      @if (teachersWithoutUser().length === 0) {
+        <p class="text-muted" style="margin: 0;">Todos los docentes activos ya tienen un usuario creado.</p>
+      } @else {
+        <form [formGroup]="createForm" (ngSubmit)="createForTeacher()" class="filters" style="padding: 0; margin: 0;">
+          <div class="form-group" style="min-width: 220px;">
+            <label for="teacherId">Docente</label>
+            <select id="teacherId" formControlName="teacherId">
+              <option value="" disabled>Elegí un docente</option>
+              @for (teacher of teachersWithoutUser(); track teacher.id) {
+                <option [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }} ({{ teacher.email }})</option>
+              }
+            </select>
+          </div>
+          <div class="form-group" style="min-width: 220px;">
+            <label for="password">Contraseña inicial (opcional)</label>
+            <input id="password" type="text" formControlName="password" placeholder="Vacío = se genera una automática" />
+          </div>
+          <button type="submit" class="btn btn-primary" [disabled]="creating()">
+            {{ creating() ? 'Creando...' : 'Crear usuario' }}
+          </button>
+        </form>
+      }
+    </div>
+
+    <h2 style="font-size: 1.4rem;">Accesos existentes</h2>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Rol</th>
+            <th>Docente vinculado</th>
+            <th>Estado</th>
+            <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of users(); track user.id) {
+            <tr>
+              <td>
+                <div class="user-cell">
+                  @if (fullPhotoUrl(user); as photo) {
+                    <img [src]="photo" alt="" class="avatar" />
+                  } @else {
+                    <span class="avatar" [style.background]="avatarColor(user.id)" aria-hidden="true">{{ initials(user.fullName) }}</span>
+                  }
+                  <div>
+                    <strong>{{ user.fullName }}</strong>
+                    <span class="text-muted">{{ user.email }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge" [class]="user.role === 'Teacher' ? 'badge-booked' : 'badge-admin'">{{ roleLabel(user) }}</span>
+              </td>
+              <td>{{ user.teacherName || '—' }}</td>
+              <td>
+                @if (user.isActive) {
+                  <span class="badge badge-booked">Activo</span>
+                } @else {
+                  <span class="badge badge-inactive">Inactivo</span>
+                }
+              </td>
+              <td class="actions-cell">
+                <button type="button" class="btn btn-secondary btn-small" (click)="resetPassword(user)">Restablecer contraseña</button>
+                <button type="button" class="btn btn-small" [class]="user.isActive ? 'btn-danger' : 'btn-green'" (click)="toggleActive(user)">
+                  {{ user.isActive ? 'Desactivar' : 'Activar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

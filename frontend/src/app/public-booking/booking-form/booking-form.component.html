@@ -1,0 +1,146 @@
+@if (confirmation(); as c) {
+  <app-public-shell heading="¡Listo!">
+    <div class="card confirmed">
+      <div class="ok-icon" aria-hidden="true"></div>
+      <h2>¡Turno confirmado!</h2>
+      <p class="text-muted">Te enviamos la confirmación por email. Si no la ves, revisá la carpeta de correo no deseado.</p>
+
+      <div class="appointment-details">
+        <div class="detail"><span>Docente</span><strong>{{ c.teacherName }}</strong></div>
+        <div class="detail"><span>Fecha</span><strong>{{ formatDate(c.date) }}</strong></div>
+        <div class="detail"><span>Horario</span><strong>{{ formatTime(c.startTime) }} hs</strong></div>
+        <div class="detail"><span>Modalidad</span><strong>{{ modeLabel(c.mode) }}</strong></div>
+      </div>
+
+      <p>Número de turno: <span class="appointment-number">#{{ c.id }}</span></p>
+      <p class="text-muted">Guardalo, lo necesitás si querés cancelar.</p>
+
+      <div class="confirmation-actions">
+        @if (googleCalendarLink(); as link) {
+          <a [href]="link" target="_blank" rel="noopener" class="btn btn-primary">Agregar recordatorio en Google Calendar</a>
+        }
+        <a routerLink="/reservar" class="btn btn-secondary">Volver al inicio</a>
+      </div>
+    </div>
+  </app-public-shell>
+} @else {
+  <app-public-shell heading="Turnos" [step]="3">
+    <a routerLink="/reservar/{{ teacherId }}" class="back-link">&larr; Elegir otro horario</a>
+
+    <div class="step-header">
+      <span class="tag">Paso 3</span>
+      <h2>Completá tus datos:</h2>
+      <p class="text-muted">Te mandamos la confirmación del turno por email. El WhatsApp lo usa la docente para recordarte la entrevista.</p>
+    </div>
+
+    @if (loading()) {
+      <p class="text-muted">Cargando...</p>
+    } @else {
+      @if (selectedAppointment(); as appointment) {
+        @if (error()) {
+          <div class="alert alert-error">{{ error() }}</div>
+        }
+
+        <div class="two-columns">
+          <form id="booking-form" [formGroup]="form" (ngSubmit)="confirm()" class="card">
+            @if (canChooseMode()) {
+                <fieldset class="form-group mode-group">
+                  <legend>¿Cómo querés tener la entrevista?</legend>
+                  <div class="mode-options">
+                    <label class="mode-option">
+                      <input type="radio" formControlName="mode" value="InPerson" />
+                      Presencial
+                    </label>
+                    <label class="mode-option">
+                      <input type="radio" formControlName="mode" value="Online" />
+                      Virtual
+                    </label>
+                  </div>
+                  @if (form.controls.mode.invalid && form.controls.mode.touched) {
+                    <span class="field-error">Elegí si la entrevista es presencial o virtual.</span>
+                  }
+                </fieldset>
+            }
+
+            <div class="form-group">
+              <label for="guardianFirstName">Tu nombre</label>
+              <input id="guardianFirstName" type="text" formControlName="guardianFirstName" autocomplete="given-name" />
+              @if (form.controls.guardianFirstName.invalid && form.controls.guardianFirstName.touched) {
+                <span class="field-error">Ingresá tu nombre.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="guardianLastName">Tu apellido</label>
+              <input id="guardianLastName" type="text" formControlName="guardianLastName" autocomplete="family-name" />
+              @if (form.controls.guardianLastName.invalid && form.controls.guardianLastName.touched) {
+                <span class="field-error">Ingresá tu apellido.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="guardianPhone">Tu WhatsApp (con código de área)</label>
+              <input id="guardianPhone" type="tel" placeholder="Ej: 2235551234" formControlName="guardianPhone" autocomplete="tel" />
+              @if (form.controls.guardianPhone.invalid && form.controls.guardianPhone.touched) {
+                <span class="field-error">Ingresá un número de teléfono válido.</span>
+              }
+              <span class="text-muted">La docente te va a escribir a este número para recordarte la entrevista.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="guardianEmail">Tu email</label>
+              <input id="guardianEmail" type="email" placeholder="Ej: nombre@gmail.com" formControlName="guardianEmail" autocomplete="email" />
+              @if (form.controls.guardianEmail.invalid && form.controls.guardianEmail.touched) {
+                <span class="field-error">Ingresá un email válido.</span>
+              }
+              <span class="text-muted">A este email te mandamos la confirmación del turno.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="childFirstName">Nombre del niño/a</label>
+              <input id="childFirstName" type="text" formControlName="childFirstName" />
+              @if (form.controls.childFirstName.invalid && form.controls.childFirstName.touched) {
+                <span class="field-error">Ingresá el nombre del niño/a.</span>
+              }
+            </div>
+
+            <div class="form-group">
+              <label for="childLastName">Apellido del niño/a</label>
+              <input id="childLastName" type="text" formControlName="childLastName" />
+              @if (form.controls.childLastName.invalid && form.controls.childLastName.touched) {
+                <span class="field-error">Ingresá el apellido del niño/a.</span>
+              }
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="notes">Comentarios (opcional)</label>
+              <textarea id="notes" rows="3" formControlName="notes"></textarea>
+            </div>
+          </form>
+
+          <aside class="summary">
+            <div class="summary-header">
+              <h3>Tu turno</h3>
+              <p>Revisá los datos antes de confirmar</p>
+            </div>
+            <div class="summary-body">
+              @if (teacher(); as d) {
+                <div class="detail"><span>Docente</span><strong>{{ d.fullName }}</strong></div>
+              }
+              <div class="detail"><span>Fecha</span><strong>{{ formatDate(appointment.date) }}</strong></div>
+              <div class="detail"><span>Horario</span><strong>{{ formatTime(appointment.startTime) }} hs</strong></div>
+              <div class="detail"><span>Modalidad</span><strong>{{ modeLabel(form.controls.mode.value) || 'A elegir' }}</strong></div>
+
+              <button type="submit" form="booking-form" class="btn btn-primary btn-block" [disabled]="sending()">
+                {{ sending() ? 'Confirmando...' : 'Confirmar turno' }}
+              </button>
+              <p class="whatsapp-note">Te llega la confirmación por email.</p>
+            </div>
+          </aside>
+        </div>
+      } @else if (error()) {
+        <div class="alert alert-error">{{ error() }}</div>
+      }
+    }
+  </app-public-shell>
+}

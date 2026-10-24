@@ -1,0 +1,53 @@
+<div class="container">
+  <div class="top-bar">
+    <div>
+      <h1>Docentes</h1>
+      <p class="text-muted">Quiénes aparecen en la agenda pública para reservar entrevistas.</p>
+    </div>
+    <a routerLink="/admin/docentes/nuevo" class="btn btn-primary">+ Nuevo docente</a>
+  </div>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted">Cargando...</p>
+  } @else {
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Sala</th>
+            <th>Estado</th>
+            <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (teacher of teachers(); track teacher.id) {
+            <tr>
+              <td><strong style="font-weight: 600;">{{ teacher.firstName }} {{ teacher.lastName }}</strong></td>
+              <td>{{ teacher.email }}</td>
+              <td>{{ teacher.classroom || '—' }}</td>
+              <td>
+                @if (teacher.isActive) {
+                  <span class="badge badge-booked">Activo</span>
+                } @else {
+                  <span class="badge badge-inactive">Inactivo</span>
+                }
+              </td>
+              <td class="actions-cell">
+                <a [routerLink]="['/admin/docentes', teacher.id, 'editar']" class="btn btn-secondary btn-small">Editar</a>
+                @if (teacher.isActive) {
+                  <button type="button" class="btn btn-danger btn-small" (click)="deactivate(teacher)">Desactivar</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

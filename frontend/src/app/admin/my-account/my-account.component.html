@@ -1,0 +1,54 @@
+<div class="container-narrow">
+  <h1 style="margin-bottom: 28px;">Mi cuenta</h1>
+
+  <h2 style="font-size: 1.4rem;">Foto de perfil</h2>
+  <div class="card profile-photo" style="margin-bottom: 36px;">
+    @if (auth.fullPhotoUrl()) {
+      <img [src]="auth.fullPhotoUrl()" alt="Foto de perfil" class="avatar avatar-medium" />
+    } @else {
+      <span class="avatar avatar-medium" aria-hidden="true">{{ initials(auth.userName()) }}</span>
+    }
+    <div>
+      <label for="photo" class="btn btn-secondary btn-small" style="cursor:pointer;">
+        {{ uploadingPhoto() ? 'Subiendo...' : 'Cambiar foto' }}
+      </label>
+      <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" style="display:none;" [disabled]="uploadingPhoto()" (change)="selectPhoto($event)" />
+      <p class="text-muted" style="margin:8px 0 0;">JPG, PNG o WEBP, hasta 2 MB.</p>
+      @if (photoError()) {
+        <p class="alert alert-error" style="margin: 8px 0 0;">{{ photoError() }}</p>
+      }
+    </div>
+  </div>
+
+  <h2 style="font-size: 1.4rem; margin-bottom: 4px;">Contraseña</h2>
+  <p class="text-muted" style="margin: 0 0 16px;">Cambiá tu contraseña de acceso al panel.</p>
+
+  @if (error()) {
+    <div class="alert alert-error">{{ error() }}</div>
+  }
+
+  @if (success()) {
+    <div class="alert alert-success">Tu contraseña se actualizó correctamente.</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="changePassword()" class="card">
+    <div class="form-group">
+      <label for="currentPassword">Contraseña actual</label>
+      <input id="currentPassword" type="password" formControlName="currentPassword" autocomplete="current-password" />
+    </div>
+
+    <div class="form-group">
+      <label for="newPassword">Contraseña nueva</label>
+      <input id="newPassword" type="password" formControlName="newPassword" autocomplete="new-password" />
+    </div>
+
+    <div class="form-group">
+      <label for="confirmPassword">Confirmar contraseña nueva</label>
+      <input id="confirmPassword" type="password" formControlName="confirmPassword" autocomplete="new-password" />
+    </div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando...' : 'Cambiar contraseña' }}
+    </button>
+  </form>
+</div>

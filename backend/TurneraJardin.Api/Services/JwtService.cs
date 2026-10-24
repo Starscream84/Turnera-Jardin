@@ -8,6 +8,9 @@ namespace TurneraJardin.Api.Services;
 
 public class JwtService : IJwtService
 {
+    /// <summary>Name of the custom claim with the teacher id, for users with the Teacher role.</summary>
+    public const string TeacherIdClaim = "teacherId";
+
     private readonly IConfiguration _config;
 
     public JwtService(IConfiguration config)
@@ -15,27 +18,27 @@ public class JwtService : IJwtService
         _config = config;
     }
 
-    public (string Token, DateTime ExpiraUtc) GenerarToken(Usuario usuario)
+    public (string Token, DateTime ExpiresAtUtc) GenerateToken(User user)
     {
         var jwtConfig = _config.GetSection("Jwt");
         var key = jwtConfig["Key"]
-            ?? throw new InvalidOperationException("Falta configurar Jwt:Key en appsettings.json");
-        var horasExpiracion = double.TryParse(jwtConfig["HorasExpiracion"], out var h) ? h : 8;
+            ?? throw new InvalidOperationException("Jwt:Key is not configured in appsettings.json");
+        var expirationHours = double.TryParse(jwtConfig["ExpirationHours"], out var h) ? h : 8;
 
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Sub, usuario.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, usuario.Email),
-            new(ClaimTypes.Name, usuario.NombreCompleto),
-            new(ClaimTypes.Role, usuario.Rol.ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(ClaimTypes.Name, user.FullName),
+            new(ClaimTypes.Role, user.Role.ToString())
         };
 
-        if (usuario.DocenteId is not null)
+        if (user.TeacherId is not null)
         {
-            claims.Add(new Claim("docenteId", usuario.DocenteId.Value.ToString()));
+            claims.Add(new Claim(TeacherIdClaim, user.TeacherId.Value.ToString()));
         }
 
-        var expiraUtc = DateTime.UtcNow.AddHours(horasExpiracion);
+        var expiresAtUtc = DateTime.UtcNow.AddHours(expirationHours);
 
         var credentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
@@ -45,9 +48,9 @@ public class JwtService : IJwtService
             issuer: jwtConfig["Issuer"],
             audience: jwtConfig["Audience"],
             claims: claims,
-            expires: expiraUtc,
+            expires: expiresAtUtc,
             signingCredentials: credentials);
 
-        return (new JwtSecurityTokenHandler().WriteToken(token), expiraUtc);
+        return (new JwtSecurityTokenHandler().WriteToken(token), expiresAtUtc);
     }
 }

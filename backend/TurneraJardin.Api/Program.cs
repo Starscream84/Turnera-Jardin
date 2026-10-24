@@ -12,33 +12,33 @@ using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Base de datos (MySQL) ---
+// --- Database (MySQL) ---
 var connectionString = builder.Configuration.GetConnectionString("Default") 
-    ?? throw new InvalidOperationException("Falta ConnectionStrings:Default");
+    ?? throw new InvalidOperationException("ConnectionStrings:Default is missing");
 
 var csb = new MySqlConnector.MySqlConnectionStringBuilder(connectionString);
-    Console.WriteLine($"[DB] Host: {csb.Server} | Puerto: {csb.Port} | Base: {csb.Database}");
+    Console.WriteLine($"[DB] Host: {csb.Server} | Port: {csb.Port} | Database: {csb.Database}");
 builder.Services.AddDbContext<AppDbContext>(options => 
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 11))));
     
-// --- Configuración de WhatsApp Cloud API ---
-builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
+// --- WhatsApp Cloud API settings ---
+builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.ConfigSection));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppCloudApiService>();
 
-// --- Email de confirmación de la reserva (API HTTP de Brevo) ---
-builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SeccionConfig));
+// --- Booking confirmation email (Brevo HTTP API) ---
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.ConfigSection));
 builder.Services.AddHttpClient<IEmailService, BrevoEmailService>();
 
-// --- Servicios propios ---
+// --- App services ---
 builder.Services.AddScoped<IJwtService, JwtService>();
-// El recordatorio del día anterior no es automático: lo manda la docente con el botón "Confirmación"
-// del listado de turnos. RecordatorioBackgroundService (envío automático por WhatsApp) queda sin registrar.
+// The day-before reminder is not automatic: the teacher sends it with the "Confirmación" button
+// in the appointment list. ReminderBackgroundService (automatic WhatsApp sending) stays unregistered.
 
-// --- Autenticación JWT ---
+// --- JWT authentication ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ;
 if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
-    throw new InvalidOperationException("Falta configurar Jwt:Key (variable de entorno Jwt__Key) o tiene menos de 32 caracteres.");
+    throw new InvalidOperationException("Jwt:Key is not configured (environment variable Jwt__Key) or is shorter than 32 characters.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -47,8 +47,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    // Sin esto, ASP.NET Core remapea el claim "sub" a un nombre interno distinto,
-    // y el código que busca JwtRegisteredClaimNames.Sub (en AuthController) no lo encuentra más.
+    // Without this, ASP.NET Core remaps the "sub" claim to a different internal name,
+    // and the code that looks for JwtRegisteredClaimNames.Sub (in AuthController) can no longer find it.
     options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -63,23 +63,23 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
-// --- CORS: habilitado para que el frontend Angular (en otro puerto) pueda consumir la API ---
+// --- CORS: enabled so the Angular frontend (on another origin) can call the API ---
 const string CorsPolicyFrontend = "FrontendPolicy";
-var origenesPermitidos = builder.Configuration.GetSection("Cors:OrigenesPermitidos").Get<string[]>()
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:4200" };
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyFrontend, policy =>
     {
-        policy.WithOrigins(origenesPermitidos)
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
-// Los enums (ej. Estado del turno) viajan como texto ("Disponible", "Reservado"...) en vez de números,
-// para que el frontend no tenga que conocer los valores numéricos internos.
+// Enums (e.g. appointment Status) travel as text ("Available", "Booked"...) instead of numbers,
+// so the frontend does not need to know the internal numeric values.
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
@@ -94,14 +94,14 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Pegar el token con el prefijo 'Bearer '. Ej: Bearer eyJhbGciOi...",
+        Description = "Paste the token with the 'Bearer ' prefix. E.g.: Bearer eyJhbGciOi...",
         Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
     };
     options.AddSecurityDefinition("Bearer", jwtScheme);
     options.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
 
-// -- IP real del cliente detras del proxy de Railway
+// -- Real client IP behind the Railway proxy
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =  ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
@@ -109,15 +109,15 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// -- Limites de pedidos por IP
+// -- Request limits per IP
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    // Reservar y cancelar: 5 pedidos cada 10 minutos por IP
-    options.AddPolicy("publico", context =>
+    // Book and cancel: 5 requests every 10 minutes per IP
+    options.AddPolicy("public", context =>
     RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 5,
@@ -125,9 +125,9 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0
         }));
 
-    // Login: 10 intentos cada 5 minutos por IP
+    // Login: 10 attempts every 5 minutes per IP
     options.AddPolicy("login", context => 
-    RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+    RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
     _ => new FixedWindowRateLimiterOptions
     {
         PermitLimit = 10,
@@ -139,7 +139,7 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-// --- Crea la base de datos y carga los datos de ejemplo la primera vez que arranca ---
+// --- Creates the database and loads the seed data the first time it starts ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -154,7 +154,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles(); // sirve wwwroot/fotos-perfil (fotos de perfil de los usuarios)
+app.UseStaticFiles(); // serves wwwroot/fotos-perfil (users' profile photos)
 app.UseCors(CorsPolicyFrontend);
 app.UseRateLimiter();
 app.UseAuthentication();

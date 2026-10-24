@@ -22,9 +22,9 @@ Si dentro de tu módulo vas a hacer algo puntual y chico, podés abrir una sub-r
 
 | # | Módulo | Carpetas principales |
 |---|---|---|
-| 1 | Docentes y autenticación (backend) | `backend/.../Controllers/AdminDocentesController.cs`, `AuthController.cs`, `Services/JwtService.cs` |
-| 2 | Turnos (backend) | `backend/.../Controllers/TurnosController.cs`, `AdminTurnosController.cs`, `DocentesController.cs` |
-| 3 | WhatsApp e integraciones | `backend/.../Services/WhatsAppCloudApiService.cs`, `RecordatorioBackgroundService.cs` |
+| 1 | Docentes y autenticación (backend) | `backend/.../Controllers/AdminTeachersController.cs`, `AuthController.cs`, `Services/JwtService.cs` |
+| 2 | Turnos (backend) | `backend/.../Controllers/AppointmentsController.cs`, `AdminAppointmentsController.cs`, `TeachersController.cs` |
+| 3 | WhatsApp e integraciones | `backend/.../Services/WhatsAppCloudApiService.cs`, `ReminderBackgroundService.cs` |
 | 4 | Reserva pública (frontend) | `frontend/src/app/public-booking/` |
 | 5 | Panel de administración (frontend) | `frontend/src/app/admin/` |
 | 6 | QA, despliegue y documentación | pruebas manuales end-to-end, README, despliegue gratuito, coordinación de PRs |

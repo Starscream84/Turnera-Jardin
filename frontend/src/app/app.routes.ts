@@ -1,29 +1,30 @@
 import { Routes } from "@angular/router";
-import { SeleccionarDocenteComponent } from "./public-booking/seleccionar-docente/seleccionar-docente.component";
-import { SeleccionarTurnoComponent } from "./public-booking/seleccionar-turno/seleccionar-turno.component";
-import { FormularioReservaComponent } from "./public-booking/formulario-reserva/formulario-reserva.component";
-import { CancelarTurnoComponent } from "./public-booking/cancelar-turno/cancelar-turno.component";
+import { SelectTeacherComponent } from "./public-booking/select-teacher/select-teacher.component";
+import { SelectAppointmentComponent } from "./public-booking/select-appointment/select-appointment.component";
+import { BookingFormComponent } from "./public-booking/booking-form/booking-form.component";
+import { CancelAppointmentComponent } from "./public-booking/cancel-appointment/cancel-appointment.component";
 import { LoginComponent } from "./admin/login/login.component";
 import { AdminLayoutComponent } from "./admin/layout/admin-layout.component";
-import { DocentesListComponent } from "./admin/docentes/docentes-list.component";
-import { DocenteFormComponent } from "./admin/docentes/docente-form.component";
-import { GenerarTurnosComponent } from "./admin/turnos/generar-turnos.component";
-import { TurnosListComponent } from "./admin/turnos/turnos-list.component";
-import { UsuariosListComponent } from "./admin/usuarios/usuarios-list.component";
-import { MiCuentaComponent } from "./admin/mi-cuenta/mi-cuenta.component";
+import { TeachersListComponent } from "./admin/teachers/teachers-list.component";
+import { TeacherFormComponent } from "./admin/teachers/teacher-form.component";
+import { GenerateAppointmentsComponent } from "./admin/appointments/generate-appointments.component";
+import { AppointmentsListComponent } from "./admin/appointments/appointments-list.component";
+import { UsersListComponent } from "./admin/users/users-list.component";
+import { MyAccountComponent } from "./admin/my-account/my-account.component";
 import { authGuard } from "./core/guards/auth.guard";
-import { adminGuard, coordinadorGuard } from "./core/guards/admin.guard";
+import { adminGuard, coordinatorGuard } from "./core/guards/admin.guard";
 
+// The URL paths stay in Spanish on purpose: families and teachers see them and links were already shared.
 export const routes: Routes = [
     { path: "", pathMatch: "full", redirectTo: "reservar" },
 
-    // Flujo público para las familias
-    { path: "reservar", component: SeleccionarDocenteComponent },
-    { path: "reservar/:docenteId", component: SeleccionarTurnoComponent },
-    { path: "reservar/:docenteId/turno/:turnoId", component: FormularioReservaComponent },
-    { path: "cancelar", component: CancelarTurnoComponent },
+    // Public flow for families
+    { path: "reservar", component: SelectTeacherComponent },
+    { path: "reservar/:teacherId", component: SelectAppointmentComponent },
+    { path: "reservar/:teacherId/turno/:appointmentId", component: BookingFormComponent },
+    { path: "cancelar", component: CancelAppointmentComponent },
 
-    // Panel de administración
+    // Admin panel
     { path: "admin/login", component: LoginComponent },
     {
         path: "admin",
@@ -31,27 +32,28 @@ export const routes: Routes = [
         canActivate: [authGuard],
         children: [
             { path: "", pathMatch: "full", redirectTo: "turnos" },
-            // Admin y Coordinador: gestión de docentes, generación de turnos y usuarios.
-            { path: "docentes", component: DocentesListComponent, canActivate: [coordinadorGuard] },
+            // Admin and Coordinator: teacher management and appointment generation.
+            { path: "docentes", component: TeachersListComponent, canActivate: [coordinatorGuard] },
             {
                 path: "docentes/nuevo",
-                component: DocenteFormComponent,
-                canActivate: [coordinadorGuard],
+                component: TeacherFormComponent,
+                canActivate: [coordinatorGuard],
             },
             {
                 path: "docentes/:id/editar",
-                component: DocenteFormComponent,
-                canActivate: [coordinadorGuard],
+                component: TeacherFormComponent,
+                canActivate: [coordinatorGuard],
             },
             {
                 path: "turnos/generar",
-                component: GenerarTurnosComponent,
-                canActivate: [coordinadorGuard],
+                component: GenerateAppointmentsComponent,
+                canActivate: [coordinatorGuard],
             },
-            { path: "usuarios", component: UsuariosListComponent, canActivate: [adminGuard] },
-            // Accesible para dirección y docentes por igual.
-            { path: "turnos", component: TurnosListComponent },
-            { path: "mi-cuenta", component: MiCuentaComponent },
+            // Admin only: user management.
+            { path: "usuarios", component: UsersListComponent, canActivate: [adminGuard] },
+            // Available to management and teachers alike.
+            { path: "turnos", component: AppointmentsListComponent },
+            { path: "mi-cuenta", component: MyAccountComponent },
         ],
     },
 

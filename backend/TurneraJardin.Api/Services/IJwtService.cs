@@ -4,5 +4,5 @@ namespace TurneraJardin.Api.Services;
 
 public interface IJwtService
 {
-    (string Token, DateTime ExpiraUtc) GenerarToken(Usuario usuario);
+    (string Token, DateTime ExpiresAtUtc) GenerateToken(User user);
 }
