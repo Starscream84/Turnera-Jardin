@@ -1,44 +1,44 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using TurneraJardin.Api.Auth;
 using TurneraJardin.Api.Data;
-using TurneraJardin.Api.Models.Enums;
-using TurneraJardin.Api.Options;
 using TurneraJardin.Api.Services;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
+// --- Base de datos (MySQL) ---
+var connectionString = builder.Configuration.GetConnectionString("Default") 
+    ?? throw new InvalidOperationException("Falta ConnectionStrings:Default");
 
-builder.Services.AddEndpointsApiExplorer();
-
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(
-        connectionString,
-        ServerVersion.AutoDetect(connectionString)
-    ));
-
-builder.Services.AddHttpContextAccessor();
-builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
-
-builder.Services.AddScoped<ITurnosService, TurnosService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuditoriaService, AuditoriaService>();
-builder.Services.AddHostedService<RecordatorioBackgroundService>();
-
+var csb = new MySqlConnector.MySqlConnectionStringBuilder(connectionString);
+    Console.WriteLine($"[DB] Host: {csb.Server} | Puerto: {csb.Port} | Base: {csb.Database}");
+builder.Services.AddDbContext<AppDbContext>(options => 
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 4, 11))));
+    
+// --- Configuración de WhatsApp Cloud API ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.SeccionConfig));
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppCloudApiService>();
 
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? "TuSuperClaveSecretaQueDebeSerLarga123!";
+// --- Email de confirmación de la reserva (API HTTP de Brevo) ---
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SeccionConfig));
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>();
+
+// --- Servicios propios ---
+builder.Services.AddScoped<IJwtService, JwtService>();
+// El recordatorio del día anterior no es automático: lo manda la docente con el botón "Confirmación"
+// del listado de turnos. RecordatorioBackgroundService (envío automático por WhatsApp) queda sin registrar.
+
+// --- Autenticación JWT ---
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection["Key"] ;
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+    throw new InvalidOperationException("Falta configurar Jwt:Key (variable de entorno Jwt__Key) o tiene menos de 32 caracteres.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -47,92 +47,116 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // Sin esto, ASP.NET Core remapea el claim "sub" a un nombre interno distinto,
+    // y el código que busca JwtRegisteredClaimNames.Sub (en AuthController) no lo encuentra más.
+    options.MapInboundClaims = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "TurneraJardinApi",
-        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "TurneraJardinClient",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey))
+        ValidIssuer = jwtSection["Issuer"],
+        ValidAudience = jwtSection["Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
+builder.Services.AddAuthorization();
 
-builder.Services.AddAuthorization(options =>
+// --- CORS: habilitado para que el frontend Angular (en otro puerto) pueda consumir la API ---
+const string CorsPolicyFrontend = "FrontendPolicy";
+var origenesPermitidos = builder.Configuration.GetSection("Cors:OrigenesPermitidos").Get<string[]>()
+    ?? new[] { "http://localhost:4200" };
+
+builder.Services.AddCors(options =>
 {
-    options.AddPolicy(Politicas.SoloSuperAdmin, policy =>
-        policy.RequireRole(nameof(RolUsuario.SuperAdmin)));
-
-    options.AddPolicy(Politicas.Direccion, policy =>
-        policy.RequireRole(nameof(RolUsuario.Admin), nameof(RolUsuario.SuperAdmin)));
-
-    options.AddPolicy(Politicas.Personal, policy =>
-        policy.RequireAuthenticatedUser());
+    options.AddPolicy(CorsPolicyFrontend, policy =>
+    {
+        policy.WithOrigins(origenesPermitidos)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
 });
 
+// Los enums (ej. Estado del turno) viajan como texto ("Disponible", "Reservado"...) en vez de números,
+// para que el frontend no tenga que conocer los valores numéricos internos.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Turnera JardÃ­n API",
-        Version = "v1"
-    });
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "Turnera Jardín API", Version = "v1" });
 
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    var jwtScheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "IngresÃ¡ el token con el formato: Bearer {tu_token}"
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
+        Description = "Pegar el token con el prefijo 'Bearer '. Ej: Bearer eyJhbGciOi...",
+        Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+    };
+    options.AddSecurityDefinition("Bearer", jwtScheme);
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement { { jwtScheme, Array.Empty<string>() } });
 });
 
-builder.Services.AddCors(options =>
+// -- IP real del cliente detras del proxy de Railway
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("http://localhost:4200")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+    options.ForwardedHeaders =  ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
 });
+
+// -- Limites de pedidos por IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Reservar y cancelar: 5 pedidos cada 10 minutos por IP
+    options.AddPolicy("publico", context =>
+    RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0
+        }));
+
+    // Login: 10 intentos cada 5 minutos por IP
+    options.AddPolicy("login", context => 
+    RateLimitPartition.GetFixedWindowLimiter(context.Connection.RemoteIpAddress?.ToString() ?? "desconocida",
+    _ => new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = 10,
+        Window = TimeSpan.FromMinutes(5),
+        QueueLimit = 0
+    }));
+});
+
 
 var app = builder.Build();
 
+// --- Crea la base de datos y carga los datos de ejemplo la primera vez que arranca ---
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     DbSeeder.Seed(db);
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+app.UseForwardedHeaders();
+
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Turnera JardÃ­n API v1");
-    c.RoutePrefix = "swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.UseCors("AllowFrontend");
-
+app.UseStaticFiles(); // sirve wwwroot/fotos-perfil (fotos de perfil de los usuarios)
+app.UseCors(CorsPolicyFrontend);
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

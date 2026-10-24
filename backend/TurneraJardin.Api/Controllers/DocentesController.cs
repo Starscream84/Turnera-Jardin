@@ -5,7 +5,6 @@ using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models.Enums;
 using TurneraJardin.Api.Services;
 
-
 namespace TurneraJardin.Api.Controllers;
 
 /// <summary>Endpoints públicos: elegir docente y ver su disponibilidad. Sin autenticación.</summary>
@@ -26,13 +25,13 @@ public class DocentesController : ControllerBase
         var docentes = await _db.Docentes
             .Where(d => d.Activo)
             .OrderBy(d => d.Apellido).ThenBy(d => d.Nombre)
-            .Select(d => new DocenteDto(d.Id, d.Nombre + " " + d.Apellido, d.Sala))
+            .Select(d => new DocenteDto(d.Id, d.Nombre + " " + d.Apellido, d.Sala, d.Ciclo))
             .ToListAsync();
 
         return Ok(docentes);
     }
 
-    /// <summary>Turnos libres de un docente en un rango de fechas (por defecto, los próximos 30 días).</summary>
+    /// <summary>Turnos libres de un docente en un rango de fechas (por defecto, desde mañana y los 30 días siguientes).</summary>
     [HttpGet("{id:int}/turnos-disponibles")]
     public async Task<ActionResult<List<TurnoDisponibleDto>>> TurnosDisponibles(
         int id, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta)
@@ -43,8 +42,8 @@ public class DocentesController : ControllerBase
             return NotFound(new { mensaje = "Docente no encontrado." });
         }
 
-        var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var fechaDesde = desde is not null && desde >= hoy ? desde.Value : hoy;
+        var primerDia = ArgentinaDate.PrimerDiaReservable();
+        var fechaDesde = desde is not null && desde >= primerDia ? desde.Value : primerDia;
         var fechaHasta = hasta ?? fechaDesde.AddDays(30);
 
         var turnos = await _db.Turnos
@@ -52,22 +51,19 @@ public class DocentesController : ControllerBase
                         && t.Estado == EstadoTurno.Disponible
                         && t.Fecha >= fechaDesde
                         && t.Fecha <= fechaHasta)
+            .Include(t => t.Docente)
             .OrderBy(t => t.Fecha).ThenBy(t => t.HoraInicio)
-            .Select(t => new TurnoDisponibleDto(t.Id, t.Fecha, t.HoraInicio, t.HoraFin))
+            .Select(t => new TurnoDisponibleDto(
+                t.Id,
+                t.DocenteId,
+                t.Docente!.NombreCompleto,
+                t.Docente!.Sala ?? "Sin asignar",
+                t.Fecha,
+                t.HoraInicio,
+                t.HoraFin,
+                t.Estado.ToString()))
             .ToListAsync();
 
         return Ok(turnos);
     }
-
-//    [HttpPut("{id}/disponibilidad")]
-//public async Task<IActionResult> ActualizarDisponibilidad(int id, [FromBody] List<CrearDisponibilidadDto> nuevasReglas)
-//{
-//    if (id <= 0 || nuevasReglas == null)
-//    {
-//        return BadRequest("Datos de solicitud inválidos.");
-//    }
-
-//    await _turnosService.ActualizarDisponibilidadDocenteAsync(id, nuevasReglas);
- //   return NoContent();
-//}
 }

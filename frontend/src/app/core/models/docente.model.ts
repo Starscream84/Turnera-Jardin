@@ -1,7 +1,11 @@
+export type CicloDocente = 'PrimerCiclo' | 'SegundoCiclo' | 'Especialista';
+
 export interface Docente {
   id: number;
   nombreCompleto: string;
   sala: string | null;
+  /** null = sin ciclo: la familia elige presencial o virtual. */
+  ciclo: CicloDocente | null;
 }
 
 export interface DocenteAdmin {
@@ -10,6 +14,7 @@ export interface DocenteAdmin {
   apellido: string;
   email: string;
   sala: string | null;
+  ciclo: CicloDocente | null;
   activo: boolean;
 }
 
@@ -18,5 +23,6 @@ export interface DocenteFormValue {
   apellido: string;
   email: string;
   sala: string | null;
+  ciclo: CicloDocente | null;
   activo: boolean;
 }

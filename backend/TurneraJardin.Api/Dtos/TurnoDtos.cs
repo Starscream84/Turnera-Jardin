@@ -1,50 +1,53 @@
 using System.ComponentModel.DataAnnotations;
 using TurneraJardin.Api.Models.Enums;
-using TurneraJardin.Api.Utilities;
 
 namespace TurneraJardin.Api.Dtos;
 
 /// <summary>Franja disponible, tal como la ve un padre/madre antes de reservar.</summary>
-public record TurnoDisponibleDto(int Id, DateOnly Fecha, TimeOnly HoraInicio, TimeOnly HoraFin);
-
-/// <summary>Datos que completa el padre/madre para reservar un turno ya elegido.</summary>
-public record ReservaTurnoDto(
+public record TurnoDisponibleDto(
+    int Id,
     int DocenteId,
+    string NombreDocente,
+    string SalaDocente,
     DateOnly Fecha,
     TimeOnly HoraInicio,
-    string NombrePadre,
-    string ApellidoPadre,
-    string TelefonoPadre,
-    string NombreNino,
-    string ApellidoNino,
-    string? Observaciones
-)
+    TimeOnly HoraFin,
+    string Estado
+);
+
+/// <summary>Datos que completa el padre/madre para reservar un turno ya elegido.</summary>
+public class ReservaTurnoDto
 {
-    /// <summary>Valida que los datos de la reserva sean correctos.</summary>
-    /// <returns>Mensaje de error o null si es válido</returns>
-    public string? ValidarDatos()
-    {
-        if (string.IsNullOrWhiteSpace(NombrePadre))
-            return "El nombre del adulto es obligatorio.";
+    [Required, MaxLength(120)]
+    public required string NombreResponsable { get; set; }
 
-        if (string.IsNullOrWhiteSpace(ApellidoPadre))
-            return "El apellido del adulto es obligatorio.";
+    [Required, MaxLength(120)]
+    public required string ApellidoResponsable { get; set; }
 
-        if (string.IsNullOrWhiteSpace(TelefonoPadre))
-            return "El teléfono del adulto es obligatorio.";
+    /// <summary>Número de WhatsApp. Se acepta con o sin "+"; el backend lo normaliza.</summary>
+    [Required, Phone, MaxLength(30)]
+    public required string TelefonoPadre { get; set; }
 
-        if (!PhoneValidator.EsValido(TelefonoPadre))
-            return PhoneValidator.GetMensajeError(TelefonoPadre);
+    /// <summary>Email al que se manda la confirmación de la reserva.</summary>
+    [Required(ErrorMessage = "Ingresá un email para recibir la confirmación.")]
+    [EmailAddress(ErrorMessage = "El email no es válido.")]
+    [MaxLength(200)]
+    public required string EmailPadre { get; set; }
 
-        if (string.IsNullOrWhiteSpace(NombreNino))
-            return "El nombre del niño/a es obligatorio.";
+    [Required, MaxLength(120)]
+    public required string NombreNino { get; set; }
 
-        if (string.IsNullOrWhiteSpace(ApellidoNino))
-            return "El apellido del niño/a es obligatorio.";
+    [Required, MaxLength(120)]
+    public required string ApellidoNino { get; set; }
 
-        return null; // Válido
-    }
-};
+    [MaxLength(500)]
+    public string? Observaciones { get; set; }
+
+    /// <summary>"Presencial" o "Virtual". Es nullable solo para que, si no viene, falle la validación en vez de asumir Presencial.</summary>
+    [Required(ErrorMessage = "Elegí si la entrevista es presencial o virtual.")]
+    [EnumDataType(typeof(ModalidadEntrevista))]
+    public ModalidadEntrevista? Modalidad { get; set; }
+}
 
 /// <summary>Confirmación devuelta al padre/madre luego de reservar con éxito.</summary>
 public record TurnoConfirmadoDto(
@@ -54,7 +57,8 @@ public record TurnoConfirmadoDto(
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
     string NombreNino,
-    string ApellidoNino
+    string ApellidoNino,
+    ModalidadEntrevista Modalidad
 );
 
 /// <summary>Vista completa de un turno para el panel de administración / docente.</summary>
@@ -66,14 +70,17 @@ public record TurnoAdminDto(
     TimeOnly HoraInicio,
     TimeOnly HoraFin,
     EstadoTurno Estado,
-    string? NombrePadre,
-    string? ApellidoPadre,
+    string? NombreResponsable,
+    string? ApellidoResponsable,
     string? TelefonoPadre,
     string? NombreNino,
     string? ApellidoNino,
     string? Observaciones,
     bool ConfirmacionEnviada,
-    bool RecordatorioEnviado
+    bool RecordatorioEnviado,
+    ModalidadEntrevista? Modalidad,
+    DateTime? ConfirmacionSolicitada,
+    string? EmailPadre
 );
 
 /// <summary>Pedido para generar turnos disponibles en bloque para un docente.</summary>
@@ -97,13 +104,4 @@ public class GenerarTurnosDto
 
     [Range(5, 240)]
     public int DuracionMinutos { get; set; } = 20;
-}
-
-public class TurnoSlotDto
-{
-    public int DocenteId { get; set; }
-    public DateOnly Fecha { get; set; }
-    public TimeOnly HoraInicio { get; set; }
-    public TimeOnly HoraFin { get; set; }
-    public bool Disponible { get; set; }
 }

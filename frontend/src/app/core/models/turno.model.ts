@@ -5,11 +5,17 @@ export interface TurnoDisponible {
   horaFin: string;
 }
 
+export type ModalidadEntrevista = 'Presencial' | 'Virtual';
+
 export interface ReservaTurno {
-  nombrePadre: string;
+  nombreResponsable: string;
+  apellidoResponsable: string;
   telefonoPadre: string;
+  emailPadre: string;
   nombreNino: string;
+  apellidoNino: string;
   observaciones?: string;
+  modalidad: ModalidadEntrevista;
 }
 
 export interface TurnoConfirmado {
@@ -19,6 +25,8 @@ export interface TurnoConfirmado {
   horaInicio: string;
   horaFin: string;
   nombreNino: string;
+  apellidoNino: string;
+  modalidad: ModalidadEntrevista;
 }
 
 export type EstadoTurno = 'Disponible' | 'Reservado' | 'Cancelado' | 'Completado';
@@ -31,12 +39,19 @@ export interface TurnoAdmin {
   horaInicio: string;
   horaFin: string;
   estado: EstadoTurno;
-  nombrePadre: string | null;
+  nombreResponsable: string | null;
+  apellidoResponsable: string | null;
   telefonoPadre: string | null;
   nombreNino: string | null;
+  apellidoNino: string | null;
   observaciones: string | null;
   confirmacionEnviada: boolean;
   recordatorioEnviado: boolean;
+  /** null mientras el turno está disponible (todavía nadie eligió). */
+  modalidad: ModalidadEntrevista | null;
+  /** Fecha/hora (UTC, ISO) en que se le pidió a la familia que confirme por WhatsApp. null si todavía no. */
+  confirmacionSolicitada: string | null;
+  emailPadre: string | null;
 }
 
 export interface GenerarTurnos {

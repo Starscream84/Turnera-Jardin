@@ -1,5 +1,5 @@
 export const environment = {
-  production: true,
-  // Reemplazar por la URL pública real del backend cuando se despliegue.
-  apiUrl: 'https://api.turnera-jardin.example.com/api'
+    production: true,
+    apiUrl: "https://turnera-jardin-production.up.railway.app/api",
+    archivosUrl: "https://turnera-jardin-production.up.railway.app",
 };

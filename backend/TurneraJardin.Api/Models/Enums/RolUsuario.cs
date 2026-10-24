@@ -5,15 +5,11 @@ namespace TurneraJardin.Api.Models.Enums;
 /// </summary>
 public enum RolUsuario
 {
-    /// <summary>Acceso total: gestiona docentes, turnos, usuarios y configuración del sistema.</summary>
-    SuperAdmin = 0,
-
-    /// <summary>Acceso administrativo: gestiona docentes, turnos y usuarios.</summary>
-    Admin = 1,
-
-    /// <summary>Coordinador: gestiona turnos y docentes (sin acceso a usuarios).</summary>
-    Coordinador = 2,
+    /// <summary>Acceso total: gestiona docentes, turnos y usuarios.</summary>
+    Admin = 0,
 
     /// <summary>Docente: solo ve y gestiona sus propios turnos.</summary>
-    Docente = 3
+    Docente = 1,
+
+    Coordinador = 2
 }

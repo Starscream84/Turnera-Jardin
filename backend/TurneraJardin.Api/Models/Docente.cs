@@ -1,3 +1,5 @@
+using TurneraJardin.Api.Models.Enums;
+
 namespace TurneraJardin.Api.Models;
 
 /// <summary>
@@ -13,11 +15,11 @@ public class Docente
 
     public required string Email { get; set; }
 
-    /// <summary>Teléfono de contacto del docente.</summary>
-    public string? Telefono { get; set; }
-
     /// <summary>Sala o grupo a cargo (ej: "Sala Celeste", "Sala de 2 años"). Informativo.</summary>
     public string? Sala { get; set; }
+
+    /// <summary>Ciclo del docente. Null = sin ciclo: la familia elige presencial o virtual.</summary>
+    public CicloDocente? Ciclo { get; set; }
 
     /// <summary>Si está en false, no aparece en la agenda pública y no se le pueden generar turnos nuevos.</summary>
     public bool Activo { get; set; } = true;
@@ -25,5 +27,4 @@ public class Docente
     public ICollection<Turno> Turnos { get; set; } = new List<Turno>();
 
     public string NombreCompleto => $"{Nombre} {Apellido}";
-    public ICollection<Disponibilidad> Disponibilidades { get; set; } = new List<Disponibilidad>();
 }

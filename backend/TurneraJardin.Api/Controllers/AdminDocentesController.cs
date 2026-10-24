@@ -1,180 +1,158 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
+using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
-using Microsoft.EntityFrameworkCore;
 
 namespace TurneraJardin.Api.Controllers;
 
+/// <summary>CRUD de docentes. Solo para administración (dirección del jardín).</summary>
 [ApiController]
-[Route("api/[controller]")]
-[Authorize(Roles = "Admin,Coordinador")]
+[Route("api/admin/docentes")]
+[Authorize(Roles = $"{nameof(RolUsuario.Admin)},{nameof(RolUsuario.Coordinador)}")]
 public class AdminDocentesController : ControllerBase
 {
-    private readonly AppDbContext _context;
-    private readonly ILogger<AdminDocentesController> _logger;
+    private readonly AppDbContext _db;
 
-    public AdminDocentesController(
-        AppDbContext context,
-        ILogger<AdminDocentesController> logger)
+    public AdminDocentesController(AppDbContext db)
     {
-        _context = context;
-        _logger = logger;
+        _db = db;
     }
 
-    // GET: api/admindocentes
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Docente>>> Listar()
+    public async Task<ActionResult<List<DocenteAdminDto>>> Listar()
     {
-        var docentes = await _context.Docentes
-            .Where(d => d.Activo)
-            .OrderBy(d => d.Apellido)
+        var docentes = await _db.Docentes
+            .OrderBy(d => d.Apellido).ThenBy(d => d.Nombre)
+            .Select(d => new DocenteAdminDto(d.Id, d.Nombre, d.Apellido, d.Email, d.Sala, d.Activo, d.Ciclo))
             .ToListAsync();
 
         return Ok(docentes);
     }
 
-    // GET: api/admindocentes/{id}/turnos?mes=10&año=2026
-    [HttpGet("{id}/turnos")]
-    public async Task<ActionResult<IEnumerable<Turno>>> ObtenerTurnosDocente(
-        int id,
-        [FromQuery] int? mes = null,
-        [FromQuery] int? año = null)
+    [HttpPost]
+    public async Task<ActionResult<DocenteAdminDto>> Crear(DocenteCreateDto dto)
     {
-        var docente = await _context.Docentes.FindAsync(id);
-        if (docente == null)
-            return NotFound();
-
-        var query = _context.Turnos.Where(t => t.DocenteId == id);
-
-        if (mes.HasValue && año.HasValue)
+        var yaExiste = await _db.Docentes.AnyAsync(d => d.Email.ToLower() == dto.Email.ToLower());
+        if (yaExiste)
         {
-            query = query.Where(t =>
-                t.Fecha.Month == mes.Value &&
-                t.Fecha.Year == año.Value);
+            return Conflict(new { mensaje = "Ya existe un docente con ese email." });
         }
 
-        var turnos = await query.OrderBy(t => t.Fecha).ToListAsync();
-        return Ok(turnos);
+        var docente = new Docente
+        {
+            Nombre = dto.Nombre.Trim(),
+            Apellido = dto.Apellido.Trim(),
+            Email = dto.Email.Trim(),
+            Sala = dto.Sala?.Trim(),
+            Ciclo = dto.Ciclo,
+            Activo = true
+        };
+
+        _db.Docentes.Add(docente);
+        await _db.SaveChangesAsync();
+
+        var resultado = new DocenteAdminDto(docente.Id, docente.Nombre, docente.Apellido, docente.Email, docente.Sala, docente.Activo, docente.Ciclo);
+        return CreatedAtAction(nameof(Listar), new { id = docente.Id }, resultado);
     }
 
-    // POST: api/admindocentes/{docenteId}/generar-turnos
-    [HttpPost("{docenteId}/generar-turnos")]
-    public async Task<ActionResult> GenerarTurnos(int docenteId, [FromBody] GenerarTurnosRequest request)
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Actualizar(int id, DocenteUpdateDto dto)
     {
-        try
+        var docente = await _db.Docentes.FindAsync(id);
+        if (docente is null)
         {
-            var docente = await _context.Docentes.FindAsync(docenteId);
-            if (docente == null)
-                return NotFound("Docente no encontrado");
-
-            if (request.FechaDesde >= request.FechaHasta)
-                return BadRequest("Fecha desde debe ser menor a fecha hasta");
-
-            var turnos = new List<Turno>();
-            var fecha = DateOnly.FromDateTime(request.FechaDesde);
-            var fechaHasta = DateOnly.FromDateTime(request.FechaHasta);
-            var diasSemanaValidos = request.DiasSemanA ?? new int[] { };
-
-            while (fecha <= fechaHasta)
-            {
-                // Convertir DayOfWeek (0=Domingo) a formato esperado (1=Lunes, 7=Domingo)
-                int diaSemana = ((int)fecha.DayOfWeek + 6) % 7 + 1;
-
-                // Verificar si el día de la semana actual está en la lista de días válidos
-                if (diasSemanaValidos.Contains(diaSemana))
-                {
-                    var horaInicio = request.HoraInicio ?? new TimeOnly(9, 0);
-                    var horaFin = request.HoraFin ?? new TimeOnly(17, 0);
-                    var duracion = request.DuracionMinutos;
-
-                    var hora = horaInicio;
-                    while (hora.AddMinutes(duracion) <= horaFin)
-                    {
-                        var turno = new Turno
-                        {
-                            DocenteId = docenteId,
-                            Fecha = fecha,
-                            HoraInicio = hora,
-                            HoraFin = hora.AddMinutes(duracion),
-                            Estado = EstadoTurno.Disponible,
-                            Modalidad = "Presencial"
-                        };
-                        turnos.Add(turno);
-                        hora = hora.AddMinutes(duracion);
-                    }
-                }
-
-                fecha = fecha.AddDays(1);
-            }
-
-            _context.Turnos.AddRange(turnos);
-            await _context.SaveChangesAsync();
-
-            _logger.LogInformation($"Generados {turnos.Count} turnos para docente {docenteId}");
-
-            return Ok(new { message = $"Generados {turnos.Count} turnos", turnos });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generando turnos");
-            return StatusCode(500, new { error = ex.Message });
-        }
-    }
-
-    // PUT: api/admindocentes/{id}
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarDocenteRequest request)
-    {
-        var docente = await _context.Docentes.FindAsync(id);
-        if (docente == null)
             return NotFound();
+        }
 
-        if (!string.IsNullOrEmpty(request.Apellido))
-            docente.Apellido = request.Apellido;
+        docente.Nombre = dto.Nombre.Trim();
+        docente.Apellido = dto.Apellido.Trim();
+        docente.Email = dto.Email.Trim();
+        docente.Sala = dto.Sala?.Trim();
+        docente.Ciclo = dto.Ciclo;
+        docente.Activo = dto.Activo;
 
-        if (!string.IsNullOrEmpty(request.Nombre))
-            docente.Nombre = request.Nombre;
-
-        if (!string.IsNullOrEmpty(request.Email))
-            docente.Email = request.Email;
-
-        _context.Docentes.Update(docente);
-        await _context.SaveChangesAsync();
-
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
-    // DELETE: api/admindocentes/{id}
-    [HttpDelete("{id}")]
+    /// <summary>
+    /// No borra físicamente al docente (para no perder el historial de turnos ya realizados):
+    /// lo desactiva, lo que lo saca de la agenda pública.
+    /// </summary>
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> Desactivar(int id)
     {
-        var docente = await _context.Docentes.FindAsync(id);
-        if (docente == null)
+        var docente = await _db.Docentes.FindAsync(id);
+        if (docente is null)
+        {
             return NotFound();
+        }
 
         docente.Activo = false;
-        _context.Docentes.Update(docente);
-        await _context.SaveChangesAsync();
-
+        await _db.SaveChangesAsync();
         return NoContent();
     }
-}
 
-public class GenerarTurnosRequest
-{
-    public DateTime FechaDesde { get; set; }
-    public DateTime FechaHasta { get; set; }
-    public int[]? DiasSemanA { get; set; }
-    public int DuracionMinutos { get; set; }
-    public TimeOnly? HoraInicio { get; set; }
-    public TimeOnly? HoraFin { get; set; }
-}
+    /// <summary>Genera en bloque turnos "Disponible" para un docente, según días de semana y horario.</summary>
+    [HttpPost("{id:int}/generar-turnos")]
+    public async Task<ActionResult<object>> GenerarTurnos(int id, GenerarTurnosDto dto)
+    {
+        var docente = await _db.Docentes.FindAsync(id);
+        if (docente is null)
+        {
+            return NotFound(new { mensaje = "Docente no encontrado." });
+        }
 
-public class ActualizarDocenteRequest
-{
-    public string? Apellido { get; set; }
-    public string? Nombre { get; set; }
-    public string? Email { get; set; }
+        if (dto.FechaHasta < dto.FechaDesde)
+        {
+            return BadRequest(new { mensaje = "La fecha 'hasta' no puede ser anterior a la fecha 'desde'." });
+        }
+
+        if (dto.HoraFin <= dto.HoraInicio)
+        {
+            return BadRequest(new { mensaje = "La hora de fin debe ser posterior a la hora de inicio." });
+        }
+
+        var existentes = await _db.Turnos
+            .Where(t => t.DocenteId == id && t.Fecha >= dto.FechaDesde && t.Fecha <= dto.FechaHasta)
+            .Select(t => new { t.Fecha, t.HoraInicio })
+            .ToListAsync();
+        var existentesSet = existentes.Select(e => (e.Fecha, e.HoraInicio)).ToHashSet();
+
+        var nuevosTurnos = new List<Turno>();
+        var duracion = TimeSpan.FromMinutes(dto.DuracionMinutos);
+
+        for (var fecha = dto.FechaDesde; fecha <= dto.FechaHasta; fecha = fecha.AddDays(1))
+        {
+            if (!dto.DiasSemana.Contains(fecha.DayOfWeek))
+            {
+                continue;
+            }
+
+            for (var horaInicio = dto.HoraInicio; horaInicio.Add(duracion) <= dto.HoraFin; horaInicio = horaInicio.Add(duracion))
+            {
+                if (existentesSet.Contains((fecha, horaInicio)))
+                {
+                    continue; // ya hay un turno cargado en ese horario, no se duplica
+                }
+
+                nuevosTurnos.Add(new Turno
+                {
+                    DocenteId = id,
+                    Fecha = fecha,
+                    HoraInicio = horaInicio,
+                    HoraFin = horaInicio.Add(duracion),
+                    Estado = EstadoTurno.Disponible
+                });
+            }
+        }
+
+        _db.Turnos.AddRange(nuevosTurnos);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { creados = nuevosTurnos.Count });
+    }
 }

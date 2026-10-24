@@ -21,39 +21,42 @@ public class Turno
 
     public EstadoTurno Estado { get; set; } = EstadoTurno.Disponible;
 
-    // Datos completados al reservar - Adulto/Padre/Madre
-    /// <summary>Nombre del padre o persona responsable.</summary>
-    public string? NombrePadre { get; set; }
-    /// <summary>Apellido del padre o persona responsable.</summary>
-    public string? ApellidoPadre { get; set; }
+    // Datos completados al reservar
+    /// <summary>Nombre del responsable (padre/madre) que reservó.</summary>
+    public string? NombreResponsable { get; set; }
+
+    /// <summary>Apellido del responsable (padre/madre) que reservó.</summary>
+    public string? ApellidoResponsable { get; set; }
 
     /// <summary>Teléfono en formato internacional E.164 sin "+" (ej: 5492235551234), listo para WhatsApp Cloud API.</summary>
     public string? TelefonoPadre { get; set; }
-    /// <summary>
-    /// Correo electrónico del padre.
-    /// </summary>
-    public string? EmailPadre { get; set; }
-    public string Modalidad { get; set; } = "Presencial";
-    public string? LinkMeet { get; set; }
-    public string? GoogleEventId { get; set; }
 
-    // Datos del niño/a
+    /// <summary>Email al que se manda la confirmación de la reserva.</summary>
+    public string? EmailPadre { get; set; }
+
     /// <summary>Nombre del niño/a.</summary>
     public string? NombreNino { get; set; }
+
     /// <summary>Apellido del niño/a.</summary>
     public string? ApellidoNino { get; set; }
     public string? Observaciones { get; set; }
 
+    /// <summary>Presencial o virtual. Queda en null mientras el turno está disponible (todavía nadie eligió).</summary>
+    public ModalidadEntrevista? Modalidad { get; set; }
+
     public DateTime? FechaReserva { get; set; }
 
-    /// <summary>Se pone en true apenas se envía (o se intenta enviar) el WhatsApp de confirmación.</summary>
+    /// <summary>Se pone en true cuando se envió el email de confirmación de la reserva.</summary>
     public bool ConfirmacionEnviada { get; set; } = false;
 
     /// <summary>Se pone en true cuando el job de recordatorios ya mandó el WhatsApp del día anterior.</summary>
     public bool RecordatorioEnviado { get; set; } = false;
 
-    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
-
-    /// <summary>Fecha en que se solicitó la confirmación del turno.</summary>
+    /// <summary>
+    /// Momento (UTC) en que la docente tocó "Confirmación" en su listado y se abrió el WhatsApp
+    /// a la familia pidiendo que confirme la asistencia. Null si todavía no se pidió.
+    /// </summary>
     public DateTime? ConfirmacionSolicitada { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 }

@@ -135,9 +135,11 @@ El seed inicial crea este usuario administrador:
 |---|---|
 | `admin@jardin.edu.ar` | `CambiarEsta123!` |
 
-**Cambiá esta contraseña antes de usar el sistema con datos reales.** Por ahora no hay una pantalla para cambiar la contraseña desde el panel; se actualiza directamente en la base (o le pedís a alguien que agregue el endpoint — quedó anotado en "Limitaciones").
+**Cambiá esta contraseña antes de usar el sistema con datos reales.** Podés hacerlo vos mismo desde **Panel → Mi contraseña**, sin tocar la base de datos.
 
 Los 18 docentes de ejemplo (Ana Gómez, Bruno Rodríguez, etc.) los podés editar o reemplazar por los reales desde **Panel → Docentes**.
+
+Para que cada docente pueda entrar al panel y ver *solo sus propios turnos*, dirección le crea un login individual desde **Panel → Usuarios**: se elige el docente, se genera (o se define) una contraseña temporal, y se le pasa a la persona por un medio seguro para que la cambie apenas entre. Desde esa misma pantalla dirección puede restablecer la contraseña de cualquier usuario (propio o de un docente) cuando haga falta, y activar/desactivar accesos.
 
 ## Configurar WhatsApp (Cloud API de Meta)
 
@@ -228,8 +230,10 @@ El código ya está armado para la opción 1 (Cloud API con plantillas), que es 
 1. Dirección entra a `/admin/login` con su usuario y contraseña.
 2. Desde **Docentes**, da de alta/edita/desactiva a los 18 docentes.
 3. Desde **Generar turnos**, elige un docente, un rango de fechas, los días de la semana, el horario y la duración de cada entrevista — el sistema genera todas las franjas automáticamente.
-4. Desde **Turnos**, dirección ve todas las reservas (y cada docente, si tiene su propio usuario, solo ve las suyas); puede cancelar reservas o eliminar franjas libres cargadas por error.
-5. Cada 30 minutos, un proceso interno revisa si hay turnos para el día siguiente sin recordatorio enviado, y lo manda.
+4. Desde **Usuarios**, dirección crea el login individual de cada docente y restablece contraseñas cuando haga falta (ver sección anterior).
+5. Desde **Turnos**, dirección ve todas las reservas (y cada docente, si tiene su propio usuario, solo ve las suyas); puede cancelar reservas o eliminar franjas libres cargadas por error.
+6. Cualquier usuario logueado puede cambiar su propia contraseña desde **Mi contraseña**.
+7. Cada 30 minutos, un proceso interno revisa si hay turnos para el día siguiente sin recordatorio enviado, y lo manda.
 
 ## Referencia de la API
 
@@ -247,9 +251,15 @@ Todos los endpoints devuelven/reciben JSON. Los marcados 🔒 requieren el heade
 | PUT 🔒 | `/api/admin/docentes/{id}` | Edita un docente (solo Admin) |
 | DELETE 🔒 | `/api/admin/docentes/{id}` | Desactiva un docente (solo Admin) |
 | POST 🔒 | `/api/admin/docentes/{id}/generar-turnos` | Genera turnos en bloque (solo Admin) |
-| GET 🔒 | `/api/admin/turnos` | Lista turnos (filtra por docente/fecha/estado) |
+| GET 🔒 | `/api/admin/turnos` | Lista turnos (filtra por docente/fecha/estado; un docente solo ve los suyos) |
 | POST 🔒 | `/api/admin/turnos/{id}/cancelar` | Cancela una reserva |
 | DELETE 🔒 | `/api/admin/turnos/{id}` | Elimina una franja libre |
+| GET 🔒 | `/api/admin/usuarios` | Lista todos los usuarios del panel (solo Admin) |
+| POST 🔒 | `/api/admin/usuarios` | Crea un login (de un docente, o de otro Admin) (solo Admin) |
+| POST 🔒 | `/api/admin/usuarios/{id}/restablecer-password` | Restablece la contraseña de un usuario (solo Admin) |
+| PUT 🔒 | `/api/admin/usuarios/{id}/activar` | Reactiva un acceso (solo Admin) |
+| POST 🔒 | `/api/admin/usuarios/{id}/desactivar` | Desactiva un acceso (solo Admin) |
+| POST 🔒 | `/api/auth/cambiar-password` | Cualquier usuario logueado cambia su propia contraseña |
 
 La documentación interactiva completa (Swagger) está disponible corriendo el backend y entrando a `http://localhost:5275/swagger`.
 
@@ -257,17 +267,17 @@ La documentación interactiva completa (Swagger) está disponible corriendo el b
 
 - **SQLite en vez de SQL Server**: cero instalación, cero costo, un solo archivo — ideal para que el jardín no tenga que mantener un servidor de base de datos.
 - **Turnos como una sola tabla** (en vez de "disponibilidad" + "reservas" separadas): simplifica mucho el modelo. Una franja horaria "vacía" (`Estado = Disponible`) se convierte en una reserva completando los mismos campos, en vez de tener dos tablas relacionadas.
-- **JWT con roles Admin/Docente**: pensado para que en el futuro cada docente pueda tener su propio usuario y ver solo su agenda, sin exponerle las de sus compañeros. Hoy el seed solo crea un usuario Admin; agregar usuarios por docente es cuestión de cargarlos (ver "Limitaciones").
+- **JWT con roles Admin/Docente**: cada docente puede tener su propio usuario (creado por dirección desde **Panel → Usuarios**) y ver solo su agenda, sin exponerle las de sus compañeros — el filtro por `docenteId` está aplicado en `AdminTurnosController`. El seed solo crea el usuario Admin inicial; los accesos de cada docente se cargan desde el panel, no hace falta tocar la base.
 - **Transacción al reservar**: evita que dos familias reserven el mismo horario si tocan "confirmar" casi al mismo tiempo.
 - **El envío de WhatsApp nunca bloquea la reserva**: si WhatsApp falla (por la razón que sea), el turno queda igual reservado, y se guarda un flag (`confirmacionEnviada = false`) para poder detectar el problema después. No quisimos que una falla de WhatsApp le impida a la familia sacar el turno.
 - **El recordatorio corre dentro del mismo proceso de la API** (`BackgroundService`), revisando cada 30 minutos. Es la opción más simple para un proyecto de este tamaño; no requiere infraestructura extra. La contra es que si el proceso de la API está caído justo en ese momento, el recordatorio se manda en cuanto vuelve a levantar (no se pierde, solo se atrasa).
 
 ## Limitaciones conocidas y qué falta para producción
 
-- No hay pantalla para que dirección cree usuarios por docente (login individual) ni para cambiar contraseñas desde el panel — hoy solo existe el usuario Admin del seed. Se puede agregar un endpoint más si lo necesitan.
 - No hay envío de email, solo WhatsApp.
 - El recordatorio depende de que el proceso de la API esté corriendo 24/7. Para un despliegue real conviene alojarlo en un servicio que lo mantenga siempre activo (ver sección de hosting).
 - No hay política de reintento automático si falla el envío de un WhatsApp (queda el flag `confirmacionEnviada`/`recordatorioEnviado` en false, pero nadie lo reintenta solo — se puede agregar un botón "reenviar" en el panel).
+- No hay recuperación de contraseña para un usuario que la olvidó sin estar logueado ("olvidé mi contraseña" desde la pantalla de login) — hoy, si un docente se olvida la suya, dirección se la restablece desde **Panel → Usuarios**.
 - No se implementó recuperación de contraseña ("olvidé mi contraseña").
 - La app no compila ni se probó de punta a punta con WhatsApp real (no se puede sin una cuenta de Meta Business verificada); sí se probó que compila y corre el frontend, y el backend fue revisado a mano con mucho cuidado pero no compilado en este entorno (ver nota al principio del documento).
 

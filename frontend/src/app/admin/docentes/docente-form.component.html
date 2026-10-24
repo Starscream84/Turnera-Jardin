@@ -1,6 +1,6 @@
 <div class="contenedor-angosto">
-  <a routerLink="/admin/docentes" class="texto-suave">&larr; Volver</a>
-  <h1>{{ esEdicion ? 'Editar docente' : 'Nuevo docente' }}</h1>
+  <a routerLink="/admin/docentes" class="enlace-volver">&larr; Volver</a>
+  <h1 style="margin-bottom: 24px;">{{ esEdicion ? 'Editar docente' : 'Nuevo docente' }}</h1>
 
   @if (error()) {
     <div class="alerta alerta-error">{{ error() }}</div>
@@ -30,10 +30,22 @@
         <input id="sala" type="text" formControlName="sala" placeholder="Ej: Sala Verde (1 año)" />
       </div>
 
+      <div class="form-grupo">
+        <label for="ciclo">Ciclo</label>
+        <select id="ciclo" formControlName="ciclo">
+          <option value="">Sin ciclo (la familia elige presencial o virtual)</option>
+          <option value="PrimerCiclo">Primer ciclo (lactantes, salas 1 y 2): solo presencial</option>
+          <option value="SegundoCiclo">Segundo ciclo (salas 3, 4 y 5): presencial o virtual</option>
+          <option value="Especialista">Especialista (música, educación física): solo presencial</option>
+        </select>
+      </div>
+
       @if (esEdicion) {
-        <div class="form-grupo" style="flex-direction: row; align-items: center;">
-          <input id="activo" type="checkbox" formControlName="activo" style="width: auto;" />
-          <label for="activo" style="font-weight: 400;">Activo (visible en la agenda pública)</label>
+        <div class="form-grupo">
+          <label for="activo" class="check-linea">
+            <input id="activo" type="checkbox" formControlName="activo" />
+            Activo (visible en la agenda pública)
+          </label>
         </div>
       }
 

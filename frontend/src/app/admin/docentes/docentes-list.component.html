@@ -1,6 +1,9 @@
 <div class="contenedor">
   <div class="barra-superior">
-    <h1>Docentes</h1>
+    <div>
+      <h1>Docentes</h1>
+      <p class="texto-suave">Quiénes aparecen en la agenda pública para reservar entrevistas.</p>
+    </div>
     <a routerLink="/admin/docentes/nuevo" class="btn btn-primario">+ Nuevo docente</a>
   </div>
 
@@ -11,7 +14,7 @@
   @if (cargando()) {
     <p class="texto-suave">Cargando...</p>
   } @else {
-    <div class="card">
+    <div class="tabla-card">
       <table>
         <thead>
           <tr>
@@ -19,23 +22,23 @@
             <th>Email</th>
             <th>Sala</th>
             <th>Estado</th>
-            <th></th>
+            <th><span style="position: absolute; left: -9999px;">Acciones</span></th>
           </tr>
         </thead>
         <tbody>
           @for (docente of docentes(); track docente.id) {
             <tr>
-              <td>{{ docente.nombre }} {{ docente.apellido }}</td>
+              <td><strong style="font-weight: 600;">{{ docente.nombre }} {{ docente.apellido }}</strong></td>
               <td>{{ docente.email }}</td>
               <td>{{ docente.sala || '—' }}</td>
               <td>
                 @if (docente.activo) {
-                  <span class="badge badge-completado">Activo</span>
+                  <span class="badge badge-reservado">Activo</span>
                 } @else {
-                  <span class="badge badge-cancelado">Inactivo</span>
+                  <span class="badge badge-inactivo">Inactivo</span>
                 }
               </td>
-              <td style="white-space: nowrap;">
+              <td class="celda-acciones">
                 <a [routerLink]="['/admin/docentes', docente.id, 'editar']" class="btn btn-secundario btn-chico">Editar</a>
                 @if (docente.activo) {
                   <button type="button" class="btn btn-peligro btn-chico" (click)="alternarActivo(docente)">Desactivar</button>

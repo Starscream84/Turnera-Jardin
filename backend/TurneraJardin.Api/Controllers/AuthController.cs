@@ -1,90 +1,59 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
-using TurneraJardin.Api.Models;
-using TurneraJardin.Api.Auth;
 using TurneraJardin.Api.Services;
-using TurneraJardin.Api.Utilities;
+using System.Linq;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TurneraJardin.Api.Controllers;
 
+/// <summary>Login para el panel de administración (directivos y docentes).</summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    // Se verifica contra este hash cuando el email no existe, para que la respuesta tarde lo mismo
-    // y no se pueda deducir qué emails están registrados midiendo tiempos.
-    private static readonly string HashFicticio = BCrypt.Net.BCrypt.HashPassword("usuario-inexistente");
-
-    private readonly AppDbContext _context;
+    private readonly AppDbContext _db;
     private readonly IJwtService _jwtService;
-    private readonly IAuditoriaService _auditoria;
 
-    public AuthController(AppDbContext context, IJwtService jwtService, IAuditoriaService auditoria)
+    public AuthController(AppDbContext db, IJwtService jwtService)
     {
-        _context = context;
+        _db = db;
         _jwtService = jwtService;
-        _auditoria = auditoria;
     }
 
-    /// <summary>Inicia sesión. Limitado por IP para frenar intentos de adivinar contraseñas.</summary>
+    [EnableRateLimiting("login")]
     [HttpPost("login")]
-    [EnableRateLimiting("login")]
-    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto)
+    public async Task<ActionResult<LoginResponseDto>> Login(LoginDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+        var email = dto.Email.Trim().ToLowerInvariant();
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email.ToLower() == email && u.Activo);
+
+        if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash))
         {
-            return BadRequest(new { mensaje = "Email y contraseña son obligatorios." });
+            return Unauthorized(new { mensaje = "Email o contraseña incorrectos." });
         }
 
-        var email = dto.Email.Trim();
-        var usuario = await _context.Usuarios
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        var (token, expiraUtc) = _jwtService.GenerarToken(usuario);
 
-        var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, usuario?.PasswordHash ?? HashFicticio);
-
-        if (usuario is null || !passwordOk)
-        {
-            await _auditoria.RegistrarAsync("LoginFallido", "Usuario", usuario?.Id.ToString(),
-                $"Email: {email}");
-            return Unauthorized(new { mensaje = "Credenciales inválidas." });
-        }
-
-        // Recién con la contraseña correcta se informa el estado de la cuenta.
-        if (!usuario.Activo)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden,
-                new { mensaje = "La cuenta está suspendida. Consultá con la dirección." });
-        }
-
-        if (usuario.DebeCambiarPassword && usuario.PasswordTemporalVenceUtc < DateTime.UtcNow)
-        {
-            return Unauthorized(new { mensaje = "La contraseña temporal venció. Pedile a la dirección que genere una nueva." });
-        }
-
-        return Ok(ConstruirRespuesta(usuario));
+        return Ok(new LoginResponseDto(token, expiraUtc, usuario.NombreCompleto, usuario.Rol.ToString(), usuario.DocenteId, usuario.FotoUrl));
     }
 
-    /// <summary>
-    /// Cambia la contraseña propia. Es la única acción permitida con una contraseña temporal.
-    /// Devuelve un token nuevo, porque el anterior queda invalidado al cambiar la versión de sesión.
-    /// </summary>
+    /// <summary>Permite a cualquier usuario logueado (dirección o docente) cambiar su propia contraseña.</summary>
+    [Authorize]
     [HttpPost("cambiar-password")]
-    [Authorize(Policy = Politicas.Personal)]
-    [EnableRateLimiting("login")]
-    public async Task<ActionResult<AuthResponseDto>> CambiarPassword([FromBody] CambiarPasswordDto dto)
+    public async Task<IActionResult> CambiarPassword(CambiarPasswordPropiaDto dto)
     {
-        var usuarioId = User.GetUsuarioId();
-        if (usuarioId == 0)
+        var idClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (idClaim is null || !int.TryParse(idClaim, out var usuarioId))
         {
             return Unauthorized();
         }
 
-        var usuario = await _context.Usuarios.FindAsync(usuarioId);
-
+        var usuario = await _db.Usuarios.FindAsync(usuarioId);
         if (usuario is null)
         {
             return Unauthorized();
@@ -95,38 +64,70 @@ public class AuthController : ControllerBase
             return BadRequest(new { mensaje = "La contraseña actual no es correcta." });
         }
 
-        if (!Contrasenas.EsValida(dto.PasswordNueva))
-        {
-            return BadRequest(new { mensaje = "La contraseña debe tener entre 10 y 72 caracteres, con letras y números." });
-        }
-
-        if (BCrypt.Net.BCrypt.Verify(dto.PasswordNueva, usuario.PasswordHash))
-        {
-            return BadRequest(new { mensaje = "La contraseña nueva tiene que ser distinta de la actual." });
-        }
-
         usuario.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordNueva);
-        usuario.DebeCambiarPassword = false;
-        usuario.PasswordTemporalVenceUtc = null;
-        usuario.VersionSesion++;
+        await _db.SaveChangesAsync();
 
-        await _auditoria.RegistrarAsync("CambioPassword", "Usuario", usuario.Id.ToString(), "Usuario cambió su contraseña");
-
-        return Ok(ConstruirRespuesta(usuario));
+        return NoContent();
     }
 
-    private AuthResponseDto ConstruirRespuesta(Usuario usuario)
+    /// <summary>Sube (o reemplaza) la foto de perfil del usuario logueado. Acepta JPG, PNG o WEBP, hasta 2 MB.</summary>
+    [Authorize]
+    [HttpPost("mi-foto")]
+    public async Task<ActionResult<object>> SubirFoto(IFormFile archivo)
     {
-        var tokenResult = _jwtService.GenerarToken(usuario);
+        if (archivo is null || archivo.Length == 0)
+        {
+            return BadRequest(new { mensaje = "No se recibió ningún archivo." });
+        }
 
-        return new AuthResponseDto(
-            tokenResult.Token,
-            tokenResult.ExpiraUtc,
-            usuario.Id,
-            usuario.NombreCompleto,
-            usuario.Email,
-            usuario.Rol.ToString(),
-            usuario.DocenteId,
-            usuario.DebeCambiarPassword);
+        var extensionesValidas = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
+        if (!extensionesValidas.Contains(extension))
+        {
+            return BadRequest(new { mensaje = "Solo se aceptan imágenes JPG, PNG o WEBP." });
+        }
+
+        const long maxBytes = 2 * 1024 * 1024; // 2 MB
+        if (archivo.Length > maxBytes)
+        {
+            return BadRequest(new { mensaje = "La imagen no puede superar los 2 MB." });
+        }
+
+        var idClaim = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (idClaim is null || !int.TryParse(idClaim, out var usuarioId))
+        {
+            return Unauthorized();
+        }
+
+        var usuario = await _db.Usuarios.FindAsync(usuarioId);
+        if (usuario is null)
+        {
+            return Unauthorized();
+        }
+
+        var carpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "fotos-perfil");
+        Directory.CreateDirectory(carpeta);
+
+        // Si ya tenía una foto propia, la borramos para no acumular archivos huérfanos.
+        if (!string.IsNullOrEmpty(usuario.FotoUrl))
+        {
+            var rutaVieja = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", usuario.FotoUrl.TrimStart('/'));
+            if (System.IO.File.Exists(rutaVieja))
+            {
+                System.IO.File.Delete(rutaVieja);
+            }
+        }
+
+        var nombreArchivo = $"{Guid.NewGuid()}{extension}";
+        var rutaCompleta = Path.Combine(carpeta, nombreArchivo);
+        using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+        {
+            await archivo.CopyToAsync(stream);
+        }
+
+        usuario.FotoUrl = $"/fotos-perfil/{nombreArchivo}";
+        await _db.SaveChangesAsync();
+
+        return Ok(new { fotoUrl = usuario.FotoUrl });
     }
 }

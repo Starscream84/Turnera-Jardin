@@ -1,92 +1,163 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { DocentesService } from '../../core/services/docentes.service';
-import { TurnoDisponible, TurnoConfirmado } from '../../core/models/turno.model';
+import { Component, OnInit, computed, inject, signal } from "@angular/core";
+import { ActivatedRoute, RouterLink } from "@angular/router";
+import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
+import { HttpErrorResponse } from "@angular/common/http";
+import { DocentesService } from "../../core/services/docentes.service";
+import {
+    ModalidadEntrevista,
+    TurnoDisponible,
+    TurnoConfirmado,
+} from "../../core/models/turno.model";
+import { Docente } from "../../core/models/docente.model";
+import { PublicShellComponent } from "../../shared/public-shell.component";
 
 @Component({
-  selector: 'app-formulario-reserva',
-  standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, CommonModule],
-  templateUrl: './formulario-reserva.component.html'
+    selector: "app-formulario-reserva",
+    standalone: true,
+    imports: [ReactiveFormsModule, RouterLink, PublicShellComponent],
+    templateUrl: "./formulario-reserva.component.html",
 })
 export class FormularioReservaComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private docentesService = inject(DocentesService);
-  private fb = inject(FormBuilder);
+    private route = inject(ActivatedRoute);
+    private docentesService = inject(DocentesService);
+    private fb = inject(FormBuilder);
 
-  form!: FormGroup;
-  docenteId!: number;
-  turnoId!: number;
-  turnoSeleccionado = signal<TurnoDisponible | null>(null);
+    docenteId!: number;
+    turnoId!: number;
+    turnoSeleccionado = signal<TurnoDisponible | null>(null);
+    /** Docente elegido, para mostrarlo en el resumen del turno. */
+    docente = signal<Docente | null>(null);
 
-  cargando = signal(true);
-  enviando = signal(false);
-  error = signal<string | null>(null);
-  confirmacion = signal<TurnoConfirmado | null>(null);
+    cargando = signal(true);
+    enviando = signal(false);
+    error = signal<string | null>(null);
+    confirmacion = signal<TurnoConfirmado | null>(null);
 
-  ngOnInit(): void {
-    this.docenteId = Number(this.route.snapshot.paramMap.get('docenteId'));
-    this.turnoId = Number(this.route.snapshot.paramMap.get('turnoId'));
-
-    this.form = this.fb.group({
-      nombrePadre: ['', [Validators.required]],
-      telefonoPadre: ['', [Validators.required, Validators.pattern(/^\d{10,}$/)]],
-      emailPadre: ['', [Validators.required, Validators.email]],
-      modalidad: ['Presencial', [Validators.required]],
-      nombreNino: ['', [Validators.required]],
-      observaciones: ['']
+    /** Primer ciclo y especialistas no ofrecen presencial/virtual: la entrevista es siempre presencial. */
+    elegirModalidad = computed(() => {
+        const ciclo = this.docente()?.ciclo;
+        return ciclo !== "PrimerCiclo" && ciclo !== "Especialista";
     });
 
-    this.docentesService.turnosDisponibles(this.docenteId).subscribe({
-      next: (turnos) => {
-        const turno = turnos.find((t) => t.id === this.turnoId) ?? null;
-        this.turnoSeleccionado.set(turno);
-        if (!turno) {
-          this.error.set('Este turno ya no está disponible. Volvé atrás y elegí otro horario.');
-        }
-        this.cargando.set(false);
-      },
-      error: () => {
-        this.error.set('No pudimos cargar los datos del turno.');
-        this.cargando.set(false);
-      }
+    /** Link que abre Google Calendar con el evento de la entrevista ya cargado, listo para guardar. */
+    enlaceGoogleCalendar = computed(() => {
+        const confirmado = this.confirmacion();
+        return confirmado ? this.armarEnlaceGoogleCalendar(confirmado) : null;
     });
-  }
 
-  confirmar(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
+    form = this.fb.nonNullable.group({
+        // Arranca vacío a propósito: la familia tiene que elegir, no se asume ninguna modalidad.
+        modalidad: ["" as ModalidadEntrevista | "", [Validators.required]],
+        nombreResponsable: ["", [Validators.required, Validators.minLength(2)]],
+        apellidoResponsable: ["", [Validators.required, Validators.minLength(2)]],
+        telefonoPadre: ["", [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
+        emailPadre: ["", [Validators.required, Validators.email, Validators.maxLength(200)]],
+        nombreNino: ["", [Validators.required, Validators.minLength(2)]],
+        apellidoNino: ["", [Validators.required, Validators.minLength(2)]],
+        observaciones: [""],
+    });
+
+    ngOnInit(): void {
+        this.docenteId = Number(this.route.snapshot.paramMap.get("docenteId"));
+        this.turnoId = Number(this.route.snapshot.paramMap.get("turnoId"));
+
+        // Solo para mostrar el nombre en el resumen: si falla, la reserva sigue funcionando igual.
+        this.docentesService.listar().subscribe({
+            next: (docentes) => {
+                const docente = docentes.find((d) => d.id === this.docenteId) ?? null;
+                this.docente.set(docente);
+                if (docente?.ciclo === "PrimerCiclo" || docente?.ciclo === "Especialista") {
+                    // Primer ciclo y especialistas: la entrevista es siempre presencial, la familia no elige.
+                    this.form.controls.modalidad.setValue("Presencial");
+                }
+            },
+        });
+
+        this.docentesService.turnosDisponibles(this.docenteId).subscribe({
+            next: (turnos) => {
+                const turno = turnos.find((t) => t.id === this.turnoId) ?? null;
+                this.turnoSeleccionado.set(turno);
+                if (!turno) {
+                    this.error.set(
+                        "Este turno ya no está disponible. Volvé atrás y elegí otro horario.",
+                    );
+                }
+                this.cargando.set(false);
+            },
+            error: () => {
+                this.error.set("No pudimos cargar los datos del turno.");
+                this.cargando.set(false);
+            },
+        });
     }
 
-    this.enviando.set(true);
-    this.error.set(null);
-
-    this.docentesService.reservarTurno(this.turnoId, this.form.getRawValue()).subscribe({
-      next: (confirmado) => {
-        this.confirmacion.set(confirmado);
-        this.enviando.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.enviando.set(false);
-        if (err.status === 409) {
-          this.error.set('Justo se acaban de reservar este turno. Volvé atrás y elegí otro horario.');
-        } else {
-          this.error.set('No pudimos confirmar la reserva. Intentá de nuevo en un momento.');
+    confirmar(): void {
+        if (this.form.invalid) {
+            this.form.markAllAsTouched();
+            return;
         }
-      }
-    });
-  }
 
-  formatearFecha(fecha: string): string {
-    const [anio, mes, dia] = fecha.split('-').map(Number);
-    return new Date(anio, mes - 1, dia).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
-  }
+        this.enviando.set(true);
+        this.error.set(null);
 
-  formatearHora(hora: string): string {
-    return hora.slice(0, 5);
-  }
+        const valores = this.form.getRawValue();
+        const datos = { ...valores, modalidad: valores.modalidad as ModalidadEntrevista };
+
+        this.docentesService.reservarTurno(this.turnoId, datos).subscribe({
+            next: (confirmado) => {
+                this.confirmacion.set(confirmado);
+                this.enviando.set(false);
+            },
+            error: (err: HttpErrorResponse) => {
+                this.enviando.set(false);
+                if (err.status === 409) {
+                    this.error.set(
+                        "Justo se acaban de reservar este turno. Volvé atrás y elegí otro horario.",
+                    );
+                } else if (err.status === 429) {
+                    this.error.set(
+                        "Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.",
+                    );
+                } else {
+                    this.error.set(
+                        "No pudimos confirmar la reserva. Intentá de nuevo en un momento.",
+                    );
+                }
+            },
+        });
+    }
+
+    formatearFecha(fecha: string): string {
+        const [anio, mes, dia] = fecha.split("-").map(Number);
+        return new Date(anio, mes - 1, dia).toLocaleDateString("es-AR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+        });
+    }
+
+    formatearHora(hora: string): string {
+        return hora.slice(0, 5);
+    }
+
+    /**
+     * Usa el link público "crear evento" de Google Calendar: no requiere API ni login nuestro,
+     * el evento se guarda en la cuenta de Google que la familia tenga abierta en su teléfono.
+     */
+    private armarEnlaceGoogleCalendar(turno: TurnoConfirmado): string {
+        // Google espera "yyyyMMddTHHmmss"; fecha llega como "yyyy-MM-dd" y la hora como "HH:mm:ss".
+        const aFormatoGoogle = (hora: string) =>
+            `${turno.fecha.replaceAll("-", "")}T${hora.replaceAll(":", "").padEnd(6, "0")}`;
+
+        const parametros = new URLSearchParams({
+            action: "TEMPLATE",
+            text: `Entrevista en el jardín con ${turno.docenteNombre}`,
+            dates: `${aFormatoGoogle(turno.horaInicio)}/${aFormatoGoogle(turno.horaFin)}`,
+            // Sin esto Google toma la hora en la zona del dispositivo, y se correría si el teléfono está en otra zona.
+            ctz: "America/Argentina/Buenos_Aires",
+            details: `Entrevista ${turno.modalidad.toLowerCase()} por ${turno.nombreNino} ${turno.apellidoNino}. Número de turno: #${turno.id}.`,
+        });
+
+        return `https://calendar.google.com/calendar/render?${parametros.toString()}`;
+    }
 }
