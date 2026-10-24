@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Services;
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -30,7 +31,7 @@ public class DocentesController : ControllerBase
         return Ok(docentes);
     }
 
-    /// <summary>Turnos libres de un docente en un rango de fechas (por defecto, los próximos 30 días).</summary>
+    /// <summary>Turnos libres de un docente en un rango de fechas (por defecto, desde mañana y los 30 días siguientes).</summary>
     [HttpGet("{id:int}/turnos-disponibles")]
     public async Task<ActionResult<List<TurnoDisponibleDto>>> TurnosDisponibles(
         int id, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta)
@@ -41,8 +42,8 @@ public class DocentesController : ControllerBase
             return NotFound(new { mensaje = "Docente no encontrado." });
         }
 
-        var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var fechaDesde = desde is not null && desde >= hoy ? desde.Value : hoy;
+        var primerDia = ArgentinaDate.PrimerDiaReservable();
+        var fechaDesde = desde is not null && desde >= primerDia ? desde.Value : primerDia;
         var fechaHasta = hasta ?? fechaDesde.AddDays(30);
 
         var turnos = await _db.Turnos

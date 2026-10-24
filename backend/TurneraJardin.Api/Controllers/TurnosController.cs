@@ -77,6 +77,11 @@ public class TurnosController : ControllerBase
             return Conflict(new { mensaje = "Este turno ya no está disponible. Elegí otro horario." });
         }
 
+        if(turno.Fecha < ArgentinaDate.PrimerDiaReservable())
+        {
+            return BadRequest(new {mensaje = "Los turnos se reservan con al menos un dia de anticipación. Elegí un turno a partir de mañana."});
+        }
+
         turno.NombrePadre = dto.NombrePadre.Trim();
         turno.TelefonoPadre = dto.TelefonoPadre.Trim();
         turno.EmailPadre = dto.EmailPadre.Trim();
