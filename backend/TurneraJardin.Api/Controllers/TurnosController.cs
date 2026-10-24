@@ -77,6 +77,11 @@ public class TurnosController : ControllerBase
             return Conflict(new { mensaje = "Este turno ya no está disponible. Elegí otro horario." });
         }
 
+        if (turno.Fecha < ArgentinaDate.PrimerDiaReservable())
+        {
+            return BadRequest(new { mensaje = "Los turnos se reservan con al menos un día de anticipación. Elegí un turno a partir de mañana." });
+        }
+
         // Primer ciclo y especialistas: las entrevistas son siempre presenciales y la familia no elige.
         if (turno.Docente!.Ciclo is CicloDocente.PrimerCiclo or CicloDocente.Especialista)
         {
