@@ -153,6 +153,11 @@ public class AdminTurnosController : ControllerBase
     public async Task<ActionResult<object>> EliminarVarios(
         [FromQuery] int? docenteId, [FromQuery] DateOnly? desde, [FromQuery] DateOnly? hasta, [FromQuery] EstadoTurno? estado)
     {
+        if (docenteId is null && desde is null && hasta is null && estado is null)
+        {
+            return BadRequest(new { mensaje = "Indicá al menos un filtro (docente, fechas o estado) para eliminar turnos en bloque." });
+        }
+
         var query = _db.Turnos.AsQueryable();
 
         if (docenteId is not null) query = query.Where(t => t.DocenteId == docenteId);
