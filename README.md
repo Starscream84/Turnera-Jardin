@@ -1,69 +1,108 @@
-# 🧸 Turnera Web — Jardín Maternal
+# Turnera Web — Jardín Maternal
 
-Sistema de reserva de turnos de entrevista para jardines maternales. Los padres sacan su turno con el/la docente de su hijo/a desde un link de WhatsApp, sin llamadas ni planillas — y reciben la confirmación y un recordatorio automático por WhatsApp.
+Sistema de reserva de turnos de entrevista para el Nivel Inicial del Colegio IDRA (Mar del Plata). Las familias sacan su turno con la docente de su hijo/a desde la web, sin llamadas ni planillas, y reciben la confirmación por email. Las docentes y la dirección gestionan la agenda desde un panel propio.
 
-Desarrollado como proyecto académico y **cedido sin cargo** a la institución, como alternativa gratuita a sistemas pagos tipo Agenda Pro.
+Desarrollado como proyecto académico y **cedido sin cargo** a la institución, como alternativa a sistemas pagos tipo Agenda Pro.
 
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
-![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-DB-003B57?logo=sqlite&logoColor=white)
-![WhatsApp Cloud API](https://img.shields.io/badge/WhatsApp-Cloud%20API-25D366?logo=whatsapp&logoColor=white)
+![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white)
+![MySQL 8](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+![Brevo](https://img.shields.io/badge/Email-Brevo-0B996E)
 ![License](https://img.shields.io/badge/uso-institucional%20sin%20cargo-blue)
+
+**Reserva de turnos:** https://turnera-jardin-azure.vercel.app
 
 ---
 
-## ✨ Qué resuelve
+## Qué resuelve
 
-- **Familias**: eligen docente, ven los horarios libres y reservan su entrevista en un par de clics, desde el celular.
-- **Institución**: gestiona a los docentes y abre turnos disponibles para cada uno desde un panel simple, sin depender de planillas compartidas.
-- **Sin recordar nada a mano**: el sistema manda solo la confirmación al reservar y un recordatorio el día anterior, por WhatsApp.
+- **Familias**: eligen docente, ven en un calendario los días con horarios libres y reservan en tres pasos desde el celular. Pueden cancelar solas con el número de turno.
+- **Docentes**: ven solo sus entrevistas, le piden confirmación a cada familia por WhatsApp con un clic e imprimen el listado del día.
+- **Dirección**: carga docentes, abre turnos en bloque para una o todas las docentes y administra los accesos al panel.
 
-## 🚀 Funcionalidades
+## Funcionalidades
 
-**Flujo público (familias)**
-- Selección de docente
-- Calendario de horarios disponibles
-- Reserva con confirmación instantánea por WhatsApp
-- Cancelación de turno autogestionada
+**Reserva pública (sin login)**
 
-**Panel de administración**
-- Login con roles (dirección / docente)
-- ABM de docentes
-- Login individual por docente (creado por dirección) para que cada uno vea solo sus propios turnos
-- Restablecimiento de contraseñas desde el panel, sin tocar la base de datos
-- Generación masiva de turnos disponibles (por rango de fechas, días y horario)
-- Listado y filtrado de reservas, cancelación de turnos
+- Buscador de docentes por nombre o sala.
+- Calendario mensual con los días que tienen lugar, horarios separados en mañana y tarde.
+- Reservas desde el día siguiente y con hasta 6 meses de anticipación.
+- Modalidad presencial o virtual según el ciclo de la docente (primer ciclo y especialistas: solo presencial).
+- Email de confirmación con el número de turno y botón para agendarlo en Google Calendar.
+- Cancelación autogestionada con número de turno + teléfono.
+- Contacto por WhatsApp con el jardín (un número por turno: mañana y tarde).
 
-**Automatizaciones**
-- WhatsApp de confirmación al reservar
-- WhatsApp de recordatorio un día antes de la entrevista
+**Panel (con login)**
 
-## 🛠️ Stack técnico
+- Tres roles: Administrador, Coordinador (dirección) y Docente; cada docente ve solo sus turnos.
+- Listado de turnos con filtros, indicadores y estado del email enviado.
+- Botón **Confirmación**: abre WhatsApp con un mensaje ya escrito para la familia y registra cuándo se pidió.
+- Listado imprimible (A4) de las entrevistas reservadas, con columna para anotar asistencia.
+- Cancelación de turnos desde el panel con aviso por email a la familia.
+- Generación masiva de turnos por período, días de la semana y una o más franjas horarias, para una docente o para todas.
+- Borrado de turnos en bloque según el filtro aplicado.
+- Alta, edición y desactivación de docentes.
+- Gestión de usuarios: crear accesos de docentes, restablecer contraseñas, activar/desactivar.
+- Cambio de contraseña propia y foto de perfil.
 
-| Capa | Tecnología |
-|---|---|
-| Backend | C# / ASP.NET Core 8 Web API |
-| ORM / Base de datos | Entity Framework Core 8 + SQLite |
-| Autenticación | JWT |
-| Frontend | Angular 19 (standalone components) |
-| Mensajería | WhatsApp Cloud API (Meta) |
+**Seguridad**
 
-Elegido para que la institución no tenga que pagar ni instalar nada extra: SQLite es un solo archivo, y todo el stack corre en infraestructura gratuita o ya existente.
+- JWT con roles, contraseñas con BCrypt.
+- Límite de pedidos por IP en reserva, cancelación y login.
+- Secretos fuera del repositorio (variables de entorno en el servidor).
 
-## 📦 Estructura del repositorio
+## Stack técnico
+
+| Capa                | Tecnología                                                              |
+| ------------------- | ----------------------------------------------------------------------- |
+| Backend             | C# / ASP.NET Core 8 Web API                                             |
+| ORM / Base de datos | Entity Framework Core + MySQL 8 (Pomelo)                                |
+| Autenticación       | JWT + BCrypt                                                            |
+| Frontend            | Angular 21 (standalone components, signals, Reactive Forms), CSS propio |
+| Emails              | Brevo (API HTTP)                                                        |
+| Hosting             | Backend y base en Railway, frontend en Vercel                           |
+
+## Estructura del repositorio
 
 ```
 turnera-jardin/
-├── backend/     → API en ASP.NET Core (C#)
-└── frontend/    → Aplicación Angular
+├── backend/
+│   ├── TurneraJardin.Api/   → API en ASP.NET Core (incluye el Dockerfile del deploy)
+│   └── scripts/             → scripts SQL de mantenimiento
+├── frontend/                → aplicación Angular (deploy en Vercel)
+└── docs/                    → documentación interna del equipo
 ```
 
+## Documentación
 
+| Documento                                              | Para qué                                                                         |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| [`docs/README-interno.md`](docs/README-interno.md)     | Cómo correrlo localmente, cómo está desplegado, variables de entorno y operación |
+| [`docs/roles-y-permisos.md`](docs/roles-y-permisos.md) | Qué puede hacer cada rol y cómo está implementado                                |
+| [`docs/guia-swagger.md`](docs/guia-swagger.md)         | Probar la API a mano con Swagger                                                 |
+| [`docs/RULES.md`](docs/RULES.md)                       | Convenciones de código                                                           |
 
-## 👥 Equipo
+Los manuales de uso (para familias y para el personal del jardín) se comparten aparte con la institución.
 
-Proyecto desarrollado por un grupo de 5 estudiantes de Desarrollo de Software del Instituto IDRA (Mar del Plata, Argentina), en el marco de un trabajo práctico ofrecido a la institución.
+## Inicio rápido (desarrollo)
 
-## 📄 Uso
+Requisitos: .NET SDK 8, Node.js 24 y MySQL 8 local.
+
+```bash
+# Backend (necesita appsettings.Development.json, ver docs/README-interno.md)
+cd backend/TurneraJardin.Api
+dotnet run            # http://localhost:5275 (Swagger en /swagger)
+
+# Frontend
+cd frontend
+npm install
+npm start             # http://localhost:4200
+```
+
+## Equipo
+
+Proyecto desarrollado por estudiantes de Desarrollo de Software del Instituto IDRA (Mar del Plata, Argentina), en el marco de un trabajo práctico ofrecido a la institución.
+
+## Uso
 
 Este proyecto se entrega sin cargo a la institución para su uso interno. No está pensado como producto comercial.
