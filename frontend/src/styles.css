@@ -1148,6 +1148,12 @@ input[type="radio"] {
     font-weight: 400;
 }
 
+.contact-band-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
 .footer {
     background: var(--blue);
     color: #fff;
@@ -1168,6 +1174,15 @@ input[type="radio"] {
     font-size: 1.15rem;
     text-underline-offset: 6px;
 }
+.footer-phones {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    font-size: 1.15rem;
+}
+
 .footer-links {
     display: flex;
     flex-wrap: wrap;
@@ -1476,6 +1491,10 @@ tbody tr:hover td {
     }
     .contact-band {
         padding: 40px 20px;
+    }
+    .contact-band-actions {
+        width: 100%;
+        flex-direction: column;
     }
     .contact-band .btn {
         width: 100%;
