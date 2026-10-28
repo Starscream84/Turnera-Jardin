@@ -1,5 +1,6 @@
 import { Component, Input } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
+import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
 
 /**
  * Visual frame of the public screens (the ones families see): navigation bar,
@@ -53,15 +54,26 @@ import { RouterLink, RouterLinkActive } from "@angular/router";
 
         <section class="contact-band">
             <h2>¿Alguna duda? conversemos</h2>
-            <a class="btn btn-green" [href]="whatsAppLink" target="_blank" rel="noopener"
-                >Chatear vía WhatsApp ›</a
-            >
+            <div class="contact-band-actions">
+                @for (contact of phones; track contact.label) {
+                    <a class="btn btn-green" [href]="whatsAppUrl(contact.phone)" target="_blank" rel="noopener"
+                        >WhatsApp {{ contact.label.toLowerCase() }} ›</a
+                    >
+                }
+            </div>
         </section>
 
         <footer class="footer">
             <div>
                 <h3>Contacto</h3>
-                <a [href]="whatsAppLink" target="_blank" rel="noopener">{{ displayPhone }}</a>
+                <ul class="footer-phones">
+                    @for (contact of phones; track contact.label) {
+                        <li>
+                            <span>{{ contact.label }}:</span>
+                            <a [href]="whatsAppUrl(contact.phone)" target="_blank" rel="noopener">{{ contact.phone }}</a>
+                        </li>
+                    }
+                </ul>
             </div>
             <div>
                 <h3>Links útiles</h3>
@@ -83,7 +95,7 @@ export class PublicShellComponent {
 
     readonly stepNames = ["Docente", "Día y horario", "Tus datos"];
 
-    // Contact phone shown on the school's website. Change it here if the kindergarten uses another number.
-    readonly displayPhone = "+54 9 223 519-9012";
-    readonly whatsAppLink = "https://wa.me/5492235199012";
+    /** Kindergarten phones (one per shift). They are configured in core/config/school-contact.ts. */
+    readonly phones = SCHOOL_PHONES;
+    readonly whatsAppUrl = whatsAppUrl;
 }
