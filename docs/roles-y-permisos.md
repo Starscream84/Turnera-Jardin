@@ -36,10 +36,13 @@ El acceso más acotado. Cada docente entra con su propio login y solo ve y puede
 | Ver todos los turnos del jardín | ✅ | ✅ | ❌ (solo los propios) |
 | Cancelar cualquier turno reservado | ✅ | ✅ | ❌ (solo los propios) |
 | Eliminar una franja "Disponible" sin reservar | ✅ | ✅ | Solo las propias |
+| Eliminar turnos en bloque (según el filtro) | ✅ | ✅ | ❌ |
+| Pedir confirmación por WhatsApp (botón "Confirmación") | ✅ | ✅ | Solo los propios |
+| Imprimir el listado de turnos reservados | ✅ | ✅ | Solo los propios |
 | Crear logins de usuario (Coordinador/Docente/Admin) | ✅ | ❌ | ❌ |
 | Restablecer contraseñas ajenas | ✅ | ❌ | ❌ |
 | Activar/desactivar accesos de usuario | ✅ | ❌ | ❌ |
-| Cambiar su propia contraseña | ✅ | ✅ | ✅ |
+| Cambiar su propia contraseña y su foto de perfil | ✅ | ✅ | ✅ |
 
 ## Cómo está implementado
 
@@ -71,6 +74,8 @@ Cada usuario logueado lleva el rol como claim en su JWT, y los controllers lo ve
 - **Guards**: `frontend/src/app/core/guards/admin.guard.ts` expone `adminGuard` (solo `Admin`) y `coordinatorGuard` (`Admin` o `Coordinator`), ambos generados por una función `createRoleGuard(roles)`.
 - **Rutas**: en `app.routes.ts`, las rutas de docentes y de generar turnos usan `coordinatorGuard`; la de usuarios usa `adminGuard`; la de turnos no tiene guard de rol (cualquier usuario logueado entra, el backend filtra qué ve).
 - **Nav**: `admin-layout.component.html` muestra "Docentes" y "Generar turnos" para `Admin`/`Coordinator`, y "Usuarios" solo para `Admin`.
+
+La pantalla **Usuarios** del panel solo crea accesos para docentes; los usuarios `Coordinator` y `Admin` se crean por API (ver abajo).
 - **Lista de turnos**: `appointments-list.component.html` (con `isManagement()`) muestra la columna y el filtro de "Docente" solo para `Admin`/`Coordinator` (un `Teacher` no lo necesita, porque de por sí solo ve los suyos).
 
 ## Cómo crear un usuario de cada tipo

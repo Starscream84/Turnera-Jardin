@@ -1,119 +1,166 @@
-> 📌 **Documento interno del equipo** — guía completa de instalación, configuración y decisiones técnicas. Para la presentación del proyecto ver el [`README.md`](./README.md) principal del repositorio.
+> 📌 **Documento interno del equipo.** Cómo está levantado el sistema, cómo correrlo en local y cómo operarlo. Para la presentación del proyecto ver el [`README.md`](../README.md) principal. El repositorio es privado desde el 27/10/2026, pero igual acá no van contraseñas, claves ni datos personales: cualquier colaborador o servicio con acceso al repo los vería.
 
-# Turnera Web — Jardín Maternal (guía interna)
+# Turnera Web — guía interna
 
-Sistema de reserva de turnos de entrevista para un jardín maternal. Los padres reciben un link (por WhatsApp) y sacan un turno de entrevista con el/la docente de su hijo/a, sin llamar ni escribir a nadie. El sistema manda la confirmación y un recordatorio un día antes, también por WhatsApp.
-
-Hecho para donarlo a la institución como alternativa a Agenda Pro u otro sistema pago.
+Estado al 27/10/2026: todo el trabajo vive en `main`, que es la rama que despliegan Railway y Vercel.
 
 ## Índice
 
-1. [Qué incluye el proyecto](#qué-incluye-el-proyecto)
-2. [Arquitectura y stack](#arquitectura-y-stack)
-3. [Estructura de carpetas](#estructura-de-carpetas)
-4. [Prerrequisitos](#prerrequisitos)
-5. [Cómo correr el backend](#cómo-correr-el-backend)
-6. [Cómo correr el frontend](#cómo-correr-el-frontend)
-7. [Datos y credenciales de prueba](#datos-y-credenciales-de-prueba)
-8. [Configurar WhatsApp (Cloud API de Meta)](#configurar-whatsapp-cloud-api-de-meta)
-9. [⚠️ Sobre el costo de WhatsApp — leer antes de decidir](#️-sobre-el-costo-de-whatsapp--leer-antes-de-decidir)
-10. [Cómo funciona el sistema, paso a paso](#cómo-funciona-el-sistema-paso-a-paso)
-11. [Referencia de la API](#referencia-de-la-api)
-12. [Decisiones de diseño y por qué](#decisiones-de-diseño-y-por-qué)
-13. [Limitaciones conocidas y qué falta para producción](#limitaciones-conocidas-y-qué-falta-para-producción)
-14. [Opciones de hosting gratuito para desplegarlo](#opciones-de-hosting-gratuito-para-desplegarlo)
+1. [Arquitectura](#1-arquitectura)
+2. [Producción](#2-producción)
+3. [Variables de entorno](#3-variables-de-entorno)
+4. [Desarrollo local](#4-desarrollo-local)
+5. [Base de datos](#5-base-de-datos)
+6. [Cómo se despliega un cambio](#6-cómo-se-despliega-un-cambio)
+7. [Emails (Brevo)](#7-emails-brevo)
+8. [WhatsApp](#8-whatsapp)
+9. [Reglas de negocio](#9-reglas-de-negocio)
+10. [Referencia de la API](#10-referencia-de-la-api)
+11. [Configuración que vive en el código](#11-configuración-que-vive-en-el-código)
+12. [Seguridad](#12-seguridad)
+13. [Problemas conocidos y cómo resolverlos](#13-problemas-conocidos-y-cómo-resolverlos)
+14. [Pendientes](#14-pendientes)
 
 ---
 
-## Qué incluye el proyecto
-
-- **`backend/`** — API en C# / ASP.NET Core 8 con Entity Framework Core y SQLite (no requiere instalar ningún motor de base de datos aparte).
-- **`frontend/`** — Aplicación en Angular 19 (standalone components) con dos partes:
-  - **Flujo público**: elegir docente → ver horarios libres → completar datos → confirmar turno. Sin login.
-  - **Panel de administración**: login, ABM de los 18 docentes, generación de turnos disponibles y listado/cancelación de reservas.
-- Envío de WhatsApp de **confirmación** (al reservar) y **recordatorio** (un día antes) usando la **WhatsApp Cloud API** oficial de Meta.
-
-Importante: en el sandbox donde armé este proyecto, el acceso a NuGet (el repositorio de paquetes de .NET) estaba bloqueado por una política de red, así que **no pude compilar ni correr el backend acá**. Lo escribí con cuidado siguiendo los patrones estándar de ASP.NET Core, y el frontend en Angular sí lo compilé y probé (`ng build` y `ng serve` corrieron sin errores). Cuando lo abras en tu máquina con conexión a internet normal, `dotnet restore` debería bajar los paquetes sin problema — si aparece algún error de compilación puntual, avisame y lo corregimos.
-
-## Arquitectura y stack
+## 1. Arquitectura
 
 ```
-┌─────────────────┐        HTTP/JSON        ┌──────────────────────┐
-│  Angular (SPA)   │ ───────────────────────▶│  ASP.NET Core Web API │
-│  localhost:4200   │◀─────────────────────── │  localhost:5275       │
-└─────────────────┘                          └──────────┬───────────┘
-                                                          │ EF Core
-                                                          ▼
-                                                ┌───────────────────┐
-                                                │  SQLite (turnera.db) │
-                                                └───────────────────┘
-                                                          │
-                                                          ▼
-                                            ┌──────────────────────────┐
-                                            │ WhatsApp Cloud API (Meta) │
-                                            └──────────────────────────┘
+ Familias / personal (navegador)
+            │
+            ▼
+┌───────────────────────────┐     HTTPS/JSON     ┌──────────────────────────────┐
+│ Vercel                    │ ─────────────────▶ │ Railway — servicio backend   │
+│ Angular 21 (sitio estático)│                    │ ASP.NET Core 8 (Docker, :8080)│
+└───────────────────────────┘                    └───────┬──────────────┬───────┘
+                                                         │ red interna  │ HTTPS
+                                                         ▼              ▼
+                                           ┌─────────────────────┐  ┌──────────┐
+                                           │ Railway — MySQL 8.4 │  │ Brevo    │
+                                           │ (sin acceso público) │  │ (emails) │
+                                           └─────────────────────┘  └──────────┘
 ```
 
-- **Backend**: ASP.NET Core 8 Web API + Entity Framework Core 8 + SQLite + autenticación JWT.
-- **Frontend**: Angular 19, standalone components, Reactive Forms, signals. Sin librerías de UI de terceros (CSS propio, liviano).
-- **Base de datos**: SQLite — un solo archivo (`turnera.db`), cero configuración, cero costo.
-- **Mensajería**: WhatsApp Cloud API (Meta), vía HTTP. Ver la sección de configuración y de costos más abajo.
+| Capa | Tecnología |
+|---|---|
+| Backend | ASP.NET Core 8 Web API, EF Core con Pomelo (MySQL), JWT + BCrypt, rate limiting nativo |
+| Frontend | Angular 21, standalone components, signals, Reactive Forms, sin librerías de UI. Build con `@angular/build`. Estilos globales en `frontend/src/styles.css` (no hay CSS por componente) |
+| Base | MySQL 8.4 en Railway; MySQL 8 local para desarrollo |
+| Emails | API HTTP de Brevo (`BrevoEmailService`) |
 
-## Estructura de carpetas
+El código (clases, métodos, rutas de la API, CSS) está en inglés. Los textos que ven las familias y el personal, y las URLs de las pantallas (`/reservar`, `/admin/turnos`…), están en español.
+
+### Estructura de carpetas
 
 ```
-turnera-jardin/
-├── README.md                      (este archivo)
-├── backend/
-│   ├── TurneraJardin.sln
-│   └── TurneraJardin.Api/
-│       ├── Controllers/           (endpoints HTTP)
-│       ├── Models/                (entidades EF Core)
-│       ├── Dtos/                  (objetos de entrada/salida de la API)
-│       ├── Data/                  (DbContext y datos de ejemplo)
-│       ├── Services/              (JWT, WhatsApp, job de recordatorios)
-│       ├── appsettings.json       (configuración: JWT, WhatsApp, CORS)
-│       └── Program.cs
-└── frontend/
-    └── src/app/
-        ├── core/                  (servicios HTTP, modelos, guard, interceptor)
-        ├── public-booking/        (flujo público de reserva)
-        └── admin/                 (panel de administración)
+backend/
+├── TurneraJardin.sln
+├── scripts/rename-to-english.sql   (migración puntual del 24/10, ver sección 5)
+└── TurneraJardin.Api/
+    ├── Controllers/    Auth, Teachers, Appointments (públicos) y Admin* (panel)
+    ├── Models/         Teacher, Appointment, User + Enums/
+    ├── Dtos/
+    ├── Data/           AppDbContext, DbSeeder
+    ├── Services/       JWT, BrevoEmailService, ArgentinaDate, WhatsApp (sin usar)
+    ├── wwwroot/fotos-perfil/   fotos de perfil (volumen en producción)
+    ├── Dockerfile
+    └── Program.cs
+frontend/
+├── vercel.json
+└── src/
+    ├── environments/   environment.ts (local) y environment.prod.ts (producción)
+    ├── styles.css
+    └── app/
+        ├── core/       config/, guards/, interceptors/, models/, services/
+        ├── shared/     public-shell (marco de las pantallas públicas), avatar.util
+        ├── public-booking/   select-teacher, select-appointment, booking-form, cancel-appointment
+        └── admin/      login, layout, appointments, teachers, users, my-account
 ```
 
-## Prerrequisitos
+## 2. Producción
 
-Para correr el proyecto en tu máquina necesitás instalar (todo gratuito):
+| Pieza | Dónde | Detalle |
+|---|---|---|
+| Frontend | Vercel | https://turnera-jardin-azure.vercel.app — Root Directory `frontend`, Production Branch `main`. `frontend/vercel.json` define build (`ng build`), salida (`dist/frontend/browser`) y el rewrite a `index.html` para que funcionen las rutas de Angular. |
+| Backend | Railway (proyecto `laudable-charisma`, entorno `production`) | https://turnera-jardin-production.up.railway.app — rama `main`, build con el `Dockerfile` de `backend/TurneraJardin.Api`, escucha en el puerto 8080, `ASPNETCORE_ENVIRONMENT=Production` (Swagger apagado). |
+| Base | Railway, servicio `MySQL` del mismo proyecto | MySQL 8.4, solo red interna (`mysql.railway.internal`). Sin acceso público. |
+| Fotos de perfil | Volumen de Railway | Montado en `/app/wwwroot/fotos-perfil` para que no se pierdan entre deploys. |
+| Emails | Brevo | Remitente verificado en la cuenta de Brevo. |
 
-- [.NET SDK 8.0](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Node.js 20 o superior](https://nodejs.org/) (incluye npm)
-- [Visual Studio Code](https://code.visualstudio.com/) con la extensión **C# Dev Kit** (para el backend) — opcional pero recomendado
-- Angular CLI: `npm install -g @angular/cli` (opcional, el proyecto ya trae los scripts de npm para no necesitarlo instalado globalmente)
+- Acceso del personal: https://turnera-jardin-azure.vercel.app/admin/login (no hay link desde la parte pública).
+- El frontend llama a la API con la URL de `frontend/src/environments/environment.prod.ts`. Si cambia el dominio del backend, se cambia ahí.
+- CORS: los orígenes permitidos están en `Cors:AllowedOrigins` de `appsettings.json` (`http://localhost:4200` y el dominio de Vercel). Si cambia el dominio del frontend, hay que agregarlo ahí o con variables `Cors__AllowedOrigins__0`, `__1`…
+- Hosting: hoy es el plan de prueba de Railway. **El hosting a largo plazo está pendiente de decisión del grupo.** Antes de cualquier cambio de plan o de proveedor, hacer backup de la base (sección 5).
 
-## Cómo correr el backend
+## 3. Variables de entorno
 
-```bash
-cd backend/TurneraJardin.Api
-dotnet restore
-dotnet run
-```
+En .NET, `__` en el nombre de la variable equivale a `:` en `appsettings.json` (`Email__ApiKey` → `Email:ApiKey`). Las variables pisan lo que diga el archivo.
 
-La primera vez que corre, la API:
+### Backend en Railway
 
-1. Crea el archivo `turnera.db` (SQLite) en esa misma carpeta.
-2. Carga automáticamente datos de ejemplo: **18 docentes**, un usuario administrador, y turnos disponibles para las próximas dos semanas (lunes a viernes, 8 a 12, cada 20 minutos) para que puedas probar todo el flujo sin cargar nada a mano.
+| Variable | Obligatoria | Valor |
+|---|---|---|
+| `ConnectionStrings__Default` | Sí | Armada con referencias al servicio MySQL: `Server=${{MySQL.MYSQLHOST}};Port=${{MySQL.MYSQLPORT}};Database=${{MySQL.MYSQLDATABASE}};User=${{MySQL.MYSQLUSER}};Password=${{MySQL.MYSQLPASSWORD}}` |
+| `Jwt__Key` | Sí | Clave aleatoria de **32 caracteres o más**. Solo existe en Railway. |
+| `Email__Enabled` | Sí | `true` |
+| `Email__ApiKey` | Sí | API key de Brevo |
+| `Email__SenderEmail` | Sí | Email remitente verificado en Brevo |
 
-La API queda escuchando en **`http://localhost:5275`**. Con `dotnet run`, en modo Development se abre automáticamente Swagger (`http://localhost:5275/swagger`) donde podés ver y probar todos los endpoints.
+Si falta `ConnectionStrings:Default`, o `Jwt:Key` es más corta que 32 caracteres, la API **no arranca** (lo controla `Program.cs`) y el log de Railway lo dice.
 
-> Para volver a empezar de cero, simplemente borrá el archivo `turnera.db` y volvé a correr `dotnet run`.
+Lo demás sale de `appsettings.json`: `Email:SenderName` ("Jardín IDRA"), `Email:FrontendUrl` (link de los emails), `Jwt:ExpirationHours` (8), CORS y la sección `WhatsApp` (deshabilitada).
 
-### Abrir el backend en VS Code
+**Nombres viejos:** antes de la traducción al inglés (24/10) las claves estaban en español (`Email__Habilitado`, `Email__RemitenteEmail`, `Jwt__HorasExpiracion`, `Cors__OrigenesPermitidos__N`, `WhatsApp__Habilitado`…). El código ya no las lee: si quedan en Railway, se pueden borrar una vez confirmado que el email llega con las nuevas.
 
-1. Abrí la carpeta `backend/` en VS Code.
-2. Instalá la extensión **C# Dev Kit** si no la tenés.
-3. Con el archivo `Program.cs` abierto, apretá F5 (o "Run and Debug") para correr con el depurador conectado.
+### Frontend en Vercel
 
-## Cómo correr el frontend
+No usa variables de entorno: la URL de la API está en `environment.prod.ts`, que se compila dentro del sitio.
+
+## 4. Desarrollo local
+
+### Requisitos
+
+- [.NET SDK 8](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Node.js 24 (con npm)
+- MySQL 8 local (por ejemplo, con Homebrew: `brew install mysql`) o un contenedor de Docker
+- Opcional: VS Code con C# Dev Kit, TablePlus
+
+### Backend
+
+1. Crear una base vacía en el MySQL local (`CREATE DATABASE turnera;`). Las tablas las crea la API sola.
+2. Crear `backend/TurneraJardin.Api/appsettings.Development.json` (está en `.gitignore`, **no se commitea**):
+
+   ```json
+   {
+     "ConnectionStrings": {
+       "Default": "Server=localhost;Port=3306;Database=turnera;User=root;Password=<tu-contraseña-local>"
+     },
+     "Jwt": {
+       "Key": "<cualquier-texto-de-32-caracteres-o-mas-solo-para-desarrollo>"
+     }
+   }
+   ```
+
+   El email queda deshabilitado (`Email:Enabled=false`): los envíos se simulan y solo aparecen en la consola.
+
+3. Correr:
+
+   ```bash
+   cd backend/TurneraJardin.Api
+   dotnet run
+   ```
+
+   Queda en `http://localhost:5275`, con Swagger en `http://localhost:5275/swagger` (ver [`guia-swagger.md`](guia-swagger.md)).
+
+La primera vez, con la base vacía, `DbSeeder` carga las 16 docentes reales con su ciclo, un usuario administrador y turnos disponibles de prueba (lunes a viernes, 8 a 12, cada 20 minutos, por dos semanas).
+
+| Usuario inicial | Contraseña |
+|---|---|
+| `admin@jardin.edu.ar` | la que figura en `DbSeeder.cs` (en producción ya se cambió) |
+
+Para empezar de cero: borrar la base (`DROP DATABASE turnera; CREATE DATABASE turnera;`) y volver a correr.
+
+### Frontend
 
 ```bash
 cd frontend
@@ -121,175 +168,191 @@ npm install
 npm start
 ```
 
-Esto levanta el frontend en **`http://localhost:4200`**, apuntando por defecto a la API en `http://localhost:5275/api` (configurado en `src/environments/environment.ts`). Andá a `http://localhost:4200` y ya deberías ver la pantalla para elegir docente.
+Queda en `http://localhost:4200` y llama a la API en `http://localhost:5275/api` (`environment.ts`). Para verificar que compila igual que en Vercel: `npx ng build`.
 
-### Abrir el frontend en VS Code
+## 5. Base de datos
 
-Abrí la carpeta `frontend/` en VS Code (podés tener las dos carpetas —`backend` y `frontend`— abiertas en dos ventanas, o abrir la carpeta raíz `turnera-jardin/` y trabajar con ambas desde el explorador de archivos).
+### Cómo se crea el esquema
 
-## Datos y credenciales de prueba
+- **No se usan EF Migrations.** Al arrancar, `DbSeeder.Seed` llama a `Database.EnsureCreated()`, que crea las tablas solo si la base está vacía. **Nunca modifica tablas existentes.**
+- El seed solo carga datos si la tabla `Teachers` está vacía. Cambiar `DbSeeder.cs` no cambia los datos de una base que ya existe.
 
-El seed inicial crea este usuario administrador:
+Tablas: `Teachers`, `Appointments`, `Users`. Los enums se guardan como entero:
 
-| Email | Contraseña |
+| Enum | Valores |
 |---|---|
-| `admin@jardin.edu.ar` | `CambiarEsta123!` |
+| `AppointmentStatus` | 0 Available, 1 Booked, 2 Cancelled, 3 Completed |
+| `InterviewMode` | 0 InPerson, 1 Online |
+| `TeacherCycle` | 1 FirstCycle, 2 SecondCycle, 3 Specialist (null = la familia elige) |
+| `UserRole` | 0 Admin, 1 Teacher, 2 Coordinator |
 
-**Cambiá esta contraseña antes de usar el sistema con datos reales.** Podés hacerlo vos mismo desde **Panel → Mi contraseña**, sin tocar la base de datos.
+Un valor nuevo de enum va siempre **al final**: reordenar cambiaría en silencio los datos guardados.
 
-Los 18 docentes de ejemplo (Ana Gómez, Bruno Rodríguez, etc.) los podés editar o reemplazar por los reales desde **Panel → Docentes**.
+### ⚠️ Cambios de modelo
 
-Para que cada docente pueda entrar al panel y ver *solo sus propios turnos*, dirección le crea un login individual desde **Panel → Usuarios**: se elige el docente, se genera (o se define) una contraseña temporal, y se le pasa a la persona por un medio seguro para que la cambie apenas entre. Desde esa misma pantalla dirección puede restablecer la contraseña de cualquier usuario (propio o de un docente) cuando haga falta, y activar/desactivar accesos.
+Cada columna nueva, renombre o cambio de tipo en un modelo necesita su `ALTER TABLE` **a mano en la base de Railway**, antes o junto con el deploy. Si no, la API devuelve 500 en cuanto consulta esa tabla (ver sección 13). Lo mismo para cada base local del equipo (o borrarla y dejar que se recree).
 
-## Configurar WhatsApp (Cloud API de Meta)
+Ejemplo de lo que hubo que hacer el 23/10: `ALTER TABLE Docentes ADD COLUMN Ciclo INT NULL;`. El renombre completo al inglés del 24/10 está en `backend/scripts/rename-to-english.sql` (ya aplicado en producción; sirve para bases locales creadas antes de esa fecha).
 
-Sin esto configurado, el sistema funciona igual (se pueden reservar y cancelar turnos), pero los mensajes de WhatsApp no se mandan: solo quedan registrados en el log de la consola (`WhatsApp:Enabled` está en `false` por defecto en `appsettings.json`). Esto es útil para desarrollar y probar sin tener que configurar nada de Meta todavía.
+### Entrar a la base de producción
 
-Pasos para activarlo de verdad:
+Con la [CLI de Railway](https://docs.railway.com/guides/cli) instalada:
 
-1. **Creá una cuenta en [Meta for Developers](https://developers.facebook.com/)** con el Facebook de la institución (o uno nuevo dedicado al jardín).
-2. Creá una app nueva de tipo **"Business"**, y agregale el producto **WhatsApp**.
-3. En la configuración de WhatsApp de la app vas a encontrar:
-   - Un **número de prueba** gratuito que Meta te da automáticamente (sirve para probar mandando mensajes a hasta 5 números que vos autorices, sin verificar nada más). Es el mejor punto de partida.
-   - El **Phone Number ID** de ese número (un número largo, lo vas a necesitar).
-   - Un **token de acceso temporal** (dura 24hs, sirve solo para probar).
-4. Para producción real (que le llegue a cualquier familia, no solo a los 5 números de prueba), tenés que:
-   - Verificar un número de teléfono real de la institución como número de WhatsApp Business.
-   - Verificar el **negocio** en Meta Business Manager (sube documentación de la institución).
-   - Generar un **token de acceso permanente** (con un "System User" en Meta Business Manager, no el token temporal de 24hs).
-5. **Crear las dos plantillas de mensaje** (*message templates*) que usa el sistema, en Meta Business Manager → WhatsApp Manager → Plantillas de mensaje. Tienen que aprobarse (Meta las revisa, normalmente en minutos u horas):
+```bash
+railway login
+railway link              # proyecto laudable-charisma, entorno production
+railway connect MySQL     # abre una consola mysql
+```
 
-   **Plantilla `confirmacion_turno`** (categoría *Utility*, idioma español (ARG)):
-   > Hola! Confirmamos el turno de entrevista para {{1}} con {{2}}, el día {{3}} a las {{4}} hs. Ante cualquier duda, respondé este mensaje.
+Para usar TablePlus u otra herramienta: `railway connect MySQL --tunnel-only` y conectarse al host y puerto que muestra.
 
-   Donde `{{1}}`=nombre del niño/a, `{{2}}`=nombre del docente, `{{3}}`=fecha, `{{4}}`=hora.
+- El túnel usa SSH: con VPN activa puede no abrir. Si se corta, volver a conectar.
+- Antes de cualquier `UPDATE`, `DELETE` o `ALTER`, hacer backup.
 
-   **Plantilla `recordatorio_turno`** (categoría *Utility*, idioma español (ARG)):
-   > ¡Hola! Te recordamos que mañana tenés turno de entrevista para {{1}} con {{2}} a las {{3}} hs. Te esperamos.
+### Backup y restauración
 
-   Donde `{{1}}`=nombre del niño/a, `{{2}}`=nombre del docente, `{{3}}`=hora.
+Con el túnel abierto (`--tunnel-only`) en otra terminal:
 
-6. Cargá los datos obtenidos en `backend/TurneraJardin.Api/appsettings.json` (o, mejor, en variables de entorno o en `dotnet user-secrets` para no dejar el token en el código fuente):
+```bash
+mysqldump -h 127.0.0.1 -P <puerto-del-túnel> -u root -p <base> > backup-$(date +%F).sql
+```
 
-   ```json
-   "WhatsApp": {
-     "Enabled": true,
-     "AccessToken": "el-token-permanente-acá",
-     "PhoneNumberId": "el-phone-number-id-acá",
-     "ApiVersion": "v20.0",
-     "ConfirmationTemplate": "confirmacion_turno",
-     "ReminderTemplate": "recordatorio_turno",
-     "TemplateLanguageCode": "es_AR"
-   }
-   ```
+`<base>` es el valor de `MYSQLDATABASE` en las variables del servicio MySQL de Railway. Para restaurar: `mysql -h 127.0.0.1 -P <puerto> -u root -p <base> < backup.sql`.
 
-   Con `dotnet user-secrets` (recomendado para no commitear el token):
-   ```bash
-   cd backend/TurneraJardin.Api
-   dotnet user-secrets init
-   dotnet user-secrets set "WhatsApp:AccessToken" "tu-token-acá"
-   dotnet user-secrets set "WhatsApp:PhoneNumberId" "tu-phone-number-id-acá"
-   ```
+Los backups tienen datos personales de familias: no se suben al repo ni se comparten por chats.
 
-## ⚠️ Sobre el costo de WhatsApp — leer antes de decidir
+## 6. Cómo se despliega un cambio
 
-Pediste que el sistema no requiera contratar ningún servicio pago, así que quiero ser bien directo con esto en vez de asumir que la Cloud API sale gratis, porque **la política de precios de Meta cambió** y sigue cambiando:
+`main` es la única rama permanente. Railway y Vercel despliegan solos cada push a `main`.
 
-- Hasta julio de 2025, WhatsApp cobraba por "conversación" (una ventana de 24hs). Desde el 1 de julio de 2025, Meta pasó a cobrar **por mensaje individual** entregado.
-- Los mensajes de plantilla ("template", que es lo que este sistema usa para mandar la confirmación y el recordatorio, porque el padre no le escribe primero al jardín) son **gratis únicamente si se mandan dentro de una "ventana de conversación" ya abierta por el cliente** (es decir, si el padre le escribió antes al número del jardín en las últimas 24hs). Fuera de esa ventana — que es el caso normal acá, porque el padre reserva desde la web sin escribirle antes al WhatsApp — **la plantilla se cobra**, a una tarifa que varía por país y por categoría del mensaje (la nuestra es "Utility", la más económica de las que se cobran).
-- Hay cambios de tarifas previstos para el 1° de octubre de 2026 en varios países (li mismo Meta lo aclara en su documentación oficial), así que la tarifa exacta puede moverse.
-- El número de prueba gratuito de Meta (para desarrollo) sí permite mandar mensajes sin cargo, pero solo a números que vos autorizaste a mano (máximo 5) — no sirve para producción con familias reales.
+1. Rama nueva desde `main` actualizado: `git checkout main && git pull && git checkout -b <tipo>/<descripcion>`.
+2. Probar en local: `dotnet build` y `npx ng build`.
+3. Push y Pull Request con base `main`.
+4. Si el cambio toca un modelo: preparar el `ALTER TABLE` y aplicarlo en Railway al mergear.
+5. Mergear y esperar los dos deploys (Railway tarda unos minutos más que Vercel).
+6. Probar en producción la parte tocada.
+7. Borrar la rama (local y remota) y volver a `main`.
 
-**En criollo**: con el flujo tal como está armado (el padre reserva desde la web, no le escribe primero al jardín), lo más probable es que los mensajes de confirmación y recordatorio **tengan un costo por mensaje**, aunque en general es un costo bajo (centavos de dólar por mensaje según el país) y el volumen de un jardín maternal es chico (unas decenas de turnos por mes, dos mensajes cada uno). No es gratis en el sentido estricto que pediste, pero tampoco es una suscripción cara.
+Lecciones aprendidas:
+- Cambiar de rama **antes** de editar archivos.
+- Un commit pusheado a una rama después de mergear su PR no llega a `main`: necesita un PR nuevo.
+- La versión de Git que trae macOS puede no tener `git switch`: usar `git checkout -b`.
 
-Opciones si esto es un problema:
+## 7. Emails (Brevo)
 
-1. **Aceptar el costo bajo por mensaje** — probablemente la opción más simple; revisen el costo real para Argentina en el [simulador de precios de Meta](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing) antes de decidir, porque no puedo confirmarles un número exacto y actualizado desde acá.
-2. **Pedirle al padre que le escriba primero al WhatsApp del jardín** (por ejemplo, con un botón "Avisar por WhatsApp" que abre un link `wa.me` con un mensaje precargado tipo "Hola, guardé mi turno"). Eso abre una ventana de conversación con el cliente, y la confirmación (si se manda dentro de esa ventana) sale gratis. El recordatorio del día siguiente, en cambio, casi seguro va a quedar fuera de esa ventana igual, así que ese sí se cobraría. No lo implementé porque agrega un paso manual para el padre y no estaba en el pedido original, pero es una alternativa válida si quieren reducir el costo.
-3. **Usar una librería no oficial** (whatsapp-web.js / Baileys), que ya habíamos descartado al planificar esto porque viola los términos de servicio de WhatsApp y el número puede terminar bloqueado — no la recomiendo para una institución real, pero la dejo mencionada como opción 100% gratis si prefieren asumir ese riesgo.
-
-El código ya está armado para la opción 1 (Cloud API con plantillas), que es la más prolija y estable. Si prefieren otra, avisen y la adaptamos.
-
-**Fuentes consultadas** (septiembre de 2026):
-- [Documentación oficial de precios — Meta for Developers](https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing)
-- [WhatsApp API Pricing 2026 — Peppercloud](https://blog.peppercloud.com/whatsapp-api-pricing-everything-you-need-to-know/)
-- [WhatsApp Pricing Change 2026 — respond.io](https://respond.io/blog/whatsapp-pricing-change-2026)
-
-## Cómo funciona el sistema, paso a paso
-
-**Flujo de la familia:**
-1. Recibe por WhatsApp un link al sitio (ej: `https://turnos.jardin.edu.ar/reservar`).
-2. Elige el/la docente de su hijo/a.
-3. Ve los horarios libres agrupados por día y elige uno.
-4. Completa su nombre, WhatsApp, y el nombre del niño/a.
-5. Confirma. El turno queda reservado al instante (no requiere aprobación) y recibe la confirmación por WhatsApp.
-6. Un día antes de la entrevista, recibe el recordatorio automático.
-7. Si necesita cancelar, entra a `/cancelar`, pone el número de turno (se lo mostramos al confirmar) y su WhatsApp.
-
-**Flujo de dirección / docentes:**
-1. Dirección entra a `/admin/login` con su usuario y contraseña.
-2. Desde **Docentes**, da de alta/edita/desactiva a los 18 docentes.
-3. Desde **Generar turnos**, elige un docente, un rango de fechas, los días de la semana, el horario y la duración de cada entrevista — el sistema genera todas las franjas automáticamente.
-4. Desde **Usuarios**, dirección crea el login individual de cada docente y restablece contraseñas cuando haga falta (ver sección anterior).
-5. Desde **Turnos**, dirección ve todas las reservas (y cada docente, si tiene su propio usuario, solo ve las suyas); puede cancelar reservas o eliminar franjas libres cargadas por error.
-6. Cualquier usuario logueado puede cambiar su propia contraseña desde **Mi contraseña**.
-7. Cada 30 minutos, un proceso interno revisa si hay turnos para el día siguiente sin recordatorio enviado, y lo manda.
-
-## Referencia de la API
-
-Todos los endpoints devuelven/reciben JSON. Los marcados 🔒 requieren el header `Authorization: Bearer <token>` obtenido en `/api/auth/login`.
-
-| Método | Ruta | Descripción |
+| Cuándo | Asunto | Contenido |
 |---|---|---|
-| POST | `/api/auth/login` | Login de dirección/docentes |
-| GET | `/api/teachers` | Lista pública de docentes activos |
-| GET | `/api/teachers/{id}/available-appointments` | Horarios libres de un docente |
-| POST | `/api/appointments/{id}/book` | Reserva un turno (manda WhatsApp de confirmación) |
-| POST | `/api/appointments/{id}/cancel?phone=` | Cancela un turno (valida el teléfono) |
-| GET 🔒 | `/api/admin/teachers` | Lista completa de docentes (solo Admin) |
-| POST 🔒 | `/api/admin/teachers` | Crea un docente (solo Admin) |
-| PUT 🔒 | `/api/admin/teachers/{id}` | Edita un docente (solo Admin) |
-| DELETE 🔒 | `/api/admin/teachers/{id}` | Desactiva un docente (solo Admin) |
-| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Genera turnos en bloque (solo Admin) |
-| GET 🔒 | `/api/admin/appointments` | Lista turnos (filtra por docente/fecha/estado; un docente solo ve los suyos) |
-| POST 🔒 | `/api/admin/appointments/{id}/cancel` | Cancela una reserva |
-| POST 🔒 | `/api/admin/appointments/{id}/request-confirmation` | Registra que se pidió confirmación por WhatsApp |
-| DELETE 🔒 | `/api/admin/appointments?teacherId=&from=&to=&status=` | Elimina en bloque (exige al menos un filtro; Admin/Coordinador) |
-| DELETE 🔒 | `/api/admin/appointments/{id}` | Elimina una franja libre |
-| GET 🔒 | `/api/admin/users` | Lista todos los usuarios del panel (solo Admin) |
-| POST 🔒 | `/api/admin/users` | Crea un login (de un docente, o de otro Admin) (solo Admin) |
-| POST 🔒 | `/api/admin/users/{id}/reset-password` | Restablece la contraseña de un usuario (solo Admin) |
-| PUT 🔒 | `/api/admin/users/{id}/activate` | Reactiva un acceso (solo Admin) |
-| POST 🔒 | `/api/admin/users/{id}/deactivate` | Desactiva un acceso (solo Admin) |
-| POST 🔒 | `/api/auth/change-password` | Cualquier usuario logueado cambia su propia contraseña |
-| POST 🔒 | `/api/auth/my-photo` | Sube la foto de perfil del usuario logueado (campo `file`) |
+| La familia reserva | "Turno confirmado: …" | Niño/a, docente, fecha, horario, modalidad, número de turno y link a `/cancelar` |
+| El jardín cancela desde el panel | "Turno cancelado: …" | Datos del turno y link para reservar de nuevo |
 
-La documentación interactiva completa (Swagger) está disponible corriendo el backend y entrando a `http://localhost:5275/swagger`.
+- Se envían por la API HTTPS de Brevo porque Railway bloquea SMTP en sus planes gratuitos.
+- Si el envío falla, **la reserva o cancelación se hace igual** y queda un warning en el log. En el panel, la columna "Avisos" muestra "Email no enviado".
+- Cuando la familia cancela sola, no se manda email.
+- Con `Email:Enabled=false` (desarrollo) no se envía nada: se registra en la consola.
+- El plan gratuito de Brevo tiene un tope diario de envíos: revisarlo en la cuenta si el volumen crece.
 
-## Decisiones de diseño y por qué
+## 8. WhatsApp
 
-- **SQLite en vez de SQL Server**: cero instalación, cero costo, un solo archivo — ideal para que el jardín no tenga que mantener un servidor de base de datos.
-- **Turnos como una sola tabla** (en vez de "disponibilidad" + "reservas" separadas): simplifica mucho el modelo. Una franja horaria "vacía" (`Status = Available`) se convierte en una reserva completando los mismos campos, en vez de tener dos tablas relacionadas.
-- **JWT con roles Admin/Docente**: cada docente puede tener su propio usuario (creado por dirección desde **Panel → Usuarios**) y ver solo su agenda, sin exponerle las de sus compañeros — el filtro por `teacherId` está aplicado en `AdminAppointmentsController`. El seed solo crea el usuario Admin inicial; los accesos de cada docente se cargan desde el panel, no hace falta tocar la base.
-- **Transacción al reservar**: evita que dos familias reserven el mismo horario si tocan "confirmar" casi al mismo tiempo.
-- **El envío de WhatsApp nunca bloquea la reserva**: si WhatsApp falla (por la razón que sea), el turno queda igual reservado, y se guarda un flag (`ConfirmationSent = false`) para poder detectar el problema después. No quisimos que una falla de WhatsApp le impida a la familia sacar el turno.
-- **El recordatorio corre dentro del mismo proceso de la API** (`BackgroundService`), revisando cada 30 minutos. Es la opción más simple para un proyecto de este tamaño; no requiere infraestructura extra. La contra es que si el proceso de la API está caído justo en ese momento, el recordatorio se manda en cuanto vuelve a levantar (no se pierde, solo se atrasa).
+- **Confirmación de asistencia (en uso):** el botón **Confirmación** del listado arma un link `https://wa.me/<teléfono>?text=…` con un mensaje para la familia y lo abre en el WhatsApp de quien lo toca (app en el celular, WhatsApp Web en la compu). El sistema solo registra cuándo se pidió (`ConfirmationRequestedAt`); la respuesta llega a ese chat. Sin costo.
+- **Teléfonos de contacto del jardín:** uno por turno, configurados en `frontend/src/app/core/config/school-contact.ts` (ver sección 11).
+- **Cloud API de Meta (sin uso):** `WhatsAppCloudApiService` y `ReminderBackgroundService` siguen en el código, pero el servicio de recordatorios no está registrado en `Program.cs` y `WhatsApp:Enabled=false`. Se descartó porque Meta cobra por mensaje de plantilla fuera de una conversación abierta por el cliente, y requiere verificar la empresa y aprobar plantillas.
 
-## Limitaciones conocidas y qué falta para producción
+## 9. Reglas de negocio
 
-- No hay envío de email, solo WhatsApp.
-- El recordatorio depende de que el proceso de la API esté corriendo 24/7. Para un despliegue real conviene alojarlo en un servicio que lo mantenga siempre activo (ver sección de hosting).
-- No hay política de reintento automático si falla el envío de un WhatsApp (queda el flag `confirmacionEnviada`/`recordatorioEnviado` en false, pero nadie lo reintenta solo — se puede agregar un botón "reenviar" en el panel).
-- No hay recuperación de contraseña para un usuario que la olvidó sin estar logueado ("olvidé mi contraseña" desde la pantalla de login) — hoy, si un docente se olvida la suya, dirección se la restablece desde **Panel → Usuarios**.
-- No se implementó recuperación de contraseña ("olvidé mi contraseña").
-- La app no compila ni se probó de punta a punta con WhatsApp real (no se puede sin una cuenta de Meta Business verificada); sí se probó que compila y corre el frontend, y el backend fue revisado a mano con mucho cuidado pero no compilado en este entorno (ver nota al principio del documento).
+| Regla | Dónde se aplica |
+|---|---|
+| Se reserva a partir del día siguiente (hora de Argentina; Railway corre en UTC, por eso existe `ArgentinaDate`) | Backend (`AppointmentsController.Book`) |
+| Se muestran turnos hasta 180 días hacia adelante | Solo frontend (`BOOKING_DAYS_AHEAD` en `core/services/booking.service.ts`); el backend no tiene tope |
+| Primer ciclo y especialistas: solo presencial. Segundo ciclo o sin ciclo: la familia elige | Backend y frontend |
+| Dos familias no pueden tomar el mismo turno | Transacción en `Book` |
+| La familia cancela con número de turno + teléfono (se comparan solo los dígitos, tienen que coincidir con lo que cargó) | Backend |
+| Cancelar (familia o panel) libera el turno como Disponible y borra los datos de la familia | Backend |
+| Desde el panel, "Eliminar" solo borra turnos Disponibles; un turno reservado se cancela | Backend |
+| El borrado en bloque exige al menos un filtro y borra también reservados, sin avisar | Backend (`DELETE /api/admin/appointments`) |
+| Al generar turnos no se duplican horarios ya cargados para esa docente | Backend |
+| Una docente desactivada no aparece en la reserva pública | Backend |
+| Límites por IP: reservar y cancelar, 5 pedidos cada 10 minutos; login, 10 cada 5 minutos (responde 429) | Backend (`Program.cs`) |
+| La sesión del panel dura 8 horas | `Jwt:ExpirationHours` |
+| Contraseñas de al menos 8 caracteres | Backend y frontend |
 
-## Opciones de hosting gratuito para desplegarlo
+## 10. Referencia de la API
 
-Este README se centra en correrlo local en VS Code, como pediste, pero si más adelante quieren que el jardín lo use de verdad (no solo en tu máquina), estas son opciones sin costo para alojar cada parte (dejo la mención nomás, no las configuré):
+Los marcados 🔒 necesitan `Authorization: Bearer <token>` (se obtiene en `/api/auth/login`). Errores de negocio: `{ "message": "…" }` en español.
 
-- **Backend (.NET)**: [Render](https://render.com) o [Railway](https://railway.app) tienen planes gratuitos para apps pequeñas; Azure también tiene un nivel gratuito para App Service (con limitaciones de uso).
-- **Frontend (Angular, sitio estático)**: [Netlify](https://netlify.com), [Vercel](https://vercel.com) o [GitHub Pages](https://pages.github.com) — todos gratuitos para un sitio de este tamaño.
-- **Base de datos**: si migran de SQLite a algo con más capacidad de escritura simultánea, [Turso](https://turso.tech) (SQLite en la nube) o [Supabase](https://supabase.com) (Postgres) tienen niveles gratuitos.
+| Método | Ruta | Quién | Descripción |
+|---|---|---|---|
+| POST | `/api/auth/login` | Público | Login (límite `login`) |
+| POST 🔒 | `/api/auth/change-password` | Cualquier usuario | Cambia la contraseña propia |
+| POST 🔒 | `/api/auth/my-photo` | Cualquier usuario | Sube foto de perfil (campo `file`; JPG/PNG/WEBP, máx. 2 MB) |
+| GET | `/api/teachers` | Público | Docentes activas |
+| GET | `/api/teachers/{id}/available-appointments?from&to` | Público | Turnos libres (por defecto desde mañana) |
+| GET | `/api/appointments/available` | Público | Turnos libres |
+| POST | `/api/appointments/{id}/book` | Público | Reserva y manda el email (límite `public`) |
+| POST | `/api/appointments/{id}/cancel?phone=` | Público | Cancela validando el teléfono (límite `public`) |
+| GET 🔒 | `/api/admin/teachers` | Admin, Coordinador | Todas las docentes |
+| POST 🔒 | `/api/admin/teachers` | Admin, Coordinador | Alta |
+| PUT 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Edición |
+| DELETE 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Desactiva (no borra) |
+| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Admin, Coordinador | Genera turnos → `{ created }` |
+| GET 🔒 | `/api/admin/appointments?teacherId&from&to&status` | Todos los roles | Lista (una docente solo ve los suyos) |
+| POST 🔒 | `/api/admin/appointments/{id}/cancel` | Todos (docente: solo propios) | Cancela y avisa por email |
+| POST 🔒 | `/api/admin/appointments/{id}/request-confirmation` | Todos (docente: solo propios) | Registra el pedido de confirmación |
+| DELETE 🔒 | `/api/admin/appointments/{id}` | Todos (docente: solo propios) | Elimina un turno Disponible |
+| DELETE 🔒 | `/api/admin/appointments?teacherId&from&to&status` | Admin, Coordinador | Borrado en bloque → `{ deleted }` |
+| GET 🔒 | `/api/admin/users` | Admin | Usuarios del panel |
+| POST 🔒 | `/api/admin/users` | Admin | Crea un acceso (docente, coordinador o admin) |
+| POST 🔒 | `/api/admin/users/{id}/reset-password` | Admin | Genera contraseña temporal |
+| PUT 🔒 | `/api/admin/users/{id}/activate` | Admin | Reactiva |
+| POST 🔒 | `/api/admin/users/{id}/deactivate` | Admin | Desactiva (no deja desactivar al último usuario de dirección) |
 
-Si en algún momento quieren que arme el despliegue real a alguno de estos servicios, lo vemos en otra sesión.
+Permisos en detalle: [`roles-y-permisos.md`](roles-y-permisos.md).
+
+La pantalla **Usuarios** del panel solo crea accesos para docentes. Un usuario **Coordinador** o **Admin** se crea por API (`POST /api/admin/users` con `role`), por ejemplo desde Swagger en local apuntando a la base correspondiente, o con un pedido HTTP autenticado contra producción.
+
+## 11. Configuración que vive en el código
+
+Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
+
+| Qué | Archivo |
+|---|---|
+| Teléfonos de contacto del jardín (mañana y tarde) | `frontend/src/app/core/config/school-contact.ts` |
+| Ventana de días para reservar (180) | `frontend/src/app/core/services/booking.service.ts` → `BOOKING_DAYS_AHEAD` |
+| URL de la API | `frontend/src/environments/environment*.ts` |
+| Preguntas frecuentes de la reserva | `frontend/src/app/public-booking/select-teacher/select-teacher.component.html` |
+| Texto del WhatsApp de confirmación | `appointments-list.component.ts` → `confirmationMessage()` |
+| Textos de los emails | `backend/.../Services/BrevoEmailService.cs` |
+| Límites de pedidos por IP | `backend/.../Program.cs` |
+
+## 12. Seguridad
+
+- Secretos de producción (`Jwt__Key`, API key de Brevo, contraseña de MySQL) **solo en Railway**. `appsettings.json` los tiene vacíos y `appsettings.Development.json` está en `.gitignore`.
+- Contraseña del admin y de MySQL de producción ya cambiadas respecto de las iniciales.
+- `gitleaks detect -v` (23/10): 12 hallazgos, todos claves y contraseñas de **desarrollo** que quedaron en el historial (distintas de las de producción). No se reescribió el historial. Correrlo de nuevo antes de cada entrega.
+- Auditorías: `dotnet list package --vulnerable` sin hallazgos; `npm audit --omit=dev` con 0 vulnerabilidades (las restantes son de desarrollo, en Karma).
+- Las fotos de perfil se validan por tipo y tamaño.
+
+## 13. Problemas conocidos y cómo resolverlos
+
+| Síntoma | Causa probable | Qué hacer |
+|---|---|---|
+| El navegador muestra "CORS Missing Allow Origin" | Casi siempre es un **500** del backend (un error no lleva headers CORS) | Ver el log del servicio en Railway. Si dice `Unknown column`, falta un `ALTER TABLE` (sección 5) |
+| La API no arranca en Railway | Falta `ConnectionStrings__Default` o `Jwt__Key` < 32 caracteres | Revisar variables (sección 3) |
+| La familia reserva pero no llega el email | API key o remitente de Brevo, o tope diario | Log de Railway y panel de Brevo; revisar spam |
+| La familia no puede cancelar ("El teléfono no coincide") | Escribió el número distinto de como lo cargó (por ejemplo, con 0 o 15) | Que lo escriba igual que al reservar, o cancelar desde el panel |
+| `dotnet run`: "address already in use" | Quedó otra instancia en el puerto 5275 | `lsof -nP -iTCP:5275 -sTCP:LISTEN` y `kill -9 <PID>` |
+| `railway connect` no abre | VPN activa o túnel cortado | Apagar la VPN y reconectar |
+| Una docente nueva cargada en `DbSeeder` no aparece en producción | El seed no corre si ya hay docentes | Cargarla desde el panel (Docentes → Nuevo docente) |
+
+## 14. Pendientes
+
+- Decidir el hosting a largo plazo y hacer backup antes de migrar.
+- Prueba completa en producción después de la traducción al inglés y limpieza de variables viejas en Railway.
+- Pasar a EF Migrations para no depender de `ALTER TABLE` manuales.
+- Backups periódicos de la base.
+- Tope de anticipación de reserva también en el backend.
+- "Olvidé mi contraseña" sin estar logueado.
+- Email a la familia cuando cancela ella misma.
+- Definir cómo recibe la familia el link de la videollamada en entrevistas virtuales.
+- Registrar la respuesta de la familia a la confirmación (confirmó / no asiste).
+- Editar el teléfono de la familia en un turno reservado; normalizar números con "15".
+- Tests automatizados; reemplazar Karma.
