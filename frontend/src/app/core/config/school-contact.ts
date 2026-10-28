@@ -13,9 +13,7 @@ export interface SchoolPhone {
 }
 
 export const SCHOOL_PHONES: readonly SchoolPhone[] = [
-    // TODO: replace with the real morning-shift number.
     { label: "Turno mañana", phone: "+54 9 223 581-4289" },
-    // TODO: replace with the real afternoon-shift number.
     { label: "Turno tarde", phone: "+54 9 223 581-4412" },
 ];
 
