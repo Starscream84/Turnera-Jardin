@@ -4,18 +4,13 @@ Guía de estilo para el equipo: backend en C#/ASP.NET Core, frontend en Angular.
 
 ## 1. Comentarios
 
-**Principio general**: comentar el *por qué*, no el *qué*. El código ya dice qué hace; el comentario tiene que explicar una decisión, una limitación, o algo no obvio (ej. por qué se eligió Cloud API de Meta y no Twilio).
+**Principio general**: comentar el *por qué*, no el *qué*. 
 
 - ❌ Evitar comentarios redundantes:
-```csharp
-// Suma dos números
-int Sumar(int a, int b) => a + b;
-```
+
+
 - ✅ Comentar decisiones o trade-offs:
 ```csharp
-// Se usa una sola tabla de Appointments (no "Available" vs "Booked" separadas)
-// para simplificar las queries de disponibilidad por docente.
-```
 
 **Documentación de API pública (backend)**: usar XML doc comments (`///`) en controllers, servicios públicos y DTOs — Swagger los levanta automáticamente.
 ```csharp
@@ -33,9 +28,8 @@ public async Task<Appointment> BookAppointmentAsync(int appointmentId, string pa
 // TODO(matias, 2026-09): implementar reintento de WhatsApp fallido
 ```
 
-**Idioma**: dado que todo el equipo habla español, los comentarios van en español. Los nombres de variables/métodos/clases van en inglés (ver punto 2) — es el estándar de la industria y evita mezclar idiomas dentro del código en sí.
+**Idioma**: Inglés.
 
-**Densidad**: no comentar cada línea. Un bloque de 3-4 líneas de lógica de negocio no trivial merece 1 comentario arriba, no uno por línea.
 
 ## 2. Nomenclatura de variables y símbolos
 

@@ -1,7 +1,5 @@
 # Guía de Swagger — probar la API a mano
 
-Swagger es la documentación interactiva que genera automáticamente ASP.NET Core a partir de los controllers. Sirve para probar cualquier endpoint sin necesitar Postman, curl, ni el frontend.
-
 ## Índice
 
 1. [Levantar el backend y abrir Swagger](#levantar-el-backend-y-abrir-swagger)
@@ -76,16 +74,16 @@ Con el token de un usuario `Admin` cargado en Authorize:
 ## Errores comunes al usar Swagger
 
 **"Request body" vs "Responses"**
-Cada endpoint tiene dos cajas de JSON distintas: arriba, el **Request body** (editable, es lo que enviás) y abajo, en **Responses → 201 → Example Value**, un ejemplo de lo que vas a *recibir* (no se edita ni se envía). Si copiás y pegás el body sin querer desde la caja de abajo, no vas a mandar el body correcto.
+Cada endpoint tiene dos cajas de JSON distintas: arriba, el **Request body** (editable, es lo que enviás) y abajo, en **Responses → 201 → Example Value**, lo que vas a *recibir* .
 
 **`teacherId: 0` no es lo mismo que `null`**
-Swagger pone `0` como placeholder por defecto para un campo numérico opcional (`int?`). Si dejás ese `0`, el backend interpreta que querés crear el login de un docente (el que tenga `Id = 0`, que probablemente no existe) en vez de un usuario de dirección. Reemplazalo siempre por `null` a mano cuando corresponda.
+Swagger pone `0` como placeholder por defecto para un campo numérico opcional (`int?`). Si dejás ese `0`, el backend interpreta que querés crear el login de un docente. Reemplazalo siempre por `null` a mano cuando corresponda.
 
 **`password: ""` no es lo mismo que `password: null`**
 Si tocás el campo y lo dejás en blanco, puede quedar como string vacío (`""`) en vez de `null`. La validación `[MinLength(8)]` no se dispara con `null` (lo ignora y genera una contraseña automática), pero **sí** se dispara con `""` (longitud 0 < 8), y te va a devolver un `400` con el mensaje "La contraseña debe tener al menos 8 caracteres." Fijate que el JSON diga literalmente `null`, sin comillas.
 
 **El campo `rol` no aparece en el ejemplo**
-Si acabás de agregar un campo a un DTO (`UserCreateDto`, por ejemplo) y no lo ves en Swagger, es porque el proceso de `dotnet run` que tenés corriendo compiló antes de ese cambio — Swagger arma el esquema a partir de lo que está cargado en memoria, no relee el archivo `.cs` en cada request. Solución: `Ctrl+C` en la terminal del backend, y `dotnet run` de nuevo.
+Si acabás de agregar un campo a un DTO (`UserCreateDto`, por ejemplo) y no lo ves en Swagger, es porque el proceso de `dotnet run` que tenés corriendo compiló antes de ese cambio. Solución: `Ctrl+C` en la terminal del backend, y `dotnet run` de nuevo.
 
 **Confundir el endpoint de cancelar turno "admin" con el "público"**
 Hay dos formas de cancelar un turno:

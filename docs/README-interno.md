@@ -168,8 +168,6 @@ npm install
 npm start
 ```
 
-Queda en `http://localhost:4200` y llama a la API en `http://localhost:5275/api` (`environment.ts`). Para verificar que compila igual que en Vercel: `npx ng build`.
-
 ## 5. Base de datos
 
 ### Cómo se crea el esquema
@@ -232,11 +230,6 @@ Los backups tienen datos personales de familias: no se suben al repo ni se compa
 5. Mergear y esperar los dos deploys (Railway tarda unos minutos más que Vercel).
 6. Probar en producción la parte tocada.
 7. Borrar la rama (local y remota) y volver a `main`.
-
-Lecciones aprendidas:
-- Cambiar de rama **antes** de editar archivos.
-- Un commit pusheado a una rama después de mergear su PR no llega a `main`: necesita un PR nuevo.
-- La versión de Git que trae macOS puede no tener `git switch`: usar `git checkout -b`.
 
 ## 7. Emails (Brevo)
 

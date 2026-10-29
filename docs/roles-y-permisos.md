@@ -16,7 +16,7 @@ El sistema tiene tres roles pensados para tres tipos de persona reales: el progr
 
 ### `Admin` — el programador/mantenedor del sistema
 
-Es el super usuario técnico. Tiene acceso total, incluyendo todo lo que puede hacer un `Coordinator`, más la gestión de cuentas de usuario (crear logins, restablecer contraseñas, activar/desactivar accesos). En la práctica, es quien da de alta la cuenta de dirección al principio, y a quien recurre el jardín si alguien pierde su contraseña o hace falta un cambio que no está expuesto en el panel.
+Es el super usuario técnico. Tiene acceso total, incluyendo todo lo que puede hacer un `Coordinator`, más la gestión de cuentas de usuario (crear logins, restablecer contraseñas, activar/desactivar accesos).
 
 ### `Coordinator` — la dirección o vicedirección del jardín
 
