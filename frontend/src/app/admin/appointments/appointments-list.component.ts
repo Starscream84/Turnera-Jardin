@@ -12,6 +12,8 @@ import {
     InterviewMode,
 } from "../../core/models/appointment.model";
 import { TeacherAdmin } from "../../core/models/teacher.model";
+import { normalizePhone } from "../../shared/phone.util";
+import { errorMessage } from "../../shared/http-error.util";
 
 @Component({
     selector: "app-appointments-list",
@@ -92,27 +94,32 @@ export class AppointmentsListComponent implements OnInit {
                 this.appointments.set(appointments);
                 this.loading.set(false);
             },
-            error: () => {
-                this.error.set("No pudimos cargar los turnos.");
+            error: (err: unknown) => {
+                this.error.set(errorMessage(err, "No pudimos cargar los turnos."));
                 this.loading.set(false);
             },
         });
     }
 
+    /** Available slots of the list on screen: the only ones the bulk delete removes. */
+    availableListed = computed(() => this.appointments().filter((a) => a.status === "Available"));
+
     /**
-     * Deletes every appointment of the list on screen (the ones the last "Buscar" brought).
-     * The backend requires at least one filter.
+     * Deletes the free slots of the list on screen (the ones the last "Buscar" brought), by id.
+     * Booked appointments are never deleted in bulk: they have to be cancelled one by one, which
+     * emails the family. If a family books one of these slots between the search and the click,
+     * the backend skips it.
      */
     deleteListed(): void {
-        const total = this.appointments().length;
-        if (total === 0) return;
+        const ids = this.availableListed().map((a) => a.id);
+        if (ids.length === 0) return;
 
         const booked = this.summary().booked;
-        const warning = booked
-            ? `\n\nATENCIÓN: ${booked} tienen una familia asignada. Se borran igual y NO se les avisa.`
+        const note = booked
+            ? `\n\nLos ${booked} turnos reservados de este listado NO se borran: si hace falta, cancelalos uno por uno (así se le avisa a la familia).`
             : "";
         const confirmed = confirm(
-            `¿Eliminar los ${total} turnos de este listado?${warning}\n\nEsta acción no se puede deshacer.`,
+            `¿Eliminar las ${ids.length} franjas disponibles de este listado?${note}\n\nEsta acción no se puede deshacer.`,
         );
         if (!confirmed) return;
 
@@ -120,15 +127,18 @@ export class AppointmentsListComponent implements OnInit {
         this.error.set(null);
         this.notice.set(null);
 
-        this.service.deleteMany(this.appliedFilter).subscribe({
+        this.service.deleteMany(ids).subscribe({
             next: (response) => {
                 this.deleting.set(false);
-                this.notice.set(`Se eliminaron ${response.deleted} turno(s).`);
+                const skipped = response.skippedBooked
+                    ? ` ${response.skippedBooked} se reservaron mientras tanto y no se borraron.`
+                    : "";
+                this.notice.set(`Se eliminaron ${response.deleted} franja(s) disponible(s).${skipped}`);
                 this.search();
             },
-            error: () => {
+            error: (err: unknown) => {
                 this.deleting.set(false);
-                this.error.set("No pudimos eliminar los turnos.");
+                this.error.set(errorMessage(err, "No pudimos eliminar los turnos."));
             },
         });
     }
@@ -140,8 +150,11 @@ export class AppointmentsListComponent implements OnInit {
         if (!confirmed) return;
 
         this.service.cancel(appointment.id).subscribe({
-            next: () => this.search(),
-            error: () => this.error.set("No pudimos cancelar el turno."),
+            next: () => {
+                this.notice.set("Turno cancelado. Le avisamos a la familia por email.");
+                this.search();
+            },
+            error: (err: unknown) => this.error.set(errorMessage(err, "No pudimos cancelar el turno.")),
         });
     }
 
@@ -190,7 +203,10 @@ export class AppointmentsListComponent implements OnInit {
         const guardian = `${appointment.guardianFirstName ?? ""} ${appointment.guardianLastName ?? ""}`.trim();
         const greeting = guardian ? `Hola ${guardian}` : "Hola";
         const child = `${appointment.childFirstName ?? ""} ${appointment.childLastName ?? ""}`.trim() || "tu hijo/a";
-        const mode = appointment.mode ? ` (${this.modeLabel(appointment.mode).toLowerCase()})` : "";
+        // In person: the address is included so the family knows where to go.
+        const place =
+            appointment.mode === "InPerson" && appointment.location ? `, en ${appointment.location}` : "";
+        const mode = appointment.mode ? ` (${this.modeLabel(appointment.mode).toLowerCase()}${place})` : "";
 
         return (
             `${greeting}, te escribimos del jardín para recordarte la entrevista por ${child} ` +
@@ -202,22 +218,11 @@ export class AppointmentsListComponent implements OnInit {
 
     /**
      * wa.me needs the full number with country code and without "+": for an Argentine mobile,
-     * 549 + area code + number. Families enter it as "2235551234", so it is completed here.
+     * 549 + area code + number. New bookings are already stored that way; older ones (typed as
+     * "0223 15 555-1234", etc.) are normalized here with the same rules as the backend.
      */
     phoneForWhatsApp(phone: string | null): string | null {
-        let digits = (phone ?? "").replace(/\D/g, "");
-        if (digits.startsWith("00")) digits = digits.slice(2);
-
-        if (digits.startsWith("54")) {
-            digits = digits.slice(2);
-            if (digits.startsWith("9")) digits = digits.slice(1);
-        }
-        if (digits.startsWith("0")) digits = digits.slice(1);
-
-        if (digits.length === 10) return `549${digits}`;
-        // Any other length: it may be a number from abroad, it is used as entered.
-        const original = (phone ?? "").replace(/\D/g, "");
-        return original.length >= 8 ? original : null;
+        return normalizePhone(phone);
     }
 
     /** Opens the browser's print dialog. */
@@ -264,7 +269,7 @@ export class AppointmentsListComponent implements OnInit {
 
         this.service.delete(appointment.id).subscribe({
             next: () => this.search(),
-            error: () => this.error.set("No pudimos eliminar el turno."),
+            error: (err: unknown) => this.error.set(errorMessage(err, "No pudimos eliminar el turno.")),
         });
     }
 

@@ -27,6 +27,11 @@ export class AdminTeachersService {
     return this.http.delete<void>(`${this.base}/${id}`);
   }
 
+  /** Addresses available for in-person interviews (chosen when generating appointments). */
+  interviewLocations(): Observable<string[]> {
+    return this.http.get<string[]>(`${environment.apiUrl}/admin/interview-locations`);
+  }
+
   generateAppointments(teacherId: number, data: GenerateAppointmentsRequest): Observable<{ created: number }> {
     return this.http.post<{ created: number }>(`${this.base}/${teacherId}/generate-appointments`, data);
   }

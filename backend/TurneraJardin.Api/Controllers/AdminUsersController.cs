@@ -88,7 +88,8 @@ public class AdminUsersController : ControllerBase
             role = dto.Role ?? UserRole.Admin;
         }
 
-        var emailInUse = await _db.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
+        // Direct comparison: the Email column uses MySQL's case-insensitive collation (and its unique index).
+        var emailInUse = await _db.Users.AnyAsync(u => u.Email == email);
         if (emailInUse)
         {
             return Conflict(new { message = "Ya existe un usuario con ese email." });
@@ -107,9 +108,10 @@ public class AdminUsersController : ControllerBase
         };
 
         _db.Users.Add(user);
+        // Two simultaneous requests for the same teacher/email hit the unique indexes → 409 (ApiExceptionHandler).
         await _db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(List), new UserCredentialsDto(user.Id, user.Email, user.FullName, user.Role.ToString(), temporaryPassword));
+        return Created($"/api/admin/users/{user.Id}", new UserCredentialsDto(user.Id, user.Email, user.FullName, user.Role.ToString(), temporaryPassword));
     }
 
     /// <summary>Resets a user's password. Without NewPassword, a random temporary one is generated.</summary>
@@ -119,7 +121,7 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound();
+            return NotFound(new { message = "Usuario no encontrado." });
         }
 
         var temporaryPassword = string.IsNullOrWhiteSpace(dto.NewPassword) ? GenerateTemporaryPassword() : dto.NewPassword.Trim();
@@ -135,7 +137,7 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound();
+            return NotFound(new { message = "Usuario no encontrado." });
         }
 
         user.IsActive = true;
@@ -150,7 +152,7 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound();
+            return NotFound(new { message = "Usuario no encontrado." });
         }
 
         if (user.Role == UserRole.Admin)
@@ -169,9 +171,12 @@ public class AdminUsersController : ControllerBase
         return NoContent();
     }
 
-    private static string GenerateTemporaryPassword()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(12);
-        return new string(bytes.Select(b => PasswordCharacters[b % PasswordCharacters.Length]).ToArray());
-    }
+    /// <summary>
+    /// 12 random characters. GetInt32 picks each one uniformly (the old "byte % length" made the first
+    /// characters of the alphabet more likely).
+    /// </summary>
+    private static string GenerateTemporaryPassword() =>
+        new(Enumerable.Range(0, 12)
+            .Select(_ => PasswordCharacters[RandomNumberGenerator.GetInt32(PasswordCharacters.Length)])
+            .ToArray());
 }

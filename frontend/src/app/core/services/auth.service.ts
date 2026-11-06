@@ -39,9 +39,17 @@ export class AuthService {
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  /** Changes the logged-in user's password (management or teacher). Does not change the active session. */
-  changePassword(data: ChangePasswordRequest): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/auth/change-password`, data);
+  /**
+   * Changes the logged-in user's password (management or teacher). The backend invalidates every
+   * previous token (other devices are logged out) and returns a new session for this one.
+   */
+  changePassword(data: ChangePasswordRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/change-password`, data).pipe(
+      tap((response) => {
+        this.session.set(response);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
+      })
+    );
   }
 
   /** Uploads (or replaces) the logged-in user's profile photo, and updates the active session with the new URL. */

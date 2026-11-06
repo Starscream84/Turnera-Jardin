@@ -3,6 +3,8 @@ export interface AvailableAppointment {
   date: string; // "yyyy-MM-dd"
   startTime: string; // "HH:mm:ss"
   endTime: string;
+  /** Address of the interview if it is in person. null for appointments generated before this field existed. */
+  location: string | null;
 }
 
 export type InterviewMode = 'InPerson' | 'Online';
@@ -33,6 +35,8 @@ export interface BookedAppointment {
   childFirstName: string;
   childLastName: string;
   mode: InterviewMode;
+  /** Interview address. null if the interview is online. */
+  location: string | null;
 }
 
 export type AppointmentStatus = 'Available' | 'Booked' | 'Cancelled' | 'Completed';
@@ -66,6 +70,8 @@ export interface AppointmentAdmin {
   /** Date/time (UTC, ISO) when the family was asked to confirm via WhatsApp. null if not yet. */
   confirmationRequestedAt: string | null;
   guardianEmail: string | null;
+  /** Address of the interview if it is in person (chosen when generating the appointment). */
+  location: string | null;
 }
 
 export interface GenerateAppointmentsRequest {
@@ -75,4 +81,6 @@ export interface GenerateAppointmentsRequest {
   startTime: string; // "HH:mm:ss"
   endTime: string;
   durationMinutes: number;
+  /** One of the addresses returned by /admin/interview-locations. */
+  location: string;
 }

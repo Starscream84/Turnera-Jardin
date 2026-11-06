@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using TurneraJardin.Api.Models.Enums;
 
 namespace TurneraJardin.Api.Models;
@@ -19,7 +20,22 @@ public class Appointment
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }
 
+    /// <summary>
+    /// Concurrency token (together with <see cref="BookedAt"/>): every UPDATE made through SaveChanges
+    /// includes "WHERE Status = original value", so if someone else booked, cancelled or deleted the
+    /// appointment in the meantime, EF throws DbUpdateConcurrencyException (answered as 409) instead
+    /// of silently overwriting the other change.
+    /// </summary>
+    [ConcurrencyCheck]
     public AppointmentStatus Status { get; set; } = AppointmentStatus.Available;
+
+    /// <summary>
+    /// Address of the in-person interview, chosen by the coordinator when generating the appointment
+    /// (one of <see cref="InterviewLocations.All"/>). Only shown to the family if the interview is in person.
+    /// Null for appointments generated before this field existed.
+    /// </summary>
+    [MaxLength(200)]
+    public string? Location { get; set; }
 
     // Data filled in when booking
     /// <summary>First name of the guardian (parent) who booked.</summary>
@@ -45,6 +61,8 @@ public class Appointment
     /// <summary>In-person or online. Stays null while the appointment is available (nobody has chosen yet).</summary>
     public InterviewMode? Mode { get; set; }
 
+    /// <summary>Moment (UTC) of the booking. Also a concurrency token: it changes on every new booking.</summary>
+    [ConcurrencyCheck]
     public DateTime? BookedAt { get; set; }
 
     /// <summary>Set to true when the booking confirmation email was sent.</summary>
@@ -60,4 +78,25 @@ public class Appointment
     public DateTime? ConfirmationRequestedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Frees the slot: back to Available and without any of the family's data.</summary>
+    public void ClearBooking()
+    {
+        Status = AppointmentStatus.Available;
+        GuardianFirstName = null;
+        GuardianLastName = null;
+        GuardianPhone = null;
+        GuardianEmail = null;
+        ChildFirstName = null;
+        ChildLastName = null;
+        Notes = null;
+        Mode = null;
+        BookedAt = null;
+        ConfirmationSent = false;
+        ReminderSent = false;
+        ConfirmationRequestedAt = null;
+    }
+
+    /// <summary>Copy of the booking data, to email the family after the slot was already cleared.</summary>
+    public Appointment SnapshotForEmail() => (Appointment)MemberwiseClone();
 }

@@ -518,6 +518,20 @@ a {
     color: #fff;
 }
 
+/* Interview address (in-person) for the chosen day, or per time when the day has more than one. */
+.day-location {
+    margin: 4px 0 0;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.time-location {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
 /* ---------- Booking calendar (step 2) ---------- */
 
 .schedule {

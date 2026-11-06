@@ -99,6 +99,19 @@ export class SelectAppointmentComponent implements OnInit {
     };
   });
 
+  /** Distinct addresses of the chosen day's appointments. With more than one, each time shows its own. */
+  dayLocations = computed(() => {
+    const date = this.selectedDate();
+    const appointments = date ? this.appointmentsByDate().get(date) ?? [] : [];
+    return [...new Set(appointments.map((a) => a.location).filter((l): l is string => !!l))];
+  });
+
+  /** First cycle and specialists: always in person. The rest: the family chooses in step 3. */
+  alwaysInPerson = computed(() => {
+    const cycle = this.teacher()?.cycle;
+    return cycle === 'FirstCycle' || cycle === 'Specialist';
+  });
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,

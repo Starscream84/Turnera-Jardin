@@ -17,6 +17,9 @@
       <h2>Ingresar</h2>
       <p class="text-muted" style="margin: 0 0 24px;">Acceso para dirección y docentes.</p>
 
+      @if (sessionExpired && !error()) {
+        <div class="alert alert-note">Tu sesión venció o se cerró. Volvé a ingresar.</div>
+      }
       @if (error()) {
         <div class="alert alert-error">{{ error() }}</div>
       }

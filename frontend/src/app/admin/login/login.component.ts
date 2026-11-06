@@ -1,8 +1,9 @@
 import { Component, inject, signal } from "@angular/core";
-import { Router, RouterLink } from "@angular/router";
+import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { AuthService } from "../../core/services/auth.service";
 import { HttpErrorResponse } from "@angular/common/http";
+import { errorMessage } from "../../shared/http-error.util";
 
 @Component({
     selector: "app-login",
@@ -14,9 +15,12 @@ export class LoginComponent {
     private fb = inject(FormBuilder);
     private auth = inject(AuthService);
     private router = inject(Router);
+    private route = inject(ActivatedRoute);
 
     sending = signal(false);
     error = signal<string | null>(null);
+    /** Shown when the interceptor sent the user here because the session expired or was revoked. */
+    sessionExpired = this.route.snapshot.queryParamMap.get("sesion") === "vencida";
 
     form = this.fb.nonNullable.group({
         email: ["", [Validators.required, Validators.email]],
@@ -40,9 +44,9 @@ export class LoginComponent {
             error: (err: HttpErrorResponse) => {
                 this.sending.set(false);
                 this.error.set(
-                    err.status === 429
-                        ? "Demasiados intentos de ingreso. Esperá unos minutos y probá de nuevo."
-                        : "Email o contraseña incorrectos.",
+                    err.status === 401
+                        ? "Email o contraseña incorrectos."
+                        : errorMessage(err, "No pudimos iniciar sesión. Intentá de nuevo en un momento."),
                 );
             },
         });

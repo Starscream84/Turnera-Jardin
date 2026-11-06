@@ -1,13 +1,23 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { concatMap, from, reduce } from 'rxjs';
+import { concatMap, forkJoin, from, reduce, startWith } from 'rxjs';
 import { AdminTeachersService } from '../../core/services/admin-teachers.service';
 import { TeacherAdmin } from '../../core/models/teacher.model';
 
 /** Dropdown value to generate the same appointments for every active teacher. */
 const ALL = 'all';
+
+/** Same limit as the backend (AdminTeachersController.MaxGenerationMonths). */
+const MAX_GENERATION_MONTHS = 6;
+
+/** "HH:mm" → minutes since midnight. NaN if empty. */
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
 
 interface Weekday {
   number: number; // 0 = Sunday .. 6 = Saturday, same as System.DayOfWeek in the backend
@@ -25,6 +35,8 @@ export class GenerateAppointmentsComponent implements OnInit {
   private teachersService = inject(AdminTeachersService);
 
   teachers = signal<TeacherAdmin[]>([]);
+  /** Addresses where an in-person interview can take place. */
+  locations = signal<string[]>([]);
   loading = signal(true);
   saving = signal(false);
   error = signal<string | null>(null);
@@ -45,6 +57,7 @@ export class GenerateAppointmentsComponent implements OnInit {
 
   form = this.fb.nonNullable.group({
     teacherId: ['', Validators.required],
+    location: ['', Validators.required],
     fromDate: ['', Validators.required],
     toDate: ['', Validators.required],
     selectedDays: this.fb.nonNullable.group({
@@ -53,6 +66,30 @@ export class GenerateAppointmentsComponent implements OnInit {
     // One or more time slots per day (e.g. 08:00–12:00 and 13:00–18:00, with the lunch break in between).
     timeSlots: this.fb.nonNullable.array([this.newTimeSlot('08:00', '12:00')]),
     durationMinutes: [20, [Validators.required, Validators.min(5), Validators.max(240)]]
+  });
+
+  private formValue = toSignal(this.form.valueChanges.pipe(startWith(this.form.getRawValue())), {
+    initialValue: this.form.getRawValue()
+  });
+
+  /**
+   * Preview of what will be generated: slots per day for each time range, and the minutes left over
+   * at the end of a range when the duration does not divide it (e.g. 08:00–12:00 every 25 min → 9 slots,
+   * 15 minutes unused).
+   */
+  preview = computed(() => {
+    const values = this.formValue();
+    const duration = Number(values.durationMinutes);
+    const ranges = (values.timeSlots ?? []).map((s) => {
+      const start = toMinutes(s?.startTime ?? '');
+      const end = toMinutes(s?.endTime ?? '');
+      if (!duration || duration <= 0 || isNaN(start) || isNaN(end) || end <= start) {
+        return { slots: 0, leftover: 0, valid: false };
+      }
+      const slots = Math.floor((end - start) / duration);
+      return { slots, leftover: (end - start) - slots * duration, valid: true };
+    });
+    return { ranges, perDay: ranges.reduce((total, r) => total + r.slots, 0) };
   });
 
   private newTimeSlot(startTime = '', endTime = '') {
@@ -71,13 +108,17 @@ export class GenerateAppointmentsComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.teachersService.list().subscribe({
-      next: (teachers) => {
+    forkJoin({
+      teachers: this.teachersService.list(),
+      locations: this.teachersService.interviewLocations()
+    }).subscribe({
+      next: ({ teachers, locations }) => {
         this.teachers.set(teachers.filter((t) => t.isActive));
+        this.locations.set(locations);
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('No pudimos cargar la lista de docentes.');
+        this.error.set('No pudimos cargar la lista de docentes y direcciones.');
         this.loading.set(false);
       }
     });
@@ -88,7 +129,7 @@ export class GenerateAppointmentsComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.error.set('Faltan datos: elegí el docente (o "Todos") y completá las fechas, los horarios de cada franja y la duración.');
+      this.error.set('Faltan datos: elegí el docente (o "Todos") y la dirección, y completá las fechas, los horarios de cada franja y la duración.');
       return;
     }
 
@@ -103,6 +144,17 @@ export class GenerateAppointmentsComponent implements OnInit {
     }
     if (values.toDate < values.fromDate) {
       this.error.set('La fecha "hasta" no puede ser anterior a la fecha "desde".');
+      return;
+    }
+    const [fy, fm, fd] = values.fromDate.split('-').map(Number);
+    const limit = new Date(fy, fm - 1 + MAX_GENERATION_MONTHS, fd);
+    const [ty, tm, td] = values.toDate.split('-').map(Number);
+    if (new Date(ty, tm - 1, td) > limit) {
+      this.error.set(`Se pueden generar turnos para hasta ${MAX_GENERATION_MONTHS} meses por vez. Achicá el período.`);
+      return;
+    }
+    if (this.preview().ranges.some((r) => r.valid && r.slots === 0)) {
+      this.error.set('En alguna franja no entra ni un turno completo con esa duración. Alargá la franja o acortá la duración.');
       return;
     }
     const timeSlots = [...values.timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
@@ -122,7 +174,8 @@ export class GenerateAppointmentsComponent implements OnInit {
       daysOfWeek,
       startTime: this.timeWithSeconds(s.startTime),
       endTime: this.timeWithSeconds(s.endTime),
-      durationMinutes: values.durationMinutes
+      durationMinutes: values.durationMinutes,
+      location: values.location
     }));
 
     const ids =

@@ -30,7 +30,9 @@ public class JwtService : IJwtService
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
-            new(ClaimTypes.Role, user.Role.ToString())
+            new(ClaimTypes.Role, user.Role.ToString()),
+            // Checked on every request: a password change or reset invalidates this token.
+            new(SecurityStamp.ClaimName, SecurityStamp.For(user))
         };
 
         if (user.TeacherId is not null)

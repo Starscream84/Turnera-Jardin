@@ -58,7 +58,8 @@ public class BrevoEmailService : IEmailService
         if (!_options.Enabled)
         {
             _logger.LogInformation(
-                "[Email DISABLED] Simulating send to {Email} with subject: {Subject}", appointment.GuardianEmail, subject);
+                "[Email DISABLED] Simulating the {Kind} email for appointment {AppointmentId} to {Email}",
+                kind, appointment.Id, MaskEmail(appointment.GuardianEmail));
             return true;
         }
 
@@ -83,16 +84,19 @@ public class BrevoEmailService : IEmailService
 
             if (!response.IsSuccessStatusCode)
             {
+                // Only the start of Brevo's answer: enough to see the error code without copying the
+                // whole request (which may echo the family's data) into the logs.
                 var body = await response.Content.ReadAsStringAsync(ct);
+                if (body.Length > 200) body = body[..200];
                 _logger.LogError(
                     "Failed to send the {Kind} email for appointment {AppointmentId}: {Status} - {Body}",
-                    kind, appointment.Id, response.StatusCode, body);
+                    kind, appointment.Id, (int)response.StatusCode, body);
                 return false;
             }
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             _logger.LogError(ex, "Exception sending the {Kind} email for appointment {AppointmentId}", kind, appointment.Id);
             return false;
@@ -134,6 +138,11 @@ public class BrevoEmailService : IEmailService
             ? ""
             : $"<p>Si no vas a poder asistir, cancelá el turno desde <a href=\"{E(frontendUrl)}/cancelar\">{E(frontendUrl)}/cancelar</a> con el número de turno y el teléfono que cargaste.</p>";
 
+        // The address only matters if the family comes to the school.
+        var location = appointment.Mode == InterviewMode.InPerson && !string.IsNullOrWhiteSpace(appointment.Location)
+            ? $"""<tr><td style="padding: 4px 16px 4px 0;">Lugar</td><td><strong>{E(appointment.Location)}</strong></td></tr>"""
+            : "";
+
         return $"""
             <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
               <h2 style="color: #1a3a74;">¡Turno confirmado!</h2>
@@ -144,6 +153,7 @@ public class BrevoEmailService : IEmailService
                 <tr><td style="padding: 4px 16px 4px 0;">Fecha</td><td><strong>{E(FormatDate(appointment.Date))}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatTime(appointment.StartTime)} hs</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Modalidad</td><td><strong>{E(ModeLabel(appointment.Mode))}</strong></td></tr>
+                {location}
                 <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{appointment.Id}</strong></td></tr>
               </table>
               <p>Guardá el número de turno: lo vas a necesitar si querés cancelar.</p>
@@ -164,6 +174,14 @@ public class BrevoEmailService : IEmailService
         InterviewMode.Online => "Virtual",
         _ => ""
     };
+
+    /// <summary>"ju***@gmail.com": enough to recognize it in a log without exposing the address.</summary>
+    private static string MaskEmail(string? email)
+    {
+        if (string.IsNullOrEmpty(email)) return "";
+        var at = email.IndexOf('@');
+        return at <= 2 ? $"***{email[Math.Max(at, 0)..]}" : $"{email[..2]}***{email[at..]}";
+    }
 
     private static string GuardianFullName(Appointment a) => $"{a.GuardianFirstName} {a.GuardianLastName}".Trim();
 
