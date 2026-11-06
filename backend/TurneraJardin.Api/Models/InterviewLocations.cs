@@ -10,9 +10,8 @@ public static class InterviewLocations
 {
     public static readonly IReadOnlyList<string> All = new[]
     {
-        "Sede 1 — Jardin",
-        "Sede 2 — Colegio",
-        "Sede 3 — Superior",
+        "San Luis 3850 (Edificio Central)",
+        "San Luis 3853 (Jardin)",
     };
 
     public static bool IsValid(string? location) =>
