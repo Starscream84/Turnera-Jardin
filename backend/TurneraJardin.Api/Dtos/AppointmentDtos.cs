@@ -12,7 +12,8 @@ public record AvailableAppointmentDto(
     DateOnly Date,
     TimeOnly StartTime,
     TimeOnly EndTime,
-    string Status
+    string Status,
+    string? Location
 );
 
 /// <summary>Data the parent fills in to book an already chosen appointment.</summary>
@@ -24,13 +25,13 @@ public class BookAppointmentDto
     [Required, MaxLength(120)]
     public required string GuardianLastName { get; set; }
 
-    /// <summary>WhatsApp number. Accepted with or without "+"; the backend normalizes it.</summary>
-    [Required, Phone, MaxLength(30)]
+    /// <summary>WhatsApp number, in any usual Argentine format. Stored normalized (see <see cref="Services.PhoneNumber"/>).</summary>
+    [Required(ErrorMessage = "Ingresá tu WhatsApp."), ArgentinePhone, MaxLength(30)]
     public required string GuardianPhone { get; set; }
 
     /// <summary>Email address the booking confirmation is sent to.</summary>
     [Required(ErrorMessage = "Ingresá un email para recibir la confirmación.")]
-    [EmailAddress(ErrorMessage = "El email no es válido.")]
+    [StrictEmail]
     [MaxLength(200)]
     public required string GuardianEmail { get; set; }
 
@@ -49,6 +50,25 @@ public class BookAppointmentDto
     public InterviewMode? Mode { get; set; }
 }
 
+/// <summary>Data to cancel a booking from the public page. The phone travels in the body, not in the URL.</summary>
+public class CancelAppointmentDto
+{
+    /// <summary>Not [Required] so an older frontend that still sends "{}" plus "?phone=" keeps working.</summary>
+    [MaxLength(30)]
+    public string? Phone { get; set; }
+}
+
+/// <summary>
+/// Explicit list of appointments to delete from the panel (the ones the coordinator saw on screen).
+/// Only "Available" ones are deleted; booked ones are skipped and must be cancelled one by one,
+/// which notifies the family.
+/// </summary>
+public class BulkDeleteAppointmentsDto
+{
+    [Required, MinLength(1), MaxLength(5000)]
+    public required List<int> Ids { get; set; }
+}
+
 /// <summary>Confirmation returned to the parent after a successful booking.</summary>
 public record BookedAppointmentDto(
     int Id,
@@ -58,7 +78,9 @@ public record BookedAppointmentDto(
     TimeOnly EndTime,
     string ChildFirstName,
     string ChildLastName,
-    InterviewMode Mode
+    InterviewMode Mode,
+    // Interview address. Null if the interview is online.
+    string? Location
 );
 
 /// <summary>Full view of an appointment for the admin / teacher panel.</summary>
@@ -80,7 +102,8 @@ public record AppointmentAdminDto(
     bool ReminderSent,
     InterviewMode? Mode,
     DateTime? ConfirmationRequestedAt,
-    string? GuardianEmail
+    string? GuardianEmail,
+    string? Location
 );
 
 /// <summary>Request to bulk-generate available appointments for a teacher.</summary>
@@ -104,4 +127,8 @@ public class GenerateAppointmentsDto
 
     [Range(5, 240)]
     public int DurationMinutes { get; set; } = 20;
+
+    /// <summary>Address of the interview: must be one of <see cref="Models.InterviewLocations.All"/>.</summary>
+    [Required(ErrorMessage = "Elegí dónde va a ser la entrevista."), MaxLength(200)]
+    public required string Location { get; set; }
 }

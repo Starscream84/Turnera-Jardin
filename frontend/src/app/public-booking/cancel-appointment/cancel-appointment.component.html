@@ -23,8 +23,12 @@
 
       <div class="form-group">
         <label for="phone">Tu WhatsApp</label>
-        <input id="phone" type="tel" formControlName="phone" />
+        <input id="phone" type="tel" formControlName="phone" autocomplete="tel" />
+        @if (form.controls.phone.invalid && form.controls.phone.touched) {
+          <span class="field-error">Ingresá el WhatsApp con característica, por ejemplo 223 555-1234.</span>
+        }
       </div>
+      <p class="text-muted">Los turnos se pueden cancelar desde acá hasta el día anterior a la entrevista.</p>
 
       <button type="submit" class="btn btn-danger btn-block" [disabled]="sending()">
         {{ sending() ? 'Cancelando...' : 'Cancelar turno' }}

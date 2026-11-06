@@ -40,7 +40,7 @@ Desarrollado como proyecto académico y **cedido sin cargo** a la institución, 
 - Listado imprimible (A4) de las entrevistas reservadas, con columna para anotar asistencia.
 - Cancelación de turnos desde el panel con aviso por email a la familia.
 - Generación masiva de turnos por período, días de la semana y una o más franjas horarias, para una docente o para todas.
-- Borrado de turnos en bloque según el filtro aplicado.
+- Borrado en bloque de las franjas disponibles del listado (los turnos reservados se cancelan uno por uno, avisando a la familia).
 - Alta, edición y desactivación de docentes.
 - Gestión de usuarios: crear accesos de docentes, restablecer contraseñas, activar/desactivar.
 - Cambio de contraseña propia y foto de perfil.

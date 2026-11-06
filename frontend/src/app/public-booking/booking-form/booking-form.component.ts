@@ -11,6 +11,8 @@ import {
 } from "../../core/models/appointment.model";
 import { Teacher } from "../../core/models/teacher.model";
 import { PublicShellComponent } from "../../shared/public-shell.component";
+import { STRICT_EMAIL_PATTERN, phoneValidator } from "../../shared/phone.util";
+import { errorMessage } from "../../shared/http-error.util";
 
 @Component({
     selector: "app-booking-form",
@@ -51,8 +53,8 @@ export class BookingFormComponent implements OnInit {
         mode: ["" as InterviewMode | "", [Validators.required]],
         guardianFirstName: ["", [Validators.required, Validators.minLength(2)]],
         guardianLastName: ["", [Validators.required, Validators.minLength(2)]],
-        guardianPhone: ["", [Validators.required, Validators.pattern(/^[0-9+\s-]{8,20}$/)]],
-        guardianEmail: ["", [Validators.required, Validators.email, Validators.maxLength(200)]],
+        guardianPhone: ["", [Validators.required, Validators.maxLength(30), phoneValidator]],
+        guardianEmail: ["", [Validators.required, Validators.pattern(STRICT_EMAIL_PATTERN), Validators.maxLength(200)]],
         childFirstName: ["", [Validators.required, Validators.minLength(2)]],
         childLastName: ["", [Validators.required, Validators.minLength(2)]],
         notes: [""],
@@ -109,19 +111,18 @@ export class BookingFormComponent implements OnInit {
                 this.confirmation.set(booked);
                 this.sending.set(false);
             },
-            error: (err: HttpErrorResponse) => {
+            error: (err: unknown) => {
                 this.sending.set(false);
-                if (err.status === 409) {
+                // If the same family retries after a lost connection, the backend answers 200 with
+                // the same booking, so a 409 here really means someone else took the slot.
+                if (err instanceof HttpErrorResponse && err.status === 409) {
                     this.error.set(
-                        "Justo se acaban de reservar este turno. Volvé atrás y elegí otro horario.",
-                    );
-                } else if (err.status === 429) {
-                    this.error.set(
-                        "Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.",
+                        "Otra familia acaba de reservar este turno. Volvé atrás y elegí otro horario.",
                     );
                 } else {
+                    // 400s carry the backend's reason (e.g. "solo atiende entrevistas presenciales").
                     this.error.set(
-                        "No pudimos confirmar la reserva. Intentá de nuevo en un momento.",
+                        errorMessage(err, "No pudimos confirmar la reserva. Intentá de nuevo en un momento."),
                     );
                 }
             },
@@ -163,6 +164,10 @@ export class BookingFormComponent implements OnInit {
             ctz: "America/Argentina/Buenos_Aires",
             details: `Entrevista ${this.modeLabel(appointment.mode).toLowerCase()} por ${appointment.childFirstName} ${appointment.childLastName}. Número de turno: #${appointment.id}.`,
         });
+        // The backend only sends the address for in-person interviews.
+        if (appointment.location) {
+            params.set("location", appointment.location);
+        }
 
         return `https://calendar.google.com/calendar/render?${params.toString()}`;
     }

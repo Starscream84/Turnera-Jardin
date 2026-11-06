@@ -36,7 +36,7 @@ El acceso más acotado. Cada docente entra con su propio login y solo ve y puede
 | Ver todos los turnos del jardín | ✅ | ✅ | ❌ (solo los propios) |
 | Cancelar cualquier turno reservado | ✅ | ✅ | ❌ (solo los propios) |
 | Eliminar una franja "Disponible" sin reservar | ✅ | ✅ | Solo las propias |
-| Eliminar turnos en bloque (según el filtro) | ✅ | ✅ | ❌ |
+| Eliminar en bloque las franjas disponibles del listado (nunca reservados) | ✅ | ✅ | ❌ |
 | Pedir confirmación por WhatsApp (botón "Confirmación") | ✅ | ✅ | Solo los propios |
 | Imprimir el listado de turnos reservados | ✅ | ✅ | Solo los propios |
 | Crear logins de usuario (Coordinador/Docente/Admin) | ✅ | ❌ | ❌ |

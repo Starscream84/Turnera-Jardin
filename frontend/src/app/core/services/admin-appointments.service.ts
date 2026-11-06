@@ -30,9 +30,12 @@ export class AdminAppointmentsService {
     return this.http.post<void>(`${this.base}/${id}/request-confirmation`, {});
   }
 
-  /** Bulk-deletes every appointment matching the filter (the backend requires at least one filter). Cannot be undone. */
-  deleteMany(filter: AdminAppointmentsFilter): Observable<{ deleted: number }> {
-    return this.http.delete<{ deleted: number }>(this.base, { params: this.toParams(filter) });
+  /**
+   * Deletes the listed appointments that are still "Available". Booked ones are skipped by the backend
+   * (they have to be cancelled one by one, which notifies the family). Cannot be undone.
+   */
+  deleteMany(ids: number[]): Observable<{ deleted: number; skippedBooked: number }> {
+    return this.http.post<{ deleted: number; skippedBooked: number }>(`${this.base}/bulk-delete`, { ids });
   }
 
   delete(id: number): Observable<void> {

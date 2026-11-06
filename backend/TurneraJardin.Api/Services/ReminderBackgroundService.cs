@@ -56,7 +56,8 @@ public class ReminderBackgroundService : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var whatsApp = scope.ServiceProvider.GetRequiredService<IWhatsAppService>();
 
-        var tomorrow = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+        // Argentina date: Railway runs in UTC, so DateTime.Today is already "tomorrow" after 21:00.
+        var tomorrow = ArgentinaDate.Today().AddDays(1);
 
         var pending = await db.Appointments
             .Include(a => a.Teacher)

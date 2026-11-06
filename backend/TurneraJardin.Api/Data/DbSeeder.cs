@@ -1,75 +1,102 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Services;
 
 namespace TurneraJardin.Api.Data;
 
 /// <summary>
-/// Loads seed data the first time the database is created (the kindergarten's teachers, an admin user
-/// and some available appointments) so the system can be tested end to end without loading
-/// everything by hand. See README -> "Datos de prueba" for the generated credentials.
+/// Creates the database the first time and, only if it is empty, loads the initial data:
+///  - Teachers: from the "Seed:Teachers" configuration section (appsettings.Development.json, which is not
+///    in the repo, or Seed__Teachers__0__FirstName=... environment variables). The repository holds no
+///    real personal data. In Development, if nothing is configured, three fictional teachers are created.
+///  - Admin user: admin@jardin.edu.ar with the password from "Seed:AdminPassword" (Seed__AdminPassword).
+///    If it is not configured, a random one is generated and written ONCE to the log: change it on the
+///    first login from "Mi cuenta".
+///  - In Development only: sample available appointments for the next two weeks.
+/// A database that already has teachers (production) is never touched.
 /// </summary>
 public static class DbSeeder
 {
-    private static readonly (string FirstName, string LastName, string Classroom, TeacherCycle? Cycle, string Email)[] SeedTeachers =
+    private sealed class SeedTeacher
     {
-        ("Lucia", "Galera", "Deambuladores A", TeacherCycle.FirstCycle, "luciasoledadgalera@gmail.com"),
-        ("Ana Clara", "Osses", "Deambuladores B", TeacherCycle.FirstCycle, "anaclaraosses21@gmail.com"),
-        ("Belén", "Alias", "Maternal A y B", TeacherCycle.FirstCycle, "belenalias4453@gmail.com"),
-        ("Ana Belen", "Recchia", "Maternal D", TeacherCycle.FirstCycle, "anabelenrecchia7@gmail.com"),
-        ("Melanie", "Jaime", "Maternal C", TeacherCycle.FirstCycle, "jaimemelanie13@gmail.com"),
-        ("Ayelén", "Peralta", "Primera sección A y B", TeacherCycle.SecondCycle, "ayelennperalta@gmail.com"),
-        ("Belen", "Navarro", "Primera sección C", TeacherCycle.SecondCycle, "belenavarrov@gmail.com"),
-        ("Delfina", "Irigoyen", "Primera sección D", TeacherCycle.SecondCycle, "irigoyendelfina9@gmail.com"),
-        ("Paula", "Oviedo", "Segunda sección A", TeacherCycle.SecondCycle, "paulaoviedo92@gmail.com"),
-        ("Paola", "Cano", "Segunda sección B", TeacherCycle.SecondCycle, "canopaola@gmail.com"),
-        ("Ivana", "Salinas", "Segunda sección D", TeacherCycle.SecondCycle, "ivi_giselle@hotmail.com"),
-        ("Guadalupe", "Palavecino", "Segunda sección C", TeacherCycle.SecondCycle, "laraguadalupepalavecino28@gmail.com"),
-        ("Belen", "Perez Pegue", "Tercera sección A", TeacherCycle.SecondCycle, "belenperezpegue@gmail.com"),
-        ("Eugenia", "Crovetto", "Tercera sección B", TeacherCycle.SecondCycle, "eugecrovetto@gmail.com"),
-        ("Paula", "Sanna", "Tercera sección C", TeacherCycle.SecondCycle, "paulasanna95@gmail.com"),
-        ("Perla", "Liotine", "Tercera sección D", TeacherCycle.SecondCycle, "liotineperla@gmail.com"),
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string? Classroom { get; set; }
+        public TeacherCycle? Cycle { get; set; }
+    }
+
+    private static readonly SeedTeacher[] DevelopmentTeachers =
+    {
+        new() { FirstName = "Docente", LastName = "de Prueba 1", Email = "docente1@example.com", Classroom = "Maternal A", Cycle = TeacherCycle.FirstCycle },
+        new() { FirstName = "Docente", LastName = "de Prueba 2", Email = "docente2@example.com", Classroom = "Primera sección A", Cycle = TeacherCycle.SecondCycle },
+        new() { FirstName = "Docente", LastName = "de Prueba 3", Email = "docente3@example.com", Classroom = "Música", Cycle = TeacherCycle.Specialist },
     };
 
-    public static void Seed(AppDbContext db)
+    public static void Seed(AppDbContext db, IConfiguration config, IHostEnvironment env, ILogger logger)
     {
         db.Database.EnsureCreated();
-        // EnsureAppointmentColumns(db); // Only needed on SQLite, not on MySQL
 
         if (db.Teachers.Any())
         {
             return; // data was already seeded
         }
 
-        var teachers = SeedTeachers.Select(t => new Teacher
-        {
-            FirstName = t.FirstName,
-            LastName = t.LastName,
-            Email = t.Email,
-            Classroom = t.Classroom,
-            Cycle = t.Cycle,
-            IsActive = true
-        }).ToList();
+        var configured = config.GetSection("Seed:Teachers").Get<SeedTeacher[]>() ?? Array.Empty<SeedTeacher>();
+        var seedTeachers = configured.Length > 0 ? configured : env.IsDevelopment() ? DevelopmentTeachers : Array.Empty<SeedTeacher>();
+
+        var teachers = seedTeachers
+            .Where(t => !string.IsNullOrWhiteSpace(t.FirstName) && !string.IsNullOrWhiteSpace(t.Email))
+            .Select(t => new Teacher
+            {
+                FirstName = t.FirstName.Trim(),
+                LastName = t.LastName.Trim(),
+                Email = t.Email.Trim(),
+                Classroom = t.Classroom?.Trim(),
+                Cycle = t.Cycle,
+                IsActive = true
+            }).ToList();
 
         db.Teachers.AddRange(teachers);
         db.SaveChanges(); // saved now so EF assigns each teacher's Id before generating their appointments
 
-        var admin = new User
+        if (!db.Users.Any())
         {
-            Email = "admin@jardin.edu.ar",
-            FullName = "Dirección del Jardín",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("CambiarEsta123!"),
-            Role = UserRole.Admin,
-            IsActive = true
-        };
-        db.Users.Add(admin);
+            var password = config["Seed:AdminPassword"];
+            if (string.IsNullOrWhiteSpace(password) || password.Length < 12)
+            {
+                password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(12));
+                logger.LogWarning(
+                    "Initial admin user created: admin@jardin.edu.ar with the random password {Password}. " +
+                    "Change it on the first login (Mi cuenta) or set Seed__AdminPassword before creating the database.",
+                    password);
+            }
 
-        // Sample appointments: Monday to Friday, 8:00 to 12:00, in 20-minute blocks,
-        // for the next two weeks, so booking can be tested without loading anything by hand.
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var duration = TimeSpan.FromMinutes(20);
-        var dayStart = new TimeOnly(8, 0);
-        var dayEnd = new TimeOnly(12, 0);
+            db.Users.Add(new User
+            {
+                Email = "admin@jardin.edu.ar",
+                FullName = "Dirección del Jardín",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                Role = UserRole.Admin,
+                IsActive = true
+            });
+        }
+
+        if (env.IsDevelopment())
+        {
+            AddSampleAppointments(db, teachers);
+        }
+
+        db.SaveChanges();
+    }
+
+    /// <summary>Monday to Friday, 8:00 to 12:00, in 20-minute blocks, for the next two weeks.</summary>
+    private static void AddSampleAppointments(AppDbContext db, List<Teacher> teachers)
+    {
+        var today = ArgentinaDate.Today();
+        var slots = Controllers.AppointmentSlots.ForDay(new TimeOnly(8, 0), new TimeOnly(12, 0), 20)!;
 
         foreach (var teacher in teachers)
         {
@@ -80,58 +107,19 @@ public static class DbSeeder
                     continue;
                 }
 
-                for (var time = dayStart; time.Add(duration) <= dayEnd; time = time.Add(duration))
+                foreach (var (start, end) in slots)
                 {
                     db.Appointments.Add(new Appointment
                     {
                         TeacherId = teacher.Id,
                         Date = date,
-                        StartTime = time,
-                        EndTime = time.Add(duration),
-                        Status = AppointmentStatus.Available
+                        StartTime = start,
+                        EndTime = end,
+                        Status = AppointmentStatus.Available,
+                        Location = InterviewLocations.All[0]
                     });
                 }
             }
-        }
-
-        db.SaveChanges();
-    }
-
-    /// <summary>
-    /// EnsureCreated() only creates the database if it doesn't exist: it doesn't add columns to an existing one.
-    /// Since the project doesn't use EF Migrations, new Appointments columns were added here by hand
-    /// when missing, so turnera.db didn't have to be deleted (losing the data) to pick up the change.
-    /// </summary>
-    private static void EnsureAppointmentColumns(AppDbContext db)
-    {
-        // Column name -> SQLite type (EF Core stores enums as INTEGER and DateTime as TEXT).
-        var columns = new (string Name, string Type)[]
-        {
-            ("Mode", "INTEGER NULL"),
-            ("ConfirmationRequestedAt", "TEXT NULL"),
-            ("GuardianEmail", "TEXT NULL"),
-        };
-
-        db.Database.OpenConnection();
-        try
-        {
-            using var command = db.Database.GetDbConnection().CreateCommand();
-
-            foreach (var (name, type) in columns)
-            {
-                command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('Appointments') WHERE name = '{name}'";
-                var exists = Convert.ToInt64(command.ExecuteScalar()) > 0;
-
-                if (!exists)
-                {
-                    command.CommandText = $"ALTER TABLE Appointments ADD COLUMN {name} {type}";
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-        finally
-        {
-            db.Database.CloseConnection();
         }
     }
 }

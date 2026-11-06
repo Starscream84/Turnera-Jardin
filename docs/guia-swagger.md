@@ -89,7 +89,7 @@ Si acabás de agregar un campo a un DTO (`UserCreateDto`, por ejemplo) y no lo v
 
 **Confundir el endpoint de cancelar turno "admin" con el "público"**
 Hay dos formas de cancelar un turno:
-- `POST /api/appointments/{id}/cancel?phone=` — **pública**, sin login, para que la familia cancele su propio turno validando su teléfono.
+- `POST /api/appointments/{id}/cancel` con cuerpo `{ "phone": "…" }` — **pública**, sin login, para que la familia cancele su propio turno validando su teléfono.
 - `POST /api/admin/appointments/{id}/cancel` — **protegida** (`Admin`/`Coordinator`, o el propio `Teacher` dueño del turno), sin pedir teléfono, para el panel de administración.
 
 Si estás probando permisos por rol, asegurate de usar la segunda. La primera funciona igual sin importar qué token tengas cargado (o sin ninguno).

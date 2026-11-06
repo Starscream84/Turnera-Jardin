@@ -6,7 +6,7 @@
     <p class="text-muted">Cargando docentes...</p>
   } @else {
     <form [formGroup]="form" (ngSubmit)="generate()" class="card">
-      <h3>1. Docente y período</h3>
+      <h3>1. Docente, lugar y período</h3>
       <div class="form-group">
         <label for="teacherId">Docente</label>
         <select id="teacherId" formControlName="teacherId">
@@ -16,6 +16,19 @@
             <option [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }}</option>
           }
         </select>
+      </div>
+
+      <div class="form-group">
+        <label for="location">Dirección de la entrevista</label>
+        <select id="location" formControlName="location">
+          <option value="" disabled>Elegí dónde va a ser</option>
+          @for (location of locations(); track location) {
+            <option [value]="location">{{ location }}</option>
+          }
+        </select>
+        <span class="text-muted" style="display: block; margin-top: 6px; font-size: 0.85rem;">
+          Se aplica a todos los turnos que generes ahora. Las familias la ven solo si la entrevista es presencial.
+        </span>
       </div>
 
       <div class="field-row">
@@ -74,6 +87,19 @@
         <label for="durationMinutes">Duración de cada turno (min)</label>
         <input id="durationMinutes" type="number" formControlName="durationMinutes" />
       </div>
+
+      @if (preview().perDay > 0) {
+        <p class="text-muted" style="margin-top: -8px;">
+          Se van a crear {{ preview().perDay }} turno(s) por día elegido{{ form.controls.teacherId.value === ALL ? ', para cada docente' : '' }}.
+        </p>
+      }
+      @for (range of preview().ranges; track $index) {
+        @if (range.valid && range.leftover > 0 && range.slots > 0) {
+          <div class="alert alert-note">
+            En la franja {{ $index + 1 }} sobran {{ range.leftover }} minutos al final: el último turno termina antes de la hora "hasta".
+          </div>
+        }
+      }
 
       @if (error()) {
         <div class="alert alert-error" role="alert">{{ error() }}</div>

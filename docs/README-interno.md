@@ -105,8 +105,12 @@ En .NET, `__` en el nombre de la variable equivale a `:` en `appsettings.json` (
 | `Email__Enabled` | Sí | `true` |
 | `Email__ApiKey` | Sí | API key de Brevo |
 | `Email__SenderEmail` | Sí | Email remitente verificado en Brevo |
+| `Seed__AdminPassword` | No | Solo para una base **nueva**: contraseña inicial de `admin@jardin.edu.ar` (12+ caracteres). Sin ella se genera una al azar y se escribe una vez en el log |
+| `ForwardedHeaders__KnownNetworks__0` | No | Rango del proxy de Railway (ej. `10.0.0.0/8`) si se quiere restringir de quién se acepta `X-Forwarded-For` |
 
 Si falta `ConnectionStrings:Default`, o `Jwt:Key` es más corta que 32 caracteres, la API **no arranca** (lo controla `Program.cs`) y el log de Railway lo dice.
+
+**Health check:** `GET /health` responde 200 si la API llega a MySQL. Se puede configurar en Railway (Settings → Deploy → Healthcheck Path = `/health`) para que un deploy roto no reemplace al que funciona.
 
 Lo demás sale de `appsettings.json`: `Email:SenderName` ("Jardín IDRA"), `Email:FrontendUrl` (link de los emails), `Jwt:ExpirationHours` (8), CORS y la sección `WhatsApp` (deshabilitada).
 
@@ -152,11 +156,22 @@ No usa variables de entorno: la URL de la API está en `environment.prod.ts`, qu
 
    Queda en `http://localhost:5275`, con Swagger en `http://localhost:5275/swagger` (ver [`guia-swagger.md`](guia-swagger.md)).
 
-La primera vez, con la base vacía, `DbSeeder` carga las 16 docentes reales con su ciclo, un usuario administrador y turnos disponibles de prueba (lunes a viernes, 8 a 12, cada 20 minutos, por dos semanas).
+La primera vez, con la base vacía, `DbSeeder` carga:
 
-| Usuario inicial | Contraseña |
-|---|---|
-| `admin@jardin.edu.ar` | la que figura en `DbSeeder.cs` (en producción ya se cambió) |
+- **Docentes:** las de la sección `Seed:Teachers` de `appsettings.Development.json` (no está en el repo). Si no hay ninguna configurada, en Development crea tres docentes ficticias (`docenteN@example.com`). El repo ya no contiene datos personales reales.
+- **Usuario `admin@jardin.edu.ar`:** con la contraseña de `Seed:AdminPassword` (mínimo 12 caracteres). Si no está configurada, genera una al azar y la escribe **una sola vez** en la consola al arrancar: cambiala desde "Mi cuenta".
+- **Turnos de prueba** (solo en Development): lunes a viernes, 8 a 12, cada 20 minutos, por dos semanas.
+
+Ejemplo de `appsettings.Development.json`:
+
+```json
+"Seed": {
+  "AdminPassword": "una-contraseña-larga-local",
+  "Teachers": [
+    { "FirstName": "Ana", "LastName": "Pérez", "Email": "ana@ejemplo.com", "Classroom": "Maternal A", "Cycle": "FirstCycle" }
+  ]
+}
+```
 
 Para empezar de cero: borrar la base (`DROP DATABASE turnera; CREATE DATABASE turnera;`) y volver a correr.
 
@@ -262,43 +277,49 @@ Lecciones aprendidas:
 | Regla | Dónde se aplica |
 |---|---|
 | Se reserva a partir del día siguiente (hora de Argentina; Railway corre en UTC, por eso existe `ArgentinaDate`) | Backend (`AppointmentsController.Book`) |
-| Se muestran turnos hasta 180 días hacia adelante | Solo frontend (`BOOKING_DAYS_AHEAD` en `core/services/booking.service.ts`); el backend no tiene tope |
+| Se reserva hasta 180 días hacia adelante | Backend (`ArgentinaDate.BookingDaysAhead`) y frontend (`BOOKING_DAYS_AHEAD`): mantener iguales |
 | Primer ciclo y especialistas: solo presencial. Segundo ciclo o sin ciclo: la familia elige | Backend y frontend |
-| Dos familias no pueden tomar el mismo turno | Transacción en `Book` |
-| La familia cancela con número de turno + teléfono (se comparan solo los dígitos, tienen que coincidir con lo que cargó) | Backend |
-| Cancelar (familia o panel) libera el turno como Disponible y borra los datos de la familia | Backend |
+| Dos familias no pueden tomar el mismo turno | `Book` es un único `UPDATE … WHERE Status = Available` (la segunda recibe 409). Si la misma familia reintenta (mismo teléfono y email), recibe 200 con la misma reserva |
+| Una docente desactivada no aparece en la reserva pública, no se le puede reservar ni generar turnos | Backend |
+| Teléfonos: se guardan normalizados como `549` + característica + número (acepta `0223 15 555-1234`, `+54 9 …`, `(223) …`) | Backend (`Services/PhoneNumber.cs`) y frontend (`shared/phone.util.ts`): misma lógica |
+| Email: tiene que tener dominio con punto (`juan@gmail` no se acepta) | Backend (`StrictEmail`) y frontend |
+| La familia cancela con número de turno + teléfono (en el cuerpo del pedido, cualquier formato del mismo número). "No existe" y "el teléfono no coincide" responden igual (404) | Backend |
+| La familia no puede cancelar desde la web un turno de hoy o de días anteriores | Backend |
+| Cancelar (familia o panel) libera el turno como Disponible y borra los datos de la familia. Desde el panel, primero se guarda y después se avisa por email | Backend |
 | Desde el panel, "Eliminar" solo borra turnos Disponibles; un turno reservado se cancela | Backend |
-| El borrado en bloque exige al menos un filtro y borra también reservados, sin avisar | Backend (`DELETE /api/admin/appointments`) |
-| Al generar turnos no se duplican horarios ya cargados para esa docente | Backend |
-| Una docente desactivada no aparece en la reserva pública | Backend |
-| Límites por IP: reservar y cancelar, 5 pedidos cada 10 minutos; login, 10 cada 5 minutos (responde 429) | Backend (`Program.cs`) |
-| La sesión del panel dura 8 horas | `Jwt:ExpirationHours` |
+| El borrado en bloque borra por lista de ids y **solo** los Disponibles; los reservados se saltean y se informan | Backend (`POST /api/admin/appointments/bulk-delete`) |
+| Generar turnos: hasta 6 meses por pedido, máximo 5.000 turnos por pedido, desde hoy, nunca cruza la medianoche. No se duplican horarios ya cargados (si dos coordinadoras generan a la vez, se reintenta una vez) | Backend; el formulario muestra cuántos turnos por día salen y si sobran minutos |
+| Si dos personas modifican el mismo turno a la vez, la segunda recibe 409 (Status y BookedAt son tokens de concurrencia) | Backend |
+| Límites por IP: reservar y cancelar, 20 cada 10 minutos; lecturas públicas, 120 por minuto; login, 10 cada 5 minutos. Además, 5 logins fallidos seguidos bloquean ese email 15 minutos. El 429 trae `Retry-After` | Backend (`Program.cs`, `LoginAttemptTracker`) |
+| La sesión del panel dura 8 horas, pero se corta en el acto si el usuario se desactiva, cambia o le restablecen la contraseña, o cambia su rol o docente. El frontend, ante un 401, cierra sesión y vuelve al login | Backend (`OnTokenValidated` + `SecurityStamp`), frontend (`auth.interceptor.ts`) |
+| Un usuario Docente sin docente asociada no ve nada (403) | Backend (`TryGetScope`) |
 | Contraseñas de al menos 8 caracteres | Backend y frontend |
 
 ## 10. Referencia de la API
 
-Los marcados 🔒 necesitan `Authorization: Bearer <token>` (se obtiene en `/api/auth/login`). Errores de negocio: `{ "message": "…" }` en español.
+Los marcados 🔒 necesitan `Authorization: Bearer <token>` (se obtiene en `/api/auth/login`). Todos los errores traen `message` en español: los de negocio como `{ "message": "…" }`, los de validación y los inesperados como ProblemDetails con `message` adentro. Conflictos de base (clave duplicada, cambio concurrente) → 409.
 
 | Método | Ruta | Quién | Descripción |
 |---|---|---|---|
 | POST | `/api/auth/login` | Público | Login (límite `login`) |
-| POST 🔒 | `/api/auth/change-password` | Cualquier usuario | Cambia la contraseña propia |
+| POST 🔒 | `/api/auth/change-password` | Cualquier usuario | Cambia la contraseña propia y devuelve una sesión nueva (las demás quedan invalidadas) |
 | POST 🔒 | `/api/auth/my-photo` | Cualquier usuario | Sube foto de perfil (campo `file`; JPG/PNG/WEBP, máx. 2 MB) |
 | GET | `/api/teachers` | Público | Docentes activas |
 | GET | `/api/teachers/{id}/available-appointments?from&to` | Público | Turnos libres (por defecto desde mañana) |
-| GET | `/api/appointments/available` | Público | Turnos libres |
-| POST | `/api/appointments/{id}/book` | Público | Reserva y manda el email (límite `public`) |
-| POST | `/api/appointments/{id}/cancel?phone=` | Público | Cancela validando el teléfono (límite `public`) |
+| GET | `/api/appointments/available?teacherId&date` | Público | Turnos libres de una docente (teacherId obligatorio) |
+| POST | `/api/appointments/{id}/book` | Público | Reserva; el email sale en segundo plano (límite `public`) |
+| POST | `/api/appointments/{id}/cancel` | Público | Cancela validando el teléfono, enviado en el cuerpo `{ "phone": "…" }` (límite `public`; `?phone=` se acepta temporalmente) |
+| GET | `/health` | Público | 200 si la API llega a MySQL |
 | GET 🔒 | `/api/admin/teachers` | Admin, Coordinador | Todas las docentes |
 | POST 🔒 | `/api/admin/teachers` | Admin, Coordinador | Alta |
 | PUT 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Edición |
 | DELETE 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Desactiva (no borra) |
-| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Admin, Coordinador | Genera turnos → `{ created }` |
+| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Admin, Coordinador | Genera turnos → `{ created, skippedExisting }` |
 | GET 🔒 | `/api/admin/appointments?teacherId&from&to&status` | Todos los roles | Lista (una docente solo ve los suyos) |
 | POST 🔒 | `/api/admin/appointments/{id}/cancel` | Todos (docente: solo propios) | Cancela y avisa por email |
 | POST 🔒 | `/api/admin/appointments/{id}/request-confirmation` | Todos (docente: solo propios) | Registra el pedido de confirmación |
 | DELETE 🔒 | `/api/admin/appointments/{id}` | Todos (docente: solo propios) | Elimina un turno Disponible |
-| DELETE 🔒 | `/api/admin/appointments?teacherId&from&to&status` | Admin, Coordinador | Borrado en bloque → `{ deleted }` |
+| POST 🔒 | `/api/admin/appointments/bulk-delete` | Admin, Coordinador | Borra los Disponibles de `{ "ids": [...] }` → `{ deleted, skippedBooked }` |
 | GET 🔒 | `/api/admin/users` | Admin | Usuarios del panel |
 | POST 🔒 | `/api/admin/users` | Admin | Crea un acceso (docente, coordinador o admin) |
 | POST 🔒 | `/api/admin/users/{id}/reset-password` | Admin | Genera contraseña temporal |
@@ -316,7 +337,7 @@ Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 | Qué | Archivo |
 |---|---|
 | Teléfonos de contacto del jardín (mañana y tarde) | `frontend/src/app/core/config/school-contact.ts` |
-| Ventana de días para reservar (180) | `frontend/src/app/core/services/booking.service.ts` → `BOOKING_DAYS_AHEAD` |
+| Ventana de días para reservar (180) | `backend/.../Services/ArgentinaDate.cs` → `BookingDaysAhead` y `frontend/src/app/core/services/booking.service.ts` → `BOOKING_DAYS_AHEAD` (iguales) |
 | URL de la API | `frontend/src/environments/environment*.ts` |
 | Preguntas frecuentes de la reserva | `frontend/src/app/public-booking/select-teacher/select-teacher.component.html` |
 | Texto del WhatsApp de confirmación | `appointments-list.component.ts` → `confirmationMessage()` |

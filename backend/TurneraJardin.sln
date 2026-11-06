@@ -3,6 +3,10 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurneraJardin.Api", "TurneraJardin.Api\TurneraJardin.Api.csproj", "{244E930E-34E5-4BEC-9663-B7AB239FD0A4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurneraJardin.Tests", "TurneraJardin.Tests\TurneraJardin.Tests.csproj", "{43D3DB15-B227-4B6A-A91A-F1E2F5B7EC4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -10,5 +14,15 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{244E930E-34E5-4BEC-9663-B7AB239FD0A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{244E930E-34E5-4BEC-9663-B7AB239FD0A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{244E930E-34E5-4BEC-9663-B7AB239FD0A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{244E930E-34E5-4BEC-9663-B7AB239FD0A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43D3DB15-B227-4B6A-A91A-F1E2F5B7EC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43D3DB15-B227-4B6A-A91A-F1E2F5B7EC4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43D3DB15-B227-4B6A-A91A-F1E2F5B7EC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43D3DB15-B227-4B6A-A91A-F1E2F5B7EC4E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

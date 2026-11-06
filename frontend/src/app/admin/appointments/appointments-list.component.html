@@ -18,14 +18,14 @@
                 <button
                     type="button"
                     class="btn btn-danger"
-                    title="Borra todos los turnos que se ven en este listado. Usá el filtro para acotar."
-                    [disabled]="deleting() || loading() || appointments().length === 0"
+                    title="Borra las franjas disponibles que se ven en este listado (nunca los turnos reservados). Usá el filtro para acotar."
+                    [disabled]="deleting() || loading() || availableListed().length === 0"
                     (click)="deleteListed()"
                 >
                     {{
                         deleting()
                             ? "Eliminando..."
-                            : "Eliminar turnos listados (" + appointments().length + ")"
+                            : "Eliminar disponibles listados (" + availableListed().length + ")"
                     }}
                 </button>
                 <a routerLink="/admin/turnos/generar" class="btn btn-primary">+ Generar turnos</a>
@@ -161,7 +161,10 @@
                             <td>
                                 @if (appointment.childFirstName) {
                                     {{ appointment.childFirstName }} {{ appointment.childLastName }}
-                                    <small>{{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}</small>
+                                    <small
+                                        >{{ appointment.guardianFirstName }}
+                                        {{ appointment.guardianLastName }}</small
+                                    >
                                     @if (appointment.guardianEmail) {
                                         <small>{{ appointment.guardianEmail }}</small>
                                     }
@@ -188,7 +191,9 @@
                                     @if (appointment.confirmationRequestedAt) {
                                         <small>
                                             Asistencia pedida el
-                                            {{ formatDateTime(appointment.confirmationRequestedAt) }}
+                                            {{
+                                                formatDateTime(appointment.confirmationRequestedAt)
+                                            }}
                                         </small>
                                     }
                                 } @else {
@@ -203,7 +208,7 @@
                                         title="Abre WhatsApp con un mensaje para la familia recordando el turno y pidiendo que confirme"
                                         (click)="requestConfirmation(appointment)"
                                     >
-                                        Confirmación
+                                        Confirmar
                                     </button>
                                     <button
                                         type="button"
@@ -274,7 +279,9 @@
                         }
                         <td>{{ modeLabel(appointment.mode) }}</td>
                         <td>{{ appointment.childFirstName }} {{ appointment.childLastName }}</td>
-                        <td>{{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}</td>
+                        <td>
+                            {{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}
+                        </td>
                         <td></td>
                     </tr>
                 }

@@ -79,7 +79,7 @@ export class TeacherFormComponent implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.saving.set(false);
-        this.error.set(err.status === 409 ? 'Ya existe un docente con ese email.' : 'No pudimos guardar los cambios.');
+        this.error.set(err.error?.message ?? (err.status === 409 ? 'Ya existe un docente con ese email.' : 'No pudimos guardar los cambios.'));
       }
     });
   }

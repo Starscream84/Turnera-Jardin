@@ -1,13 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
+import { REQUEST_TIMEOUT_MS } from '../../shared/http-error.util';
 import { environment } from '../../../environments/environment';
 import { Teacher } from '../models/teacher.model';
 import { AvailableAppointment, BookAppointmentRequest, BookedAppointment } from '../models/appointment.model';
 
 /**
- * How far ahead a family can book: free appointments are shown from today
- * up to this many days ahead (180 ≈ 6 months).
+ * How far ahead a family can book: free appointments are shown from tomorrow
+ * up to this many days ahead (180 ≈ 6 months). The backend enforces the same limit
+ * (ArgentinaDate.BookingDaysAhead) and caps any later "to" date.
  */
 export const BOOKING_DAYS_AHEAD = 180;
 
@@ -36,10 +38,15 @@ export class BookingService {
   }
 
   bookAppointment(appointmentId: number, data: BookAppointmentRequest): Observable<BookedAppointment> {
-    return this.http.post<BookedAppointment>(`${environment.apiUrl}/appointments/${appointmentId}/book`, data);
+    return this.http
+      .post<BookedAppointment>(`${environment.apiUrl}/appointments/${appointmentId}/book`, data)
+      .pipe(timeout(REQUEST_TIMEOUT_MS));
   }
 
   cancelAppointment(appointmentId: number, phone: string): Observable<void> {
-    return this.http.post<void>(`${environment.apiUrl}/appointments/${appointmentId}/cancel?phone=${encodeURIComponent(phone)}`, {});
+    // The phone goes in the body, not in the URL (URLs end up in proxy and server logs).
+    return this.http
+      .post<void>(`${environment.apiUrl}/appointments/${appointmentId}/cancel`, { phone })
+      .pipe(timeout(REQUEST_TIMEOUT_MS));
   }
 }

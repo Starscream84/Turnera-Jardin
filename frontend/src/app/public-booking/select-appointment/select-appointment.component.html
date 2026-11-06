@@ -75,6 +75,11 @@
       <section class="day-times" aria-live="polite">
         @if (selectedDate(); as date) {
           <h3>{{ formatDate(date) }}</h3>
+          @if (dayLocations().length === 1) {
+            <p class="day-location">
+              {{ alwaysInPerson() ? 'Lugar:' : 'Lugar (si elegís presencial):' }} <strong>{{ dayLocations()[0] }}</strong>
+            </p>
+          }
 
           @if (dayAppointments().morning.length > 0) {
             <p class="times-title">Mañana</p>
@@ -82,6 +87,9 @@
               @for (appointment of dayAppointments().morning; track appointment.id) {
                 <button type="button" class="time-option" (click)="chooseAppointment(appointment)">
                   {{ formatTime(appointment.startTime) }}
+                  @if (dayLocations().length > 1 && appointment.location) {
+                    <small class="time-location">{{ appointment.location }}</small>
+                  }
                 </button>
               }
             </div>
@@ -93,6 +101,9 @@
               @for (appointment of dayAppointments().afternoon; track appointment.id) {
                 <button type="button" class="time-option" (click)="chooseAppointment(appointment)">
                   {{ formatTime(appointment.startTime) }}
+                  @if (dayLocations().length > 1 && appointment.location) {
+                    <small class="time-location">{{ appointment.location }}</small>
+                  }
                 </button>
               }
             </div>
