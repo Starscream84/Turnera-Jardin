@@ -1,6 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { errorMessage } from '../../shared/http-error.util';
 import { initials } from '../../shared/avatar.util';
 
 const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB, must match the backend limit
@@ -16,9 +18,11 @@ const VALID_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export class MyAccountComponent {
   private fb = inject(FormBuilder);
   auth = inject(AuthService);
+  private router = inject(Router);
 
   readonly initials = initials;
 
+  private wasTemporary = false;
   saving = signal(false);
   error = signal<string | null>(null);
   success = signal(false);
@@ -47,18 +51,24 @@ export class MyAccountComponent {
     this.saving.set(true);
     this.error.set(null);
     this.success.set(false);
+    this.wasTemporary = this.auth.mustChangePassword();
 
     this.auth
       .changePassword({ currentPassword: values.currentPassword, newPassword: values.newPassword })
       .subscribe({
         next: () => {
+          const wasTemporary = this.wasTemporary;
           this.saving.set(false);
           this.success.set(true);
           this.form.reset();
+          // With a temporary password the user came here forced: once changed, back to the panel.
+          if (wasTemporary) {
+            this.router.navigate(['/admin/turnos']);
+          }
         },
-        error: (err) => {
+        error: (err: unknown) => {
           this.saving.set(false);
-          this.error.set(err?.error?.message ?? 'No pudimos cambiar la contraseña.');
+          this.error.set(errorMessage(err, 'No pudimos cambiar la contraseña.'));
         }
       });
   }

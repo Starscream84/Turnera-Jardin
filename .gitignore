@@ -1,0 +1,5 @@
+# Files the Claude desktop app saves when it shares a file in the chat. Never part of the project.
+Claude outputs/
+
+# macOS
+.DS_Store

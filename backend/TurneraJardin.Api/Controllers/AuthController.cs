@@ -40,8 +40,7 @@ public class AuthController : ControllerBase
 
         if (_attempts.IsLocked(email))
         {
-            return StatusCode(StatusCodes.Status429TooManyRequests,
-                new { message = "Demasiados intentos fallidos con este usuario. Esperá 15 minutos o pedí que te restablezcan la contraseña." });
+            return this.ApiError(StatusCodes.Status429TooManyRequests, ErrorCodes.AccountLocked, "Demasiados intentos fallidos con este usuario. Esperá 15 minutos o pedí que te restablezcan la contraseña.");
         }
 
         // Direct comparison: the Email column uses MySQL's case-insensitive collation, so this uses the unique index.
@@ -51,7 +50,7 @@ public class AuthController : ControllerBase
         if (user is null || !passwordOk)
         {
             _attempts.RegisterFailure(email);
-            return Unauthorized(new { message = "Email o contraseña incorrectos." });
+            return this.ApiError(StatusCodes.Status401Unauthorized, ErrorCodes.InvalidCredentials, "Email o contraseña incorrectos.");
         }
 
         _attempts.Reset(email);
@@ -69,15 +68,21 @@ public class AuthController : ControllerBase
         var user = await CurrentUserAsync();
         if (user is null)
         {
-            return Unauthorized(new { message = "Tu sesión venció. Volvé a iniciar sesión." });
+            return this.ApiError(StatusCodes.Status401Unauthorized, ErrorCodes.SessionExpired, "Tu sesión venció. Volvé a iniciar sesión.");
         }
 
         if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
         {
-            return BadRequest(new { message = "La contraseña actual no es correcta." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.WrongCurrentPassword, "La contraseña actual no es correcta.");
+        }
+
+        if (dto.NewPassword == dto.CurrentPassword)
+        {
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.ValidationError, "La contraseña nueva tiene que ser distinta de la actual.");
         }
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        user.MustChangePassword = false;
         await _db.SaveChangesAsync();
         _logger.LogInformation("User {UserId} changed their password", user.Id);
 
@@ -92,32 +97,36 @@ public class AuthController : ControllerBase
     {
         if (file is null || file.Length == 0)
         {
-            return BadRequest(new { message = "No se recibió ningún archivo." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidImage, "No se recibió ningún archivo.");
         }
 
         const long maxBytes = 2 * 1024 * 1024; // 2 MB
         if (file.Length > maxBytes)
         {
-            return BadRequest(new { message = "La imagen no puede superar los 2 MB." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidImage, "La imagen no puede superar los 2 MB.");
         }
 
-        // The type is decided by the file's real content (its first bytes), not by its name.
-        var header = new byte[12];
-        await using (var peek = file.OpenReadStream())
+        // The file is rebuilt keeping only the image itself: no EXIF/GPS or other metadata, nothing
+        // hidden after the end of the image, and a size limit in pixels (ImageSanitizer, H12).
+        // The type comes from the real content, never from the file name.
+        byte[] original;
+        await using (var input = file.OpenReadStream())
+        using (var buffer = new MemoryStream((int)file.Length))
         {
-            await peek.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false);
+            await input.CopyToAsync(buffer);
+            original = buffer.ToArray();
         }
 
-        var extension = ImageExtension(header);
-        if (extension is null)
+        var clean = ImageSanitizer.Sanitize(original, out var imageError);
+        if (clean is null)
         {
-            return BadRequest(new { message = "Solo se aceptan imágenes JPG, PNG o WEBP." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidImage, imageError ?? "Solo se aceptan imágenes JPG, PNG o WEBP.");
         }
 
         var user = await CurrentUserAsync();
         if (user is null)
         {
-            return Unauthorized(new { message = "Tu sesión venció. Volvé a iniciar sesión." });
+            return this.ApiError(StatusCodes.Status401Unauthorized, ErrorCodes.SessionExpired, "Tu sesión venció. Volvé a iniciar sesión.");
         }
 
         // The folder keeps its Spanish name: it is part of the public URL already stored in Users.PhotoUrl.
@@ -136,12 +145,9 @@ public class AuthController : ControllerBase
             }
         }
 
-        var fileName = $"{Guid.NewGuid()}{extension}";
+        var fileName = $"{Guid.NewGuid()}{clean.Extension}";
         var fullPath = Path.Combine(folder, fileName);
-        await using (var stream = new FileStream(fullPath, FileMode.CreateNew))
-        {
-            await file.CopyToAsync(stream);
-        }
+        await System.IO.File.WriteAllBytesAsync(fullPath, clean.Data);
 
         user.PhotoUrl = $"/fotos-perfil/{fileName}";
         await _db.SaveChangesAsync();
@@ -152,7 +158,7 @@ public class AuthController : ControllerBase
     private LoginResponseDto CreateSession(Models.User user)
     {
         var (token, expiresAtUtc) = _jwtService.GenerateToken(user);
-        return new LoginResponseDto(token, expiresAtUtc, user.FullName, user.Role.ToString(), user.TeacherId, user.PhotoUrl);
+        return new LoginResponseDto(token, expiresAtUtc, user.FullName, user.Role.ToString(), user.TeacherId, user.PhotoUrl, user.MustChangePassword);
     }
 
     private async Task<Models.User?> CurrentUserAsync()
@@ -161,14 +167,5 @@ public class AuthController : ControllerBase
         return idClaim is not null && int.TryParse(idClaim, out var userId)
             ? await _db.Users.FindAsync(userId)
             : null;
-    }
-
-    /// <summary>Recognizes JPG, PNG and WEBP by their "magic bytes". Null for anything else.</summary>
-    private static string? ImageExtension(ReadOnlySpan<byte> h)
-    {
-        if (h.Length >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF) return ".jpg";
-        if (h.Length >= 8 && h[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A })) return ".png";
-        if (h.Length >= 12 && h[..4].SequenceEqual("RIFF"u8) && h[8..12].SequenceEqual("WEBP"u8)) return ".webp";
-        return null;
     }
 }

@@ -88,6 +88,9 @@
                 } @else {
                   <span class="badge badge-inactive">Inactivo</span>
                 }
+                @if (user.mustChangePassword) {
+                  <span class="badge badge-available" title="Todavía no cambió la contraseña temporal">Contraseña temporal</span>
+                }
               </td>
               <td class="actions-cell">
                 <button type="button" class="btn btn-secondary btn-small" (click)="resetPassword(user)">Restablecer contraseña</button>

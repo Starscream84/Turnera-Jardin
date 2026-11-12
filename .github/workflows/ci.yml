@@ -21,6 +21,10 @@ jobs:
       - run: dotnet restore TurneraJardin.sln
       - run: dotnet build TurneraJardin.sln --no-restore -c Release
       - run: dotnet test TurneraJardin.sln --no-build -c Release --verbosity normal
+      - name: Migrations up to date with the model
+        run: |
+          dotnet tool install --global dotnet-ef --version 9.0.*
+          dotnet ef migrations has-pending-model-changes --project TurneraJardin.Api --no-build --configuration Release
       - name: Vulnerable packages
         run: dotnet list TurneraJardin.Api/TurneraJardin.Api.csproj package --vulnerable --include-transitive
 

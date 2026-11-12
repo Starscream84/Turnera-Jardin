@@ -11,9 +11,13 @@ public enum AppointmentStatus
     /// <summary>A parent booked the appointment.</summary>
     Booked = 1,
 
-    /// <summary>The appointment was cancelled (by the parent or by the school).</summary>
+    /// <summary>
+    /// Not used: a cancelled appointment goes back to Available so another family can book the slot,
+    /// and the cancellation is recorded in <see cref="Models.AppointmentEvent"/> (history).
+    /// The value is kept so the stored numbers never change meaning.
+    /// </summary>
     Cancelled = 2,
 
-    /// <summary>The interview already took place.</summary>
+    /// <summary>Not used (reserved). Kept so the stored numbers never change meaning.</summary>
     Completed = 3
 }

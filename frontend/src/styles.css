@@ -1734,3 +1734,20 @@ tbody tr:hover td {
         margin-top: 8pt;
     }
 }
+
+/* ===== Paginación de listados del panel (Turnos, Historial) ===== */
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 16px 0 8px;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+}
+
+@media print {
+    .pager {
+        display: none;
+    }
+}

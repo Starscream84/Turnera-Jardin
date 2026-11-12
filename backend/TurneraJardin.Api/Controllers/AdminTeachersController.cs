@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 using TurneraJardin.Api.Data;
@@ -23,10 +24,19 @@ public class AdminTeachersController : ControllerBase
     public const int MaxGenerationMonths = 6;
 
     private readonly AppDbContext _db;
+    private readonly IOutputCacheStore _cache;
 
-    public AdminTeachersController(AppDbContext db)
+    public AdminTeachersController(AppDbContext db, IOutputCacheStore cache)
     {
         _db = db;
+        _cache = cache;
+    }
+
+    /// <summary>The public pages cache the teachers list and free slots for a moment: changes here invalidate them.</summary>
+    private async Task EvictPublicCacheAsync()
+    {
+        await _cache.EvictByTagAsync(CachePolicies.TeachersTag, default);
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, default);
     }
 
     [HttpGet]
@@ -48,7 +58,7 @@ public class AdminTeachersController : ControllerBase
         // The column uses MySQL's case-insensitive collation, so a direct comparison uses the unique index.
         if (await _db.Teachers.AnyAsync(t => t.Email == email))
         {
-            return Conflict(new { message = "Ya existe un docente con ese email." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.TeacherEmailInUse, "Ya existe un docente con ese email.");
         }
 
         var teacher = new Teacher
@@ -63,6 +73,7 @@ public class AdminTeachersController : ControllerBase
 
         _db.Teachers.Add(teacher);
         await _db.SaveChangesAsync(); // a concurrent duplicate → MySQL 1062 → 409 (ApiExceptionHandler)
+        await EvictPublicCacheAsync();
 
         var result = new TeacherAdminDto(teacher.Id, teacher.FirstName, teacher.LastName, teacher.Email, teacher.Classroom, teacher.IsActive, teacher.Cycle);
         return Created($"/api/admin/teachers/{teacher.Id}", result);
@@ -74,13 +85,13 @@ public class AdminTeachersController : ControllerBase
         var teacher = await _db.Teachers.FindAsync(id);
         if (teacher is null)
         {
-            return NotFound(new { message = "Docente no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.TeacherNotFound, "Docente no encontrado.");
         }
 
         var email = dto.Email.Trim();
         if (await _db.Teachers.AnyAsync(t => t.Email == email && t.Id != id))
         {
-            return Conflict(new { message = "Ya existe otro docente con ese email." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.TeacherEmailInUse, "Ya existe otro docente con ese email.");
         }
 
         teacher.FirstName = dto.FirstName.Trim();
@@ -91,6 +102,7 @@ public class AdminTeachersController : ControllerBase
         teacher.IsActive = dto.IsActive;
 
         await _db.SaveChangesAsync();
+        await EvictPublicCacheAsync();
         return NoContent();
     }
 
@@ -104,11 +116,12 @@ public class AdminTeachersController : ControllerBase
         var teacher = await _db.Teachers.FindAsync(id);
         if (teacher is null)
         {
-            return NotFound(new { message = "Docente no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.TeacherNotFound, "Docente no encontrado.");
         }
 
         teacher.IsActive = false;
         await _db.SaveChangesAsync();
+        await EvictPublicCacheAsync();
         return NoContent();
     }
 
@@ -119,38 +132,38 @@ public class AdminTeachersController : ControllerBase
         var teacher = await _db.Teachers.AsNoTracking().FirstOrDefaultAsync(t => t.Id == id);
         if (teacher is null)
         {
-            return NotFound(new { message = "Docente no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.TeacherNotFound, "Docente no encontrado.");
         }
 
         if (!teacher.IsActive)
         {
-            return BadRequest(new { message = "El docente está desactivado: activalo antes de generarle turnos." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.TeacherInactive, "El docente está desactivado: activalo antes de generarle turnos.");
         }
 
         if (dto.ToDate < dto.FromDate)
         {
-            return BadRequest(new { message = "La fecha 'hasta' no puede ser anterior a la fecha 'desde'." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidDateRange, "La fecha 'hasta' no puede ser anterior a la fecha 'desde'.");
         }
 
         if (dto.FromDate < ArgentinaDate.Today())
         {
-            return BadRequest(new { message = "La fecha 'desde' no puede ser anterior a hoy." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidDateRange, "La fecha 'desde' no puede ser anterior a hoy.");
         }
 
         if (dto.ToDate > dto.FromDate.AddMonths(MaxGenerationMonths))
         {
-            return BadRequest(new { message = $"Se pueden generar turnos para hasta {MaxGenerationMonths} meses por vez." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.DateRangeTooLong, $"Se pueden generar turnos para hasta {MaxGenerationMonths} meses por vez.");
         }
 
         if (!InterviewLocations.IsValid(dto.Location))
         {
-            return BadRequest(new { message = "Elegí una de las direcciones de la lista para la entrevista." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidLocation, "Elegí una de las direcciones de la lista para la entrevista.");
         }
 
         var slots = AppointmentSlots.ForDay(dto.StartTime, dto.EndTime, dto.DurationMinutes);
         if (slots is null)
         {
-            return BadRequest(new { message = "La hora de fin debe ser posterior a la hora de inicio, y tiene que entrar al menos un turno completo en la franja." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidTimeRange, "La hora de fin debe ser posterior a la hora de inicio, y tiene que entrar al menos un turno completo en la franja.");
         }
 
         var dates = new List<DateOnly>();
@@ -164,7 +177,7 @@ public class AdminTeachersController : ControllerBase
 
         if ((long)dates.Count * slots.Count > MaxAppointmentsPerRequest)
         {
-            return BadRequest(new { message = $"Son demasiados turnos para un solo pedido (más de {MaxAppointmentsPerRequest}). Achicá el rango de fechas o alargá la duración." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.TooManyAppointments, $"Son demasiados turnos para un solo pedido (más de {MaxAppointmentsPerRequest}). Achicá el rango de fechas o alargá la duración.");
         }
 
         var location = dto.Location.Trim();
@@ -205,6 +218,7 @@ public class AdminTeachersController : ControllerBase
             {
                 _db.Appointments.AddRange(newAppointments);
                 await _db.SaveChangesAsync();
+                await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, default);
                 return Ok(new { created = newAppointments.Count, skippedExisting = dates.Count * slots.Count - newAppointments.Count });
             }
             catch (DbUpdateException ex) when (attempt == 1 && ex.InnerException is MySqlException { ErrorCode: MySqlErrorCode.DuplicateKeyEntry })

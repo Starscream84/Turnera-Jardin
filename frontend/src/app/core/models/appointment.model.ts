@@ -1,5 +1,7 @@
 export interface AvailableAppointment {
   id: number;
+  /** The API also sends teacherName, classroom and status; only what the screens use is declared. */
+  teacherId: number;
   date: string; // "yyyy-MM-dd"
   startTime: string; // "HH:mm:ss"
   endTime: string;
@@ -83,4 +85,33 @@ export interface GenerateAppointmentsRequest {
   durationMinutes: number;
   /** One of the addresses returned by /admin/interview-locations. */
   location: string;
+}
+
+/** What happened to an appointment (history). Same names as AppointmentEventType in the backend. */
+export type AppointmentEventType = 'Booked' | 'CancelledByFamily' | 'CancelledByStaff' | 'ConfirmationRequested';
+
+export const APPOINTMENT_EVENT_LABELS: Record<AppointmentEventType, string> = {
+  Booked: 'Reserva',
+  CancelledByFamily: 'Cancelado por la familia',
+  CancelledByStaff: 'Cancelado desde el panel',
+  ConfirmationRequested: 'Confirmación pedida',
+};
+
+/** One row of the history (GET /api/admin/appointments/history). */
+export interface AppointmentEvent {
+  id: number;
+  appointmentId: number;
+  teacherId: number;
+  teacherName: string;
+  date: string;
+  startTime: string;
+  type: AppointmentEventType;
+  mode: InterviewMode | null;
+  guardianName: string | null;
+  guardianPhone: string | null;
+  childName: string | null;
+  /** Panel user who did it; null when the family did it from the web. */
+  userName: string | null;
+  /** UTC */
+  createdAt: string;
 }

@@ -17,6 +17,8 @@ export class AuthService {
   readonly userName = computed(() => this.session()?.fullName ?? '');
   readonly role = computed(() => this.session()?.role ?? null);
   readonly photoUrl = computed(() => this.session()?.photoUrl ?? null);
+  /** Temporary password pending change (H30). Sessions saved before this field existed count as false. */
+  readonly mustChangePassword = computed(() => this.session()?.mustChangePassword === true);
   /** The photo ready to use in an <img src>, with the backend root prepended. Null if there is none. */
   readonly fullPhotoUrl = computed(() => {
     const relative = this.photoUrl();
@@ -32,6 +34,19 @@ export class AuthService {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(response));
       })
     );
+  }
+
+  /**
+   * Called when the API answers PASSWORD_CHANGE_REQUIRED (e.g. an admin reset the password while the
+   * user was logged in): marks the session so the guard sends the user to "Mi cuenta".
+   */
+  markPasswordChangeRequired(): void {
+    const current = this.session();
+    if (current && !current.mustChangePassword) {
+      const updated = { ...current, mustChangePassword: true };
+      this.session.set(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    }
   }
 
   logout(): void {

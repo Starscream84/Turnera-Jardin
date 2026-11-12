@@ -11,4 +11,5 @@ public class LoginDto
     public required string Password { get; set; }
 }
 
-public record LoginResponseDto(string Token, DateTime ExpiresAtUtc, string FullName, string Role, int? TeacherId, string? PhotoUrl);
+/// <summary>Session returned by login and change-password. MustChangePassword: the panel must send the user to "Mi cuenta" first.</summary>
+public record LoginResponseDto(string Token, DateTime ExpiresAtUtc, string FullName, string Role, int? TeacherId, string? PhotoUrl, bool MustChangePassword);

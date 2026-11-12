@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
@@ -24,17 +25,29 @@ public class AdminAppointmentsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IEmailQueue _emails;
     private readonly ILogger<AdminAppointmentsController> _logger;
+    private readonly IOutputCacheStore _cache;
 
-    public AdminAppointmentsController(AppDbContext db, IEmailQueue emails, ILogger<AdminAppointmentsController> logger)
+    /// <summary>Page size when the request does not say, and the maximum accepted.</summary>
+    public const int DefaultPageSize = 500;
+    public const int MaxPageSize = 2000;
+
+    public AdminAppointmentsController(AppDbContext db, IEmailQueue emails, ILogger<AdminAppointmentsController> logger, IOutputCacheStore cache)
     {
         _db = db;
         _emails = emails;
         _logger = logger;
+        _cache = cache;
     }
 
+    /// <summary>
+    /// Appointments of the panel, paginated (page from 1, pageSize up to 2000; 500 by default).
+    /// The body is the page; the totals of the whole filter go in headers, so the panel can show the
+    /// indicators and "página X de Y": X-Total-Count (all), X-Booked-Count (booked ones).
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<List<AppointmentAdminDto>>> List(
-        [FromQuery] int? teacherId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] AppointmentStatus? status)
+        [FromQuery] int? teacherId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] AppointmentStatus? status,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = DefaultPageSize)
     {
         if (!TryGetScope(out var ownTeacherId, out var denied))
         {
@@ -57,8 +70,15 @@ public class AdminAppointmentsController : ControllerBase
         if (to is not null) query = query.Where(a => a.Date <= to);
         if (status is not null) query = query.Where(a => a.Status == status);
 
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+        Response.Headers["X-Total-Count"] = (await query.CountAsync()).ToString();
+        Response.Headers["X-Booked-Count"] = (await query.CountAsync(a => a.Status == AppointmentStatus.Booked)).ToString();
+
         var appointments = await query
-            .OrderBy(a => a.Date).ThenBy(a => a.StartTime)
+            .OrderBy(a => a.Date).ThenBy(a => a.StartTime).ThenBy(a => a.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(a => new AppointmentAdminDto(
                 a.Id, a.TeacherId, a.Teacher!.FirstName + " " + a.Teacher!.LastName, a.Date, a.StartTime, a.EndTime,
                 a.Status, a.GuardianFirstName, a.GuardianLastName, a.GuardianPhone, a.ChildFirstName, a.ChildLastName, a.Notes,
@@ -83,7 +103,7 @@ public class AdminAppointmentsController : ControllerBase
         var appointment = await _db.Appointments.Include(a => a.Teacher).FirstOrDefaultAsync(a => a.Id == id);
         if (appointment is null)
         {
-            return NotFound(new { message = "El turno no existe." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "El turno no existe.");
         }
 
         if (ownTeacherId is not null && appointment.TeacherId != ownTeacherId)
@@ -93,15 +113,18 @@ public class AdminAppointmentsController : ControllerBase
 
         if (appointment.Status != AppointmentStatus.Booked)
         {
-            return Conflict(new { message = "Este turno no está reservado: no hay nada para cancelar." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentNotBooked, "Este turno no está reservado: no hay nada para cancelar.");
         }
 
         var snapshot = appointment.SnapshotForEmail();
 
         // Status and BookedAt are concurrency tokens: if the family cancelled or the slot changed
         // in the meantime, SaveChanges throws and the panel gets a 409 instead of a silent overwrite.
+        // The history row is saved in the same SaveChanges (one transaction).
+        _db.AppointmentEvents.Add(AppointmentEvent.From(appointment, AppointmentEventType.CancelledByStaff, CurrentUserIdNumber(), CurrentUserName()));
         appointment.ClearBooking();
         await _db.SaveChangesAsync();
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, default);
 
         _emails.EnqueueCancellation(snapshot);
         _logger.LogInformation("Appointment {AppointmentId} cancelled from the panel by user {UserId}", id, CurrentUserId());
@@ -122,10 +145,10 @@ public class AdminAppointmentsController : ControllerBase
             return denied!;
         }
 
-        var appointment = await _db.Appointments.FindAsync(id);
+        var appointment = await _db.Appointments.Include(a => a.Teacher).FirstOrDefaultAsync(a => a.Id == id);
         if (appointment is null)
         {
-            return NotFound(new { message = "El turno no existe." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "El turno no existe.");
         }
 
         if (ownTeacherId is not null && appointment.TeacherId != ownTeacherId)
@@ -135,12 +158,59 @@ public class AdminAppointmentsController : ControllerBase
 
         if (appointment.Status != AppointmentStatus.Booked)
         {
-            return BadRequest(new { message = "Solo se puede pedir confirmación de turnos reservados." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.AppointmentNotBooked, "Solo se puede pedir confirmación de turnos reservados.");
         }
 
         appointment.ConfirmationRequestedAt = DateTime.UtcNow;
+        _db.AppointmentEvents.Add(AppointmentEvent.From(appointment, AppointmentEventType.ConfirmationRequested, CurrentUserIdNumber(), CurrentUserName()));
         await _db.SaveChangesAsync();
         return NoContent();
+    }
+
+    /// <summary>
+    /// History of bookings, cancellations and confirmation requests (H21), newest first, paginated like the list.
+    /// Filters by the date of the appointment (not the date of the event). A Teacher only sees her own.
+    /// Total in the X-Total-Count header.
+    /// </summary>
+    [HttpGet("history")]
+    public async Task<ActionResult<List<AppointmentEventDto>>> History(
+        [FromQuery] int? teacherId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] AppointmentEventType? type,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = DefaultPageSize)
+    {
+        if (!TryGetScope(out var ownTeacherId, out var denied))
+        {
+            return denied!;
+        }
+
+        var query = _db.AppointmentEvents.AsNoTracking().AsQueryable();
+
+        if (ownTeacherId is not null)
+        {
+            query = query.Where(e => e.TeacherId == ownTeacherId);
+        }
+        else if (teacherId is not null)
+        {
+            query = query.Where(e => e.TeacherId == teacherId);
+        }
+
+        if (from is not null) query = query.Where(e => e.Date >= from);
+        if (to is not null) query = query.Where(e => e.Date <= to);
+        if (type is not null) query = query.Where(e => e.Type == type);
+
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+        Response.Headers["X-Total-Count"] = (await query.CountAsync()).ToString();
+
+        var events = await query
+            .OrderByDescending(e => e.CreatedAt).ThenByDescending(e => e.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(e => new AppointmentEventDto(
+                e.Id, e.AppointmentId, e.TeacherId, e.TeacherName, e.Date, e.StartTime, e.Type, e.Mode,
+                e.GuardianName, e.GuardianPhone, e.ChildName, e.UserName, e.CreatedAt))
+            .ToListAsync();
+
+        return Ok(events);
     }
 
     /// <summary>
@@ -162,6 +232,7 @@ public class AdminAppointmentsController : ControllerBase
 
         var skippedBooked = await _db.Appointments
             .CountAsync(a => ids.Contains(a.Id) && a.Status == AppointmentStatus.Booked);
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, default);
 
         _logger.LogInformation("Bulk delete by user {UserId}: {Deleted} deleted, {Skipped} booked skipped", CurrentUserId(), deleted, skippedBooked);
         return Ok(new { deleted, skippedBooked });
@@ -179,7 +250,7 @@ public class AdminAppointmentsController : ControllerBase
         var appointment = await _db.Appointments.FindAsync(id);
         if (appointment is null)
         {
-            return NotFound(new { message = "El turno no existe." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "El turno no existe.");
         }
 
         if (ownTeacherId is not null && appointment.TeacherId != ownTeacherId)
@@ -189,12 +260,13 @@ public class AdminAppointmentsController : ControllerBase
 
         if (appointment.Status != AppointmentStatus.Available)
         {
-            return Conflict(new { message = "Solo se pueden eliminar turnos que todavía no fueron reservados. Si ya tiene una familia asignada, cancelalo en vez de eliminarlo." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentAlreadyBooked, "Solo se pueden eliminar turnos que todavía no fueron reservados. Si ya tiene una familia asignada, cancelalo en vez de eliminarlo.");
         }
 
         // Status is a concurrency token: if a family books it right now, the DELETE affects 0 rows → 409.
         _db.Appointments.Remove(appointment);
         await _db.SaveChangesAsync();
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, default);
         return NoContent();
     }
 
@@ -225,7 +297,11 @@ public class AdminAppointmentsController : ControllerBase
     }
 
     private ObjectResult Forbidden() =>
-        StatusCode(StatusCodes.Status403Forbidden, new { message = "No tenés permiso para ver o modificar este turno." });
+        this.ApiError(StatusCodes.Status403Forbidden, ErrorCodes.Forbidden, "No tenés permiso para ver o modificar este turno.");
 
     private string? CurrentUserId() => User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
+
+    private int? CurrentUserIdNumber() => int.TryParse(CurrentUserId(), out var id) ? id : null;
+
+    private string? CurrentUserName() => User.FindFirstValue(ClaimTypes.Name);
 }

@@ -12,7 +12,8 @@ public record UserAdminDto(
     int? TeacherId,
     string? TeacherName,
     bool IsActive,
-    string? PhotoUrl);
+    string? PhotoUrl,
+    bool MustChangePassword);
 
 /// <summary>
 /// Data to create a new login. If <see cref="TeacherId"/> is sent, a Teacher login linked to that

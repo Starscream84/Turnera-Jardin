@@ -3,7 +3,7 @@ import { SelectTeacherComponent } from "./public-booking/select-teacher/select-t
 import { SelectAppointmentComponent } from "./public-booking/select-appointment/select-appointment.component";
 import { BookingFormComponent } from "./public-booking/booking-form/booking-form.component";
 import { CancelAppointmentComponent } from "./public-booking/cancel-appointment/cancel-appointment.component";
-import { authGuard } from "./core/guards/auth.guard";
+import { authGuard, passwordChangeGuard } from "./core/guards/auth.guard";
 import { adminGuard, coordinatorGuard } from "./core/guards/admin.guard";
 
 // The URL paths stay in Spanish on purpose: families and teachers see them and links were already shared.
@@ -28,6 +28,7 @@ export const routes: Routes = [
         loadComponent: () =>
             import("./admin/layout/admin-layout.component").then((m) => m.AdminLayoutComponent),
         canActivate: [authGuard],
+        canActivateChild: [passwordChangeGuard],
         children: [
             { path: "", pathMatch: "full", redirectTo: "turnos" },
             // Admin and Coordinator: teacher management and appointment generation.
@@ -65,6 +66,11 @@ export const routes: Routes = [
                     import("./admin/users/users-list.component").then((m) => m.UsersListComponent),
             },
             // Available to management and teachers alike.
+            {
+                path: "historial",
+                loadComponent: () =>
+                    import("./admin/history/history.component").then((m) => m.HistoryComponent),
+            },
             {
                 path: "turnos",
                 loadComponent: () =>

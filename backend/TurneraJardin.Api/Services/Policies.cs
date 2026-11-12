@@ -17,3 +17,12 @@ public static class RateLimitPolicies
     public const string PublicRead = "public-read";
     public const string Login = "login";
 }
+
+/// <summary>Output cache policies and tags for the public reads (registered in Program.cs).</summary>
+public static class CachePolicies
+{
+    public const string Teachers = "teachers";
+    public const string TeachersTag = "teachers";
+    public const string Availability = "availability";
+    public const string AvailabilityTag = "availability";
+}

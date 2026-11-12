@@ -1,5 +1,8 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.Migrations;
 using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
 using TurneraJardin.Api.Services;
@@ -7,13 +10,14 @@ using TurneraJardin.Api.Services;
 namespace TurneraJardin.Api.Data;
 
 /// <summary>
-/// Creates the database the first time and, only if it is empty, loads the initial data:
+/// Brings the database schema up to date with EF Core Migrations (Migrations/ folder) and, only if
+/// the database has no teachers, loads the initial data:
 ///  - Teachers: from the "Seed:Teachers" configuration section (appsettings.Development.json, which is not
 ///    in the repo, or Seed__Teachers__0__FirstName=... environment variables). The repository holds no
 ///    real personal data. In Development, if nothing is configured, three fictional teachers are created.
 ///  - Admin user: admin@jardin.edu.ar with the password from "Seed:AdminPassword" (Seed__AdminPassword).
-///    If it is not configured, a random one is generated and written ONCE to the log: change it on the
-///    first login from "Mi cuenta".
+///    If it is not configured, a random one is generated and written ONCE to the log. Either way the
+///    user is created with MustChangePassword = true, so the first login forces a new password.
 ///  - In Development only: sample available appointments for the next two weeks.
 /// A database that already has teachers (production) is never touched.
 /// </summary>
@@ -35,9 +39,15 @@ public static class DbSeeder
         new() { FirstName = "Docente", LastName = "de Prueba 3", Email = "docente3@example.com", Classroom = "Música", Cycle = TeacherCycle.Specialist },
     };
 
+    /// <summary>
+    /// First migration: the schema as it was when the project moved from EnsureCreated() to migrations.
+    /// A database created before that (Railway's, or a teammate's local one) already has these tables.
+    /// </summary>
+    public const string BaselineMigrationId = "20261112113341_InitialBaseline";
+
     public static void Seed(AppDbContext db, IConfiguration config, IHostEnvironment env, ILogger logger)
     {
-        db.Database.EnsureCreated();
+        ApplyMigrations(db, logger);
 
         if (db.Teachers.Any())
         {
@@ -80,7 +90,8 @@ public static class DbSeeder
                 FullName = "Dirección del Jardín",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
                 Role = UserRole.Admin,
-                IsActive = true
+                IsActive = true,
+                MustChangePassword = true
             });
         }
 
@@ -91,6 +102,44 @@ public static class DbSeeder
 
         db.SaveChanges();
     }
+
+    /// <summary>
+    /// Applies the pending migrations. If the database was created with the old EnsureCreated()
+    /// (it has the tables but no __EFMigrationsHistory), it is first marked as being at the baseline,
+    /// without running it: its tables already exist with that same schema
+    /// (Railway's was checked column by column on 2026-11-12; run backend/scripts/2026-11-align-index-names.sql
+    /// there so the index names also match). Then Migrate() runs only the migrations after the baseline.
+    /// </summary>
+    private static void ApplyMigrations(AppDbContext db, ILogger logger)
+    {
+        // A database that does not exist yet (new environment) is created entirely by Migrate().
+        var databaseExists = db.GetService<IRelationalDatabaseCreator>().Exists();
+        if (databaseExists && TableExists(db, "Teachers") && !TableExists(db, "__EFMigrationsHistory"))
+        {
+            var history = db.GetService<IHistoryRepository>();
+            db.Database.ExecuteSqlRaw(history.GetCreateIfNotExistsScript());
+            db.Database.ExecuteSqlRaw(history.GetInsertScript(new HistoryRow(BaselineMigrationId, "9.0.0")));
+            logger.LogWarning(
+                "Database created before migrations: marked as {Baseline} without running it. Pending migrations run next.",
+                BaselineMigrationId);
+        }
+
+        var pending = db.Database.GetPendingMigrations().ToList();
+        if (pending.Count > 0)
+        {
+            logger.LogInformation("Applying migrations: {Migrations}", string.Join(", ", pending));
+        }
+
+        db.Database.Migrate();
+    }
+
+    private static bool TableExists(AppDbContext db, string table) =>
+        db.Database
+            .SqlQueryRaw<int>(
+                "SELECT COUNT(*) AS `Value` FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = {0}",
+                table)
+            .AsEnumerable()
+            .Single() > 0;
 
     /// <summary>Monday to Friday, 8:00 to 12:00, in 20-minute blocks, for the next two weeks.</summary>
     private static void AddSampleAppointments(AppDbContext db, List<Teacher> teachers)

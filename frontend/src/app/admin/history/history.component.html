@@ -1,0 +1,108 @@
+<div class="container">
+    <div class="top-bar">
+        <div>
+            <h1>Historial</h1>
+            <p class="text-muted">
+                Reservas, cancelaciones y pedidos de confirmación. Un turno cancelado vuelve a quedar disponible
+                en Turnos; acá queda el registro de quién lo había reservado y quién lo canceló.
+            </p>
+        </div>
+    </div>
+
+    <form [formGroup]="filterForm" (ngSubmit)="search()" class="card filters">
+        @if (isManagement()) {
+            <div class="form-group">
+                <label for="h-teacherId">Docente</label>
+                <select id="h-teacherId" formControlName="teacherId">
+                    <option value="">Todos</option>
+                    @for (teacher of teachers(); track teacher.id) {
+                        <option [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }}</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <div class="form-group">
+            <label for="h-from">Turnos desde</label>
+            <input id="h-from" type="date" formControlName="from" />
+        </div>
+
+        <div class="form-group">
+            <label for="h-to">Turnos hasta</label>
+            <input id="h-to" type="date" formControlName="to" />
+        </div>
+
+        <div class="form-group">
+            <label for="h-type">Qué pasó</label>
+            <select id="h-type" formControlName="type">
+                <option value="">Todo</option>
+                <option value="Booked">Reservas</option>
+                <option value="CancelledByFamily">Cancelado por la familia</option>
+                <option value="CancelledByStaff">Cancelado desde el panel</option>
+                <option value="ConfirmationRequested">Confirmación pedida</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
+    @if (error()) {
+        <div class="alert alert-error" role="alert">{{ error() }}</div>
+    }
+
+    @if (loading()) {
+        <p class="text-muted">Cargando...</p>
+    } @else if (events().length === 0) {
+        <p class="text-muted">No hay movimientos que coincidan con el filtro.</p>
+    } @else {
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cuándo</th>
+                        <th>Qué pasó</th>
+                        <th>Turno</th>
+                        @if (isManagement()) {
+                            <th>Docente</th>
+                        }
+                        <th>Familia</th>
+                        <th>Hecho por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (event of events(); track event.id) {
+                        <tr>
+                            <td>{{ formatMoment(event.createdAt) }}</td>
+                            <td><span class="badge" [class]="badgeClass(event.type)">{{ eventLabels[event.type] }}</span></td>
+                            <td>
+                                {{ formatDate(event.date) }} {{ event.startTime.slice(0, 5) }}
+                                @if (event.mode) {
+                                    <br /><small class="text-muted">{{ modeLabels[event.mode] }} · N.º {{ event.appointmentId }}</small>
+                                } @else {
+                                    <br /><small class="text-muted">N.º {{ event.appointmentId }}</small>
+                                }
+                            </td>
+                            @if (isManagement()) {
+                                <td>{{ event.teacherName }}</td>
+                            }
+                            <td>
+                                {{ event.childName || "—" }}
+                                @if (event.guardianName) {
+                                    <br /><small class="text-muted">{{ event.guardianName }} · {{ event.guardianPhone }}</small>
+                                }
+                            </td>
+                            <td>{{ event.userName || "La familia (web)" }}</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (pageCount() > 1) {
+            <nav class="pager" aria-label="Páginas">
+                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() <= 1" (click)="loadPage(page() - 1)">← Anterior</button>
+                <span>Página {{ page() }} de {{ pageCount() }} · {{ total() }} movimientos</span>
+                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() >= pageCount()" (click)="loadPage(page() + 1)">Siguiente →</button>
+            </nav>
+        }
+    }
+</div>

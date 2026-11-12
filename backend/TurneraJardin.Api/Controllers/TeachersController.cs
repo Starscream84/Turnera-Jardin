@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
@@ -22,6 +23,7 @@ public class TeachersController : ControllerBase
     }
 
     [HttpGet]
+    [OutputCache(PolicyName = CachePolicies.Teachers)]
     public async Task<ActionResult<List<TeacherDto>>> List()
     {
         var teachers = await _db.Teachers
@@ -34,28 +36,31 @@ public class TeachersController : ControllerBase
     }
 
     /// <summary>
-    /// Free appointments of a teacher within a date range: by default from tomorrow and the following 30 days,
-    /// never before tomorrow nor more than <see cref="ArgentinaDate.BookingDaysAhead"/> days ahead.
+    /// Free appointments of a teacher within a date range. By default (no "from"/"to") the whole bookable
+    /// window computed with the server's Argentina date: from tomorrow up to
+    /// <see cref="ArgentinaDate.BookingDaysAhead"/> days ahead, so the family's device clock never matters.
+    /// Never before tomorrow nor after that window, whatever is asked.
     /// </summary>
     [HttpGet("{id:int}/available-appointments")]
+    [OutputCache(PolicyName = CachePolicies.Availability)]
     public async Task<ActionResult<List<AvailableAppointmentDto>>> AvailableAppointments(
         int id, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to)
     {
         if (from is not null && to is not null && to < from)
         {
-            return BadRequest(new { message = "La fecha 'hasta' no puede ser anterior a la fecha 'desde'." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.InvalidDateRange, "La fecha 'hasta' no puede ser anterior a la fecha 'desde'.");
         }
 
         var teacherExists = await _db.Teachers.AnyAsync(t => t.Id == id && t.IsActive);
         if (!teacherExists)
         {
-            return NotFound(new { message = "Docente no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.TeacherNotFound, "Docente no encontrado.");
         }
 
         var firstDay = ArgentinaDate.FirstBookableDay();
         var lastDay = ArgentinaDate.LastBookableDay();
         var fromDate = from is not null && from >= firstDay ? from.Value : firstDay;
-        var toDate = to ?? fromDate.AddDays(30);
+        var toDate = to ?? lastDay;
         if (toDate > lastDay)
         {
             toDate = lastDay;

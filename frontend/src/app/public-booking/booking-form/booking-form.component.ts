@@ -1,7 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
-import { HttpErrorResponse } from "@angular/common/http";
 import { BookingService } from "../../core/services/booking.service";
 import {
     INTERVIEW_MODE_LABELS,
@@ -12,7 +11,7 @@ import {
 import { Teacher } from "../../core/models/teacher.model";
 import { PublicShellComponent } from "../../shared/public-shell.component";
 import { STRICT_EMAIL_PATTERN, phoneValidator } from "../../shared/phone.util";
-import { errorMessage } from "../../shared/http-error.util";
+import { errorCode, errorMessage } from "../../shared/http-error.util";
 
 @Component({
     selector: "app-booking-form",
@@ -76,19 +75,22 @@ export class BookingFormComponent implements OnInit {
             },
         });
 
-        this.bookingService.availableAppointments(this.teacherId).subscribe({
-            next: (appointments) => {
-                const appointment = appointments.find((a) => a.id === this.appointmentId) ?? null;
-                this.selectedAppointment.set(appointment);
-                if (!appointment) {
-                    this.error.set(
-                        "Este turno ya no está disponible. Volvé atrás y elegí otro horario.",
-                    );
+        // Only this slot (GET /appointments/{id}), not every free slot of the teacher.
+        this.bookingService.getAppointment(this.appointmentId).subscribe({
+            next: (appointment) => {
+                if (appointment.teacherId !== this.teacherId) {
+                    this.error.set("Este turno ya no está disponible. Volvé atrás y elegí otro horario.");
+                } else {
+                    this.selectedAppointment.set(appointment);
                 }
                 this.loading.set(false);
             },
-            error: () => {
-                this.error.set("No pudimos cargar los datos del turno.");
+            error: (err: unknown) => {
+                this.error.set(
+                    errorCode(err) === "APPOINTMENT_NOT_FOUND"
+                        ? "Este turno ya no está disponible. Volvé atrás y elegí otro horario."
+                        : errorMessage(err, "No pudimos cargar los datos del turno."),
+                );
                 this.loading.set(false);
             },
         });
@@ -115,7 +117,7 @@ export class BookingFormComponent implements OnInit {
                 this.sending.set(false);
                 // If the same family retries after a lost connection, the backend answers 200 with
                 // the same booking, so a 409 here really means someone else took the slot.
-                if (err instanceof HttpErrorResponse && err.status === 409) {
+                if (errorCode(err) === "APPOINTMENT_TAKEN") {
                     this.error.set(
                         "Otra familia acaba de reservar este turno. Volvé atrás y elegí otro horario.",
                     );

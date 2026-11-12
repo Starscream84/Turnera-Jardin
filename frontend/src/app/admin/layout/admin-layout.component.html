@@ -6,6 +6,7 @@
     </a>
     <div class="nav-links">
       <a routerLink="/admin/turnos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-link">Turnos</a>
+      <a routerLink="/admin/historial" routerLinkActive="active" class="nav-link">Historial</a>
       @if (auth.role() === 'Admin' || auth.role() === 'Coordinator') {
         <a routerLink="/admin/turnos/generar" routerLinkActive="active" class="nav-link">Generar turnos</a>
         <a routerLink="/admin/docentes" routerLinkActive="active" class="nav-link">Docentes</a>

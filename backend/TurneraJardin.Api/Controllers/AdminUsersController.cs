@@ -6,6 +6,7 @@ using TurneraJardin.Api.Data;
 using TurneraJardin.Api.Dtos;
 using TurneraJardin.Api.Models;
 using TurneraJardin.Api.Models.Enums;
+using TurneraJardin.Api.Services;
 
 namespace TurneraJardin.Api.Controllers;
 
@@ -34,7 +35,7 @@ public class AdminUsersController : ControllerBase
             .Include(u => u.Teacher)
             .OrderBy(u => u.Role).ThenBy(u => u.FullName)
             .Select(u => new UserAdminDto(
-                u.Id, u.Email, u.FullName, u.Role, u.TeacherId, u.Teacher!.FullName, u.IsActive, u.PhotoUrl))
+                u.Id, u.Email, u.FullName, u.Role, u.TeacherId, u.Teacher!.FirstName + " " + u.Teacher!.LastName, u.IsActive, u.PhotoUrl, u.MustChangePassword))
             .ToListAsync();
 
         return Ok(users);
@@ -58,13 +59,13 @@ public class AdminUsersController : ControllerBase
             teacher = await _db.Teachers.FindAsync(dto.TeacherId.Value);
             if (teacher is null)
             {
-                return NotFound(new { message = "Docente no encontrado." });
+                return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.TeacherNotFound, "Docente no encontrado.");
             }
 
             var alreadyHasUser = await _db.Users.AnyAsync(u => u.TeacherId == teacher.Id);
             if (alreadyHasUser)
             {
-                return Conflict(new { message = "Ese docente ya tiene un usuario asignado. Si necesita otra contraseña, restablecela en vez de crear un usuario nuevo." });
+                return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.TeacherHasUser, "Ese docente ya tiene un usuario asignado. Si necesita otra contraseña, restablecela en vez de crear un usuario nuevo.");
             }
 
             email = string.IsNullOrWhiteSpace(dto.Email) ? teacher.Email : dto.Email.Trim();
@@ -75,12 +76,12 @@ public class AdminUsersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.FullName))
             {
-                return BadRequest(new { message = "Para crear un usuario de dirección hacen falta el email y el nombre completo." });
+                return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.ValidationError, "Para crear un usuario de dirección hacen falta el email y el nombre completo.");
             }
 
             if (dto.Role == UserRole.Teacher)
             {
-                return BadRequest(new { message = "Para crear un usuario Docente hace falta indicar el docente." });
+                return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.ValidationError, "Para crear un usuario Docente hace falta indicar el docente.");
             }
 
             email = dto.Email.Trim();
@@ -92,7 +93,7 @@ public class AdminUsersController : ControllerBase
         var emailInUse = await _db.Users.AnyAsync(u => u.Email == email);
         if (emailInUse)
         {
-            return Conflict(new { message = "Ya existe un usuario con ese email." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.UserEmailInUse, "Ya existe un usuario con ese email.");
         }
 
         var temporaryPassword = string.IsNullOrWhiteSpace(dto.Password) ? GenerateTemporaryPassword() : dto.Password.Trim();
@@ -102,6 +103,8 @@ public class AdminUsersController : ControllerBase
             Email = email,
             FullName = fullName,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
+            // Temporary password: the first login forces a new one (H30).
+            MustChangePassword = true,
             Role = role,
             TeacherId = teacher?.Id,
             IsActive = true
@@ -121,11 +124,12 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound(new { message = "Usuario no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.UserNotFound, "Usuario no encontrado.");
         }
 
         var temporaryPassword = string.IsNullOrWhiteSpace(dto.NewPassword) ? GenerateTemporaryPassword() : dto.NewPassword.Trim();
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword);
+        user.MustChangePassword = true;
         await _db.SaveChangesAsync();
 
         return Ok(new UserCredentialsDto(user.Id, user.Email, user.FullName, user.Role.ToString(), temporaryPassword));
@@ -137,7 +141,7 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound(new { message = "Usuario no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.UserNotFound, "Usuario no encontrado.");
         }
 
         user.IsActive = true;
@@ -152,7 +156,7 @@ public class AdminUsersController : ControllerBase
         var user = await _db.Users.FindAsync(id);
         if (user is null)
         {
-            return NotFound(new { message = "Usuario no encontrado." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.UserNotFound, "Usuario no encontrado.");
         }
 
         if (user.Role == UserRole.Admin)
@@ -162,7 +166,7 @@ public class AdminUsersController : ControllerBase
 
             if (otherActiveAdmins == 0)
             {
-                return BadRequest(new { message = "No se puede desactivar el último usuario de dirección activo." });
+                return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.LastAdmin, "No se puede desactivar el último usuario de dirección activo.");
             }
         }
 
