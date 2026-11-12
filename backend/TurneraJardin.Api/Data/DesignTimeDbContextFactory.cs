@@ -14,6 +14,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseMySql("Server=localhost;Database=design_time;User=design;Password=design", new MySqlServerVersion(new Version(8, 4, 11)))
+            .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IHistoryRepository, ShortLockMySqlHistoryRepository>()
             .Options;
         return new AppDbContext(options);
     }
