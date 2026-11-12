@@ -41,7 +41,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         // Retries transient errors (MySQL restarting, a dropped connection) instead of failing the request
         // or leaving the container in a restart loop at startup. There are no manual transactions left
         // (booking is a single conditional UPDATE), so it is compatible with every endpoint.
-        mysql => mysql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null)));
+        mysql => mysql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null))
+    // Short migration lock name: Railway's 48-character database name made Pomelo's exceed MySQL's 64-character limit.
+    .ReplaceService<Microsoft.EntityFrameworkCore.Migrations.IHistoryRepository, ShortLockMySqlHistoryRepository>());
 
 // --- WhatsApp Cloud API settings (disabled: the teacher sends the message with the "Confirmación" button) ---
 builder.Services.Configure<WhatsAppOptions>(builder.Configuration.GetSection(WhatsAppOptions.ConfigSection));
