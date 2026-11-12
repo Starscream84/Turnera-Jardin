@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TurneraJardin.Api.Data;
@@ -20,12 +21,49 @@ public class AppointmentsController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IEmailQueue _emails;
     private readonly ILogger<AppointmentsController> _logger;
+    private readonly IOutputCacheStore _cache;
 
-    public AppointmentsController(AppDbContext db, IEmailQueue emails, ILogger<AppointmentsController> logger)
+    public AppointmentsController(AppDbContext db, IEmailQueue emails, ILogger<AppointmentsController> logger, IOutputCacheStore cache)
     {
         _db = db;
         _emails = emails;
         _logger = logger;
+        _cache = cache;
+    }
+
+    /// <summary>
+    /// One free slot, by id: what the booking form (step 3) needs, instead of downloading every free
+    /// slot of the teacher. 404 if it does not exist, is already booked, or is not bookable (today, past,
+    /// more than 6 months ahead, inactive teacher).
+    /// </summary>
+    [EnableRateLimiting(RateLimitPolicies.PublicRead)]
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<AvailableAppointmentDto>> GetOne(int id)
+    {
+        var firstDay = ArgentinaDate.FirstBookableDay();
+        var lastDay = ArgentinaDate.LastBookableDay();
+
+        var dto = await _db.Appointments.AsNoTracking()
+            .Where(a => a.Id == id
+                        && a.Teacher!.IsActive
+                        && a.Status == AppointmentStatus.Available
+                        && a.Date >= firstDay
+                        && a.Date <= lastDay)
+            .Select(a => new AvailableAppointmentDto(
+                a.Id,
+                a.TeacherId,
+                a.Teacher!.FirstName + " " + a.Teacher!.LastName,
+                a.Teacher!.Classroom ?? "Sin asignar",
+                a.Date,
+                a.StartTime,
+                a.EndTime,
+                a.Status.ToString(),
+                a.Location))
+            .FirstOrDefaultAsync();
+
+        return dto is null
+            ? this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "Este turno ya no está disponible. Volvé y elegí otro horario.")
+            : Ok(dto);
     }
 
     /// <summary>
@@ -87,7 +125,7 @@ public class AppointmentsController : ControllerBase
 
         if (appointment is null)
         {
-            return NotFound(new { message = "El turno no existe." });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "El turno no existe.");
         }
 
         var phone = PhoneNumber.Normalize(dto.GuardianPhone)!; // [ArgentinePhone] already validated it
@@ -97,22 +135,22 @@ public class AppointmentsController : ControllerBase
         {
             return IsSameFamily(appointment, phone, email)
                 ? Ok(ToBookedDto(appointment))
-                : Conflict(new { message = "Este turno ya no está disponible. Elegí otro horario." });
+                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
         }
 
         if (appointment.Status != AppointmentStatus.Available || !appointment.Teacher!.IsActive)
         {
-            return Conflict(new { message = "Este turno ya no está disponible. Elegí otro horario." });
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
         }
 
         if (appointment.Date < ArgentinaDate.FirstBookableDay())
         {
-            return BadRequest(new { message = "Los turnos se reservan con al menos un día de anticipación. Elegí un turno a partir de mañana." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.BookingTooSoon, "Los turnos se reservan con al menos un día de anticipación. Elegí un turno a partir de mañana.");
         }
 
         if (appointment.Date > ArgentinaDate.LastBookableDay())
         {
-            return BadRequest(new { message = $"Por ahora se puede reservar hasta {ArgentinaDate.BookingDaysAhead} días antes. Elegí una fecha más cercana." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.BookingTooFar, $"Por ahora se puede reservar hasta {ArgentinaDate.BookingDaysAhead} días antes. Elegí una fecha más cercana.");
         }
 
         var mode = dto.Mode!.Value;
@@ -121,7 +159,7 @@ public class AppointmentsController : ControllerBase
         {
             if (mode == InterviewMode.Online)
             {
-                return BadRequest(new { message = "Esta docente solo atiende entrevistas presenciales." });
+                return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.ModeNotAllowed, "Esta docente solo atiende entrevistas presenciales.");
             }
 
             mode = InterviewMode.InPerson;
@@ -136,26 +174,51 @@ public class AppointmentsController : ControllerBase
         var firstDay = ArgentinaDate.FirstBookableDay();
         var lastDay = ArgentinaDate.LastBookableDay();
 
-        var rows = await _db.Appointments
-            .Where(a => a.Id == id
-                        && a.Status == AppointmentStatus.Available
-                        && a.Date >= firstDay
-                        && a.Date <= lastDay
-                        && a.Teacher!.IsActive)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(a => a.Status, AppointmentStatus.Booked)
-                .SetProperty(a => a.GuardianFirstName, guardianFirstName)
-                .SetProperty(a => a.GuardianLastName, guardianLastName)
-                .SetProperty(a => a.GuardianPhone, phone)
-                .SetProperty(a => a.GuardianEmail, email)
-                .SetProperty(a => a.ChildFirstName, childFirstName)
-                .SetProperty(a => a.ChildLastName, childLastName)
-                .SetProperty(a => a.Notes, notes)
-                .SetProperty(a => a.Mode, (InterviewMode?)mode)
-                .SetProperty(a => a.BookedAt, (DateTime?)bookedAt)
-                .SetProperty(a => a.ConfirmationSent, false)
-                .SetProperty(a => a.ReminderSent, false)
-                .SetProperty(a => a.ConfirmationRequestedAt, (DateTime?)null), ct);
+        // The conditional UPDATE and the history row are saved together (same transaction). The execution
+        // strategy (EnableRetryOnFailure) re-runs the whole block if MySQL drops the connection midway.
+        var strategy = _db.Database.CreateExecutionStrategy();
+        var rows = await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+            _db.ChangeTracker.Clear();
+
+            var updated = await _db.Appointments
+                .Where(a => a.Id == id
+                            && a.Status == AppointmentStatus.Available
+                            && a.Date >= firstDay
+                            && a.Date <= lastDay
+                            && a.Teacher!.IsActive)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(a => a.Status, AppointmentStatus.Booked)
+                    .SetProperty(a => a.GuardianFirstName, guardianFirstName)
+                    .SetProperty(a => a.GuardianLastName, guardianLastName)
+                    .SetProperty(a => a.GuardianPhone, phone)
+                    .SetProperty(a => a.GuardianEmail, email)
+                    .SetProperty(a => a.ChildFirstName, childFirstName)
+                    .SetProperty(a => a.ChildLastName, childLastName)
+                    .SetProperty(a => a.Notes, notes)
+                    .SetProperty(a => a.Mode, (InterviewMode?)mode)
+                    .SetProperty(a => a.BookedAt, (DateTime?)bookedAt)
+                    .SetProperty(a => a.ConfirmationSent, false)
+                    .SetProperty(a => a.ReminderSent, false)
+                    .SetProperty(a => a.ConfirmationRequestedAt, (DateTime?)null), ct);
+
+            if (updated == 1)
+            {
+                var booked = appointment.SnapshotForEmail();
+                booked.GuardianFirstName = guardianFirstName;
+                booked.GuardianLastName = guardianLastName;
+                booked.GuardianPhone = phone;
+                booked.ChildFirstName = childFirstName;
+                booked.ChildLastName = childLastName;
+                booked.Mode = mode;
+                _db.AppointmentEvents.Add(AppointmentEvent.From(booked, AppointmentEventType.Booked));
+                await _db.SaveChangesAsync(ct);
+            }
+
+            await transaction.CommitAsync(ct);
+            return updated;
+        });
 
         if (rows == 0)
         {
@@ -165,11 +228,12 @@ public class AppointmentsController : ControllerBase
 
             return current is not null && current.Status == AppointmentStatus.Booked && IsSameFamily(current, phone, email)
                 ? Ok(ToBookedDto(current))
-                : Conflict(new { message = "Este turno ya no está disponible. Elegí otro horario." });
+                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
         }
 
         // The email goes out in the background (EmailDispatcherService), with retries if Brevo fails.
         _emails.EnqueueConfirmation(id);
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, ct);
         _logger.LogInformation("Appointment {AppointmentId} booked", id);
 
         appointment.Status = AppointmentStatus.Booked;
@@ -198,27 +262,30 @@ public class AppointmentsController : ControllerBase
         var enteredPhone = dto?.Phone ?? phone;
         if (string.IsNullOrWhiteSpace(enteredPhone))
         {
-            return BadRequest(new { message = "Ingresá el WhatsApp con el que reservaste." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.PhoneRequired, "Ingresá el WhatsApp con el que reservaste.");
         }
 
-        var appointment = await _db.Appointments.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var appointment = await _db.Appointments.Include(a => a.Teacher).FirstOrDefaultAsync(a => a.Id == id, ct);
 
         if (appointment is null
             || appointment.Status != AppointmentStatus.Booked
             || !PhoneNumber.SameNumber(enteredPhone, appointment.GuardianPhone))
         {
-            return NotFound(new { message = NotFoundOrNoMatchMessage });
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.BookingNotFound, NotFoundOrNoMatchMessage);
         }
 
         if (appointment.Date < ArgentinaDate.FirstBookableDay())
         {
-            return BadRequest(new { message = "Los turnos de hoy o de días anteriores no se pueden cancelar desde la web. Comunicate con el jardín." });
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.CancelTooLate, "Los turnos de hoy o de días anteriores no se pueden cancelar desde la web. Comunicate con el jardín.");
         }
 
         // Status and BookedAt are concurrency tokens: if the appointment changed since we read it,
         // SaveChanges throws and ApiExceptionHandler answers 409.
+        // The history row and the cleared slot are saved in the same SaveChanges (one transaction).
+        _db.AppointmentEvents.Add(AppointmentEvent.From(appointment, AppointmentEventType.CancelledByFamily));
         appointment.ClearBooking();
         await _db.SaveChangesAsync(ct);
+        await _cache.EvictByTagAsync(CachePolicies.AvailabilityTag, ct);
 
         _logger.LogInformation("Appointment {AppointmentId} cancelled by the family", id);
         return NoContent();

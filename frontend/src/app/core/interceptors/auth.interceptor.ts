@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../services/auth.service';
+import { errorCode } from '../../shared/http-error.util';
 
 /** API paths (after environment.apiUrl) that need the logged-in user's token. */
 const AUTHENTICATED_PREFIXES = ['/admin/', '/auth/change-password', '/auth/my-photo'];
@@ -34,6 +35,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
       if (err instanceof HttpErrorResponse && err.status === 401) {
         auth.logout();
         router.navigate(['/admin/login'], { queryParams: { sesion: 'vencida' } });
+      } else if (err instanceof HttpErrorResponse && err.status === 403 && errorCode(err) === 'PASSWORD_CHANGE_REQUIRED') {
+        auth.markPasswordChangeRequired();
+        router.navigate(['/admin/mi-cuenta']);
       }
       return throwError(() => err);
     })

@@ -12,4 +12,6 @@ export interface LoginResponse {
   role: UserRole;
   teacherId: number | null;
   photoUrl: string | null;
+  /** True while the password is temporary: the panel only allows "Mi cuenta" until it is changed. */
+  mustChangePassword: boolean;
 }

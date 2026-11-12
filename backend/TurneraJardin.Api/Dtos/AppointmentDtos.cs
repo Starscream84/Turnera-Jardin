@@ -132,3 +132,19 @@ public class GenerateAppointmentsDto
     [Required(ErrorMessage = "Elegí dónde va a ser la entrevista."), MaxLength(200)]
     public required string Location { get; set; }
 }
+
+/// <summary>One row of the appointment history (panel → Historial). UserName is null when the family did it from the web.</summary>
+public record AppointmentEventDto(
+    long Id,
+    int AppointmentId,
+    int TeacherId,
+    string TeacherName,
+    DateOnly Date,
+    TimeOnly StartTime,
+    AppointmentEventType Type,
+    InterviewMode? Mode,
+    string? GuardianName,
+    string? GuardianPhone,
+    string? ChildName,
+    string? UserName,
+    DateTime CreatedAt);

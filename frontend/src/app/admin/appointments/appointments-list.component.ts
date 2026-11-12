@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule } from "@angular/forms";
-import { AdminAppointmentsService, AdminAppointmentsFilter } from "../../core/services/admin-appointments.service";
+import { AdminAppointmentsService, AdminAppointmentsFilter, PAGE_SIZE } from "../../core/services/admin-appointments.service";
 import { AdminTeachersService } from "../../core/services/admin-teachers.service";
 import { AuthService } from "../../core/services/auth.service";
 import {
@@ -28,6 +28,12 @@ export class AppointmentsListComponent implements OnInit {
     auth = inject(AuthService);
 
     appointments = signal<AppointmentAdmin[]>([]);
+    /** Pagination: current page (from 1) and totals of the whole filter, from the backend headers. */
+    page = signal(1);
+    total = signal(0);
+    totalBooked = signal(0);
+    readonly pageSize = PAGE_SIZE;
+    pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
     teachers = signal<TeacherAdmin[]>([]);
     loading = signal(true);
     error = signal<string | null>(null);
@@ -41,14 +47,18 @@ export class AppointmentsListComponent implements OnInit {
     /** Admin or Coordinator: sees every teacher's schedule and can generate and bulk-delete appointments. */
     isManagement = computed(() => this.auth.role() === "Admin" || this.auth.role() === "Coordinator");
 
-    /** Totals of the list on screen (according to the applied filter), for the indicators at the top. */
+    /**
+     * Indicators at the top. Booked/available/total cover the whole filter (backend totals), not only
+     * the page on screen. Cancellations are not here: a cancelled slot goes back to Available, and the
+     * record of who cancelled is in Historial.
+     */
     summary = computed(() => {
         const appointments = this.appointments();
-        const count = (status: AppointmentStatus) => appointments.filter((a) => a.status === status).length;
         return {
-            booked: count("Booked"),
-            available: count("Available"),
-            cancelled: count("Cancelled"),
+            total: this.total(),
+            booked: this.totalBooked(),
+            available: this.total() - this.totalBooked(),
+            bookedOnPage: appointments.filter((a) => a.status === "Booked").length,
             attendanceRequested: appointments.filter(
                 (a) => a.status === "Booked" && a.confirmationRequestedAt,
             ).length,
@@ -88,10 +98,19 @@ export class AppointmentsListComponent implements OnInit {
             status: values.status || undefined,
         };
         this.appliedFilter = filter;
+        this.loadPage(1);
+    }
 
-        this.service.list(filter).subscribe({
-            next: (appointments) => {
-                this.appointments.set(appointments);
+    /** Loads a page of the last searched filter (the pager buttons). */
+    loadPage(page: number): void {
+        this.loading.set(true);
+        this.error.set(null);
+        this.service.list(this.appliedFilter, page).subscribe({
+            next: (result) => {
+                this.appointments.set(result.items);
+                this.total.set(result.total);
+                this.totalBooked.set(result.booked);
+                this.page.set(page);
                 this.loading.set(false);
             },
             error: (err: unknown) => {
@@ -114,12 +133,13 @@ export class AppointmentsListComponent implements OnInit {
         const ids = this.availableListed().map((a) => a.id);
         if (ids.length === 0) return;
 
-        const booked = this.summary().booked;
+        const booked = this.summary().bookedOnPage;
         const note = booked
-            ? `\n\nLos ${booked} turnos reservados de este listado NO se borran: si hace falta, cancelalos uno por uno (así se le avisa a la familia).`
+            ? `\n\nLos ${booked} turnos reservados de esta página NO se borran: si hace falta, cancelalos uno por uno (así se le avisa a la familia).`
             : "";
+        const where = this.pageCount() > 1 ? `de esta página (${this.page()} de ${this.pageCount()})` : "de este listado";
         const confirmed = confirm(
-            `¿Eliminar las ${ids.length} franjas disponibles de este listado?${note}\n\nEsta acción no se puede deshacer.`,
+            `¿Eliminar las ${ids.length} franjas disponibles ${where}?${note}\n\nEsta acción no se puede deshacer.`,
         );
         if (!confirmed) return;
 
@@ -134,7 +154,7 @@ export class AppointmentsListComponent implements OnInit {
                     ? ` ${response.skippedBooked} se reservaron mientras tanto y no se borraron.`
                     : "";
                 this.notice.set(`Se eliminaron ${response.deleted} franja(s) disponible(s).${skipped}`);
-                this.search();
+                this.loadPage(this.page());
             },
             error: (err: unknown) => {
                 this.deleting.set(false);
@@ -152,7 +172,7 @@ export class AppointmentsListComponent implements OnInit {
         this.service.cancel(appointment.id).subscribe({
             next: () => {
                 this.notice.set("Turno cancelado. Le avisamos a la familia por email.");
-                this.search();
+                this.loadPage(this.page());
             },
             error: (err: unknown) => this.error.set(errorMessage(err, "No pudimos cancelar el turno.")),
         });

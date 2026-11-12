@@ -7,9 +7,9 @@ import { Teacher } from '../models/teacher.model';
 import { AvailableAppointment, BookAppointmentRequest, BookedAppointment } from '../models/appointment.model';
 
 /**
- * How far ahead a family can book: free appointments are shown from tomorrow
- * up to this many days ahead (180 ≈ 6 months). The backend enforces the same limit
- * (ArgentinaDate.BookingDaysAhead) and caps any later "to" date.
+ * How far ahead a family can book (180 ≈ 6 months). Only used for texts: the dates themselves are
+ * decided by the backend with the server's Argentina date (ArgentinaDate.BookingDaysAhead), so a phone
+ * with the wrong date or time zone sees the same slots as everyone else. Keep both numbers equal.
  */
 export const BOOKING_DAYS_AHEAD = 180;
 
@@ -22,19 +22,14 @@ export class BookingService {
     return this.http.get<Teacher[]>(`${environment.apiUrl}/teachers`);
   }
 
-  /**
-   * Free appointments of a teacher from today up to BOOKING_DAYS_AHEAD days ahead.
-   * The "to" date is sent explicitly because otherwise the backend returns only the next 30 days.
-   */
+  /** Free appointments of a teacher, for the whole bookable window (from tomorrow, decided by the server). */
   availableAppointments(teacherId: number): Observable<AvailableAppointment[]> {
-    const limit = new Date();
-    limit.setDate(limit.getDate() + BOOKING_DAYS_AHEAD);
-    const to = `${limit.getFullYear()}-${String(limit.getMonth() + 1).padStart(2, '0')}-${String(limit.getDate()).padStart(2, '0')}`;
+    return this.http.get<AvailableAppointment[]>(`${environment.apiUrl}/teachers/${teacherId}/available-appointments`);
+  }
 
-    return this.http.get<AvailableAppointment[]>(
-      `${environment.apiUrl}/teachers/${teacherId}/available-appointments`,
-      { params: { to } }
-    );
+  /** One free appointment (booking form). 404 if it was booked meanwhile or is no longer bookable. */
+  getAppointment(appointmentId: number): Observable<AvailableAppointment> {
+    return this.http.get<AvailableAppointment>(`${environment.apiUrl}/appointments/${appointmentId}`);
   }
 
   bookAppointment(appointmentId: number, data: BookAppointmentRequest): Observable<BookedAppointment> {

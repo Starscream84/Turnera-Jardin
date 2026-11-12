@@ -9,6 +9,8 @@ export interface UserAdmin {
   teacherName: string | null;
   isActive: boolean;
   photoUrl: string | null;
+  /** The user has not replaced the temporary password yet. */
+  mustChangePassword: boolean;
 }
 
 export interface UserCreateRequest {

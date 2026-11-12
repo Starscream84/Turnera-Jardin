@@ -16,6 +16,19 @@ using TurneraJardin.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- Logs: one JSON object per line outside Development (Railway indexes the fields, e.g. RequestId),
+// including the scope with the request id added by RequestCorrelationMiddleware. Plain text locally.
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddJsonConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ ";
+        options.UseUtcTimestamp = true;
+    });
+}
+
 // --- Database (MySQL) ---
 var connectionString = builder.Configuration.GetConnectionString("Default");
 if (string.IsNullOrWhiteSpace(connectionString))
@@ -53,6 +66,15 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 // --- Health check: GET /health answers 200 only if MySQL is reachable ---
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+
+// --- Short cache for the public reads (teachers list, free slots of a teacher). Every change to the
+// slots (book, cancel, generate, delete) evicts the "availability" tag, so a family never sees a stale
+// free slot for more than an instant; the teachers list is evicted when a teacher is created or edited.
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy(CachePolicies.Teachers, p => p.Expire(TimeSpan.FromMinutes(5)).Tag(CachePolicies.TeachersTag));
+    options.AddPolicy(CachePolicies.Availability, p => p.Expire(TimeSpan.FromSeconds(30)).Tag(CachePolicies.AvailabilityTag));
+});
 
 // --- JWT authentication ---
 var jwtSection = builder.Configuration.GetSection("Jwt");
@@ -100,7 +122,7 @@ builder.Services.AddAuthentication(options =>
             var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
             var user = await db.Users.AsNoTracking()
                 .Where(u => u.Id == userId)
-                .Select(u => new { u.Id, u.IsActive, u.PasswordHash, u.Role, u.TeacherId })
+                .Select(u => new { u.Id, u.IsActive, u.PasswordHash, u.Role, u.TeacherId, u.MustChangePassword })
                 .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
 
             var stamp = principal.FindFirst(SecurityStamp.ClaimName)?.Value;
@@ -114,7 +136,11 @@ builder.Services.AddAuthentication(options =>
                 || teacherInToken != user.TeacherId?.ToString())
             {
                 context.Fail("Session no longer valid");
+                return;
             }
+
+            // H30: read by PasswordChangeRequiredMiddleware.
+            context.HttpContext.Items[PasswordChangeRequiredMiddleware.ItemKey] = user.MustChangePassword;
         }
     };
 });
@@ -136,7 +162,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .WithExposedHeaders("Retry-After");
+            .WithExposedHeaders("Retry-After", RequestCorrelationMiddleware.HeaderName, "X-Total-Count", "X-Booked-Count");
     });
 });
 
@@ -146,18 +172,19 @@ builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
     .ConfigureApiBehaviorOptions(options =>
     {
-        // Validation errors (400) also carry a "message" with the first error, like the rest of the API.
+        // Validation errors (400): same format as the rest of the API (code VALIDATION_ERROR, message = first
+        // error) plus "errors" with every field, as in ValidationProblemDetails.
         options.InvalidModelStateResponseFactory = context =>
         {
-            var problem = new ValidationProblemDetails(context.ModelState)
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "Hay datos inválidos en el formulario."
-            };
             var first = context.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
-                .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
-            problem.Extensions["message"] = first ?? problem.Title;
-            return new BadRequestObjectResult(problem);
+                .FirstOrDefault(m => !string.IsNullOrWhiteSpace(m)) ?? "Hay datos inválidos en el formulario.";
+            var problem = ApiProblem.Build(context.HttpContext, StatusCodes.Status400BadRequest, ErrorCodes.ValidationError, first);
+            problem.Extensions["errors"] = context.ModelState
+                .Where(kv => kv.Value is { Errors.Count: > 0 })
+                .ToDictionary(kv => kv.Key, kv => kv.Value!.Errors.Select(e => e.ErrorMessage).ToArray());
+            var result = new BadRequestObjectResult(problem);
+            result.ContentTypes.Add(ApiProblem.ContentType);
+            return result;
         };
     });
 builder.Services.AddEndpointsApiExplorer();
@@ -212,8 +239,8 @@ builder.Services.AddRateLimiter(options =>
         {
             context.HttpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
         }
-        await context.HttpContext.Response.WriteAsJsonAsync(
-            new { message = "Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo." }, ct);
+        await ApiProblem.WriteAsync(context.HttpContext, StatusCodes.Status429TooManyRequests, ErrorCodes.RateLimited,
+            "Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.", ct);
     };
 
     static string ClientIp(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -257,6 +284,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseForwardedHeaders();
+app.UseMiddleware<RequestCorrelationMiddleware>();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -278,8 +306,10 @@ app.Use(async (context, next) =>
 app.UseStaticFiles(); // serves wwwroot/fotos-perfil (users' profile photos, on the Railway volume)
 app.UseCors(CorsPolicyFrontend);
 app.UseRateLimiter();
+app.UseOutputCache();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 
 app.MapHealthChecks("/health");
 app.MapControllers();

@@ -12,7 +12,7 @@
                 [disabled]="loading() || bookedForPrint().length === 0"
                 (click)="print()"
             >
-                Imprimir listado ({{ bookedForPrint().length }})
+                Imprimir listado ({{ bookedForPrint().length }}){{ pageCount() > 1 ? ' · esta página' : '' }}
             </button>
             @if (isManagement()) {
                 <button
@@ -46,28 +46,28 @@
             <div class="kpi">
                 <div>
                     <span class="tag tag-small">Reservados</span>
-                    <small>en este listado</small>
+                    <small>con este filtro</small>
                 </div>
                 <span class="kpi-number green">{{ summary().booked }}</span>
             </div>
             <div class="kpi">
                 <div>
                     <span class="tag tag-small tag-blue">Disponibles</span>
-                    <small>en este listado</small>
+                    <small>con este filtro</small>
                 </div>
                 <span class="kpi-number blue">{{ summary().available }}</span>
             </div>
-            <div class="kpi">
+            <a class="kpi" routerLink="/admin/historial" style="text-decoration: none; color: inherit;">
                 <div>
-                    <span class="tag tag-small tag-orange">Cancelados</span>
-                    <small>en este listado</small>
+                    <span class="tag tag-small tag-orange">Cancelaciones</span>
+                    <small>ver en Historial</small>
                 </div>
-                <span class="kpi-number orange">{{ summary().cancelled }}</span>
-            </div>
+                <span class="kpi-number orange">→</span>
+            </a>
             <div class="kpi">
                 <div>
                     <span class="tag tag-small tag-magenta">Asistencia pedida</span>
-                    <small>por WhatsApp</small>
+                    <small>{{ pageCount() > 1 ? 'en esta página' : 'por WhatsApp' }}</small>
                 </div>
                 <span class="kpi-number magenta">{{ summary().attendanceRequested }}</span>
             </div>
@@ -105,8 +105,6 @@
                 <option value="">Todos</option>
                 <option value="Available">Disponible</option>
                 <option value="Booked">Reservado</option>
-                <option value="Cancelled">Cancelado</option>
-                <option value="Completed">Completado</option>
             </select>
         </div>
 
@@ -232,6 +230,13 @@
                 </tbody>
             </table>
         </div>
+        @if (pageCount() > 1) {
+            <nav class="pager" aria-label="Páginas">
+                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() <= 1" (click)="loadPage(page() - 1)">← Anterior</button>
+                <span>Página {{ page() }} de {{ pageCount() }} · {{ summary().total }} turnos</span>
+                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() >= pageCount()" (click)="loadPage(page() + 1)">Siguiente →</button>
+            </nav>
+        }
     }
 
     <section class="print-only">

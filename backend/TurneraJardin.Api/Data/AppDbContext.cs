@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Teacher> Teachers => Set<Teacher>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<AppointmentEvent> AppointmentEvents => Set<AppointmentEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,7 +34,6 @@ public class AppDbContext : DbContext
             entity.HasIndex(a => new { a.TeacherId, a.Date, a.StartTime }).IsUnique();
 
             // Free slots of a teacher (public booking) and lists by status and date (panel, email retries).
-            // Railway: these were created by hand, see backend/scripts/2026-11-qa-fixes.sql.
             entity.HasIndex(a => new { a.TeacherId, a.Status, a.Date }).HasDatabaseName("IX_Appointments_TeacherId_Status_Date");
             entity.HasIndex(a => new { a.Status, a.Date }).HasDatabaseName("IX_Appointments_Status_Date");
         });
@@ -49,6 +49,13 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(u => u.TeacherId)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AppointmentEvent>(entity =>
+        {
+            // History screen: by date of the appointment, optionally by teacher; and the history of one slot.
+            entity.HasIndex(e => new { e.Date, e.TeacherId });
+            entity.HasIndex(e => e.AppointmentId);
         });
     }
 }

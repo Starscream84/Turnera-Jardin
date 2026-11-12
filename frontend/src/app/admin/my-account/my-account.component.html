@@ -1,6 +1,11 @@
 <div class="container-narrow">
   <h1 style="margin-bottom: 28px;">Mi cuenta</h1>
 
+  @if (auth.mustChangePassword()) {
+    <div class="alert alert-note" style="margin-bottom: 28px;">
+      Estás usando una contraseña temporal. Elegí una nueva para poder usar el panel.
+    </div>
+  } @else {
   <h2 style="font-size: 1.4rem;">Foto de perfil</h2>
   <div class="card profile-photo" style="margin-bottom: 36px;">
     @if (auth.fullPhotoUrl()) {
@@ -19,6 +24,7 @@
       }
     </div>
   </div>
+  }
 
   <h2 style="font-size: 1.4rem; margin-bottom: 4px;">Contraseña</h2>
   <p class="text-muted" style="margin: 0 0 16px;">Cambiá tu contraseña de acceso al panel.</p>
