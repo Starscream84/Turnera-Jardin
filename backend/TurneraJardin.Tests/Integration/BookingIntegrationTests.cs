@@ -74,6 +74,9 @@ public class BookingIntegrationTests : IDisposable
 
         var stored = db.Appointments.AsNoTracking().Single(a => a.Id == id);
         Assert.Equal("5492235551234", stored.GuardianPhone); // stored normalized
+        Assert.Equal("Laura Pérez", stored.GuardianName);     // single field, extra spaces removed
+        Assert.Equal("Tomás Pérez", stored.ChildName);
+        Assert.Equal("Laura Pérez", db.AppointmentEvents.AsNoTracking().Single(e => e.AppointmentId == id).GuardianName);
         Assert.Single(_emails.Confirmations);
     }
 
@@ -197,12 +200,10 @@ public class BookingIntegrationTests : IDisposable
 
     private static BookAppointmentDto Booking(string phone, string email, InterviewMode mode = InterviewMode.InPerson) => new()
     {
-        GuardianFirstName = "Laura",
-        GuardianLastName = "Pérez",
+        GuardianName = "  Laura   Pérez ",
         GuardianPhone = phone,
         GuardianEmail = email,
-        ChildFirstName = "Tomás",
-        ChildLastName = "Pérez",
+        ChildName = "Tomás Pérez",
         Mode = mode
     };
 }

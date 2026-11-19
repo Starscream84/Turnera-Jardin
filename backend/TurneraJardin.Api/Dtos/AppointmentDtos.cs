@@ -19,11 +19,9 @@ public record AvailableAppointmentDto(
 /// <summary>Data the parent fills in to book an already chosen appointment.</summary>
 public class BookAppointmentDto
 {
-    [Required, MaxLength(120)]
-    public required string GuardianFirstName { get; set; }
-
-    [Required, MaxLength(120)]
-    public required string GuardianLastName { get; set; }
+    /// <summary>Guardian's first and last name, in a single field.</summary>
+    [Required(ErrorMessage = "Ingresá tu nombre y apellido."), MaxLength(200)]
+    public required string GuardianName { get; set; }
 
     /// <summary>WhatsApp number, in any usual Argentine format. Stored normalized (see <see cref="Services.PhoneNumber"/>).</summary>
     [Required(ErrorMessage = "Ingresá tu WhatsApp."), ArgentinePhone, MaxLength(30)]
@@ -35,11 +33,9 @@ public class BookAppointmentDto
     [MaxLength(200)]
     public required string GuardianEmail { get; set; }
 
-    [Required, MaxLength(120)]
-    public required string ChildFirstName { get; set; }
-
-    [Required, MaxLength(120)]
-    public required string ChildLastName { get; set; }
+    /// <summary>Child's first and last name, in a single field.</summary>
+    [Required(ErrorMessage = "Ingresá el nombre y apellido del niño/a."), MaxLength(200)]
+    public required string ChildName { get; set; }
 
     [MaxLength(500)]
     public string? Notes { get; set; }
@@ -76,8 +72,7 @@ public record BookedAppointmentDto(
     DateOnly Date,
     TimeOnly StartTime,
     TimeOnly EndTime,
-    string ChildFirstName,
-    string ChildLastName,
+    string ChildName,
     InterviewMode Mode,
     // Interview address. Null if the interview is online.
     string? Location
@@ -92,11 +87,9 @@ public record AppointmentAdminDto(
     TimeOnly StartTime,
     TimeOnly EndTime,
     AppointmentStatus Status,
-    string? GuardianFirstName,
-    string? GuardianLastName,
+    string? GuardianName,
     string? GuardianPhone,
-    string? ChildFirstName,
-    string? ChildLastName,
+    string? ChildName,
     string? Notes,
     bool ConfirmationSent,
     bool ReminderSent,

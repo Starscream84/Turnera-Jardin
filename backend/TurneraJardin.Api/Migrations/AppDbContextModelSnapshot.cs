@@ -34,11 +34,9 @@ namespace TurneraJardin.Api.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("ChildFirstName")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("ChildLastName")
-                        .HasColumnType("longtext");
+                    b.Property<string>("ChildName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<DateTime?>("ConfirmationRequestedAt")
                         .HasColumnType("datetime(6)");
@@ -58,11 +56,9 @@ namespace TurneraJardin.Api.Migrations
                     b.Property<string>("GuardianEmail")
                         .HasColumnType("longtext");
 
-                    b.Property<string>("GuardianFirstName")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("GuardianLastName")
-                        .HasColumnType("longtext");
+                    b.Property<string>("GuardianName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("GuardianPhone")
                         .HasColumnType("longtext");

@@ -11,6 +11,7 @@ El esquema de la base ya no se crea con `EnsureCreated()`: lo definen las migrac
 |---|---|
 | `20261112113341_InitialBaseline` | El esquema tal como estaba al pasar a migraciones (Teachers, Users, Appointments e índices). |
 | `20261112114020_HistoryAndPasswordChange` | `Users.MustChangePassword` y la tabla `AppointmentEvents` (historial). |
+| `20261119120000_SingleNameFields` | Nombre y apellido en un solo campo: `Appointments.ChildName` y `GuardianName` reemplazan a `ChildFirstName`/`ChildLastName` y `GuardianFirstName`/`GuardianLastName`. Une los datos existentes antes de borrar las columnas viejas. |
 
 **Bases creadas antes (Railway, bases locales del grupo).** Si la API encuentra las tablas pero no la tabla
 `__EFMigrationsHistory`, marca la baseline como aplicada **sin ejecutarla** y después corre solo las

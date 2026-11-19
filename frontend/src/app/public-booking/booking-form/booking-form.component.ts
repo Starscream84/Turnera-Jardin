@@ -11,6 +11,7 @@ import {
 import { Teacher } from "../../core/models/teacher.model";
 import { PublicShellComponent } from "../../shared/public-shell.component";
 import { STRICT_EMAIL_PATTERN, phoneValidator } from "../../shared/phone.util";
+import { fullNameValidator } from "../../shared/name.util";
 import { errorCode, errorMessage } from "../../shared/http-error.util";
 
 @Component({
@@ -46,12 +47,10 @@ export class BookingFormComponent implements OnInit {
         // Starts empty on purpose: the family says if it's the child's first interview
         // (first one = in person, the rest = online). Nothing is assumed.
         mode: ["" as InterviewMode | "", [Validators.required]],
-        guardianFirstName: ["", [Validators.required, Validators.minLength(2)]],
-        guardianLastName: ["", [Validators.required, Validators.minLength(2)]],
+        guardianName: ["", [Validators.required, Validators.maxLength(200), fullNameValidator]],
         guardianPhone: ["", [Validators.required, Validators.maxLength(30), phoneValidator]],
         guardianEmail: ["", [Validators.required, Validators.pattern(STRICT_EMAIL_PATTERN), Validators.maxLength(200)]],
-        childFirstName: ["", [Validators.required, Validators.minLength(2)]],
-        childLastName: ["", [Validators.required, Validators.minLength(2)]],
+        childName: ["", [Validators.required, Validators.maxLength(200), fullNameValidator]],
         notes: [""],
     });
 
@@ -156,7 +155,7 @@ export class BookingFormComponent implements OnInit {
             dates: `${toGoogleFormat(appointment.startTime)}/${toGoogleFormat(appointment.endTime)}`,
             // Without this Google uses the device's time zone, and the time would shift if the phone is in another zone.
             ctz: "America/Argentina/Buenos_Aires",
-            details: `Entrevista ${this.modeLabel(appointment.mode).toLowerCase()} por ${appointment.childFirstName} ${appointment.childLastName}. Número de entrevista: #${appointment.id}.`,
+            details: `Entrevista ${this.modeLabel(appointment.mode).toLowerCase()} por ${appointment.childName}. Número de entrevista: #${appointment.id}.`,
         });
         // The backend only sends the address for in-person interviews.
         if (appointment.location) {
