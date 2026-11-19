@@ -37,7 +37,11 @@ export function errorMessage(err: unknown, fallback: string): string {
       return 'No pudimos conectarnos con el servidor. Revisá tu conexión a internet y probá de nuevo.';
     }
     if (err.status === 429) {
-      return 'Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.';
+      // ACCOUNT_LOCKED and RATE_LIMITED come with different explanations: show the backend's one.
+      const msg = err.error && typeof err.error === 'object' ? err.error.message : null;
+      return typeof msg === 'string' && msg
+        ? msg
+        : 'Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.';
     }
     if (err.status >= 500) {
       // Unexpected error: the code lets the school find exactly what happened in the logs.

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from "@angular/core";
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { BookingService } from "../../core/services/booking.service";
@@ -17,6 +17,7 @@ import { errorCode, errorMessage } from "../../shared/http-error.util";
     selector: "app-booking-form",
     standalone: true,
     imports: [ReactiveFormsModule, RouterLink, PublicShellComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
     templateUrl: "./booking-form.component.html",
 })
 export class BookingFormComponent implements OnInit {
@@ -35,12 +36,6 @@ export class BookingFormComponent implements OnInit {
     error = signal<string | null>(null);
     confirmation = signal<BookedAppointment | null>(null);
 
-    /** First cycle and specialists don't offer in-person/online: the interview is always in person. */
-    canChooseMode = computed(() => {
-        const cycle = this.teacher()?.cycle;
-        return cycle !== "FirstCycle" && cycle !== "Specialist";
-    });
-
     /** Link that opens Google Calendar with the interview event already filled in, ready to save. */
     googleCalendarLink = computed(() => {
         const booked = this.confirmation();
@@ -48,7 +43,8 @@ export class BookingFormComponent implements OnInit {
     });
 
     form = this.fb.nonNullable.group({
-        // Starts empty on purpose: the family has to choose, no mode is assumed.
+        // Starts empty on purpose: the family says if it's the child's first interview
+        // (first one = in person, the rest = online). Nothing is assumed.
         mode: ["" as InterviewMode | "", [Validators.required]],
         guardianFirstName: ["", [Validators.required, Validators.minLength(2)]],
         guardianLastName: ["", [Validators.required, Validators.minLength(2)]],
@@ -68,10 +64,6 @@ export class BookingFormComponent implements OnInit {
             next: (teachers) => {
                 const teacher = teachers.find((t) => t.id === this.teacherId) ?? null;
                 this.teacher.set(teacher);
-                if (teacher?.cycle === "FirstCycle" || teacher?.cycle === "Specialist") {
-                    // First cycle and specialists: the interview is always in person, the family doesn't choose.
-                    this.form.controls.mode.setValue("InPerson");
-                }
             },
         });
 
@@ -89,7 +81,7 @@ export class BookingFormComponent implements OnInit {
                 this.error.set(
                     errorCode(err) === "APPOINTMENT_NOT_FOUND"
                         ? "Este turno ya no está disponible. Volvé atrás y elegí otro horario."
-                        : errorMessage(err, "No pudimos cargar los datos del turno."),
+                        : errorMessage(err, "No pudimos cargar los datos de la entrevista."),
                 );
                 this.loading.set(false);
             },
@@ -164,7 +156,7 @@ export class BookingFormComponent implements OnInit {
             dates: `${toGoogleFormat(appointment.startTime)}/${toGoogleFormat(appointment.endTime)}`,
             // Without this Google uses the device's time zone, and the time would shift if the phone is in another zone.
             ctz: "America/Argentina/Buenos_Aires",
-            details: `Entrevista ${this.modeLabel(appointment.mode).toLowerCase()} por ${appointment.childFirstName} ${appointment.childLastName}. Número de turno: #${appointment.id}.`,
+            details: `Entrevista ${this.modeLabel(appointment.mode).toLowerCase()} por ${appointment.childFirstName} ${appointment.childLastName}. Número de entrevista: #${appointment.id}.`,
         });
         // The backend only sends the address for in-person interviews.
         if (appointment.location) {

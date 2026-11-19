@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { initials } from '../../shared/avatar.util';
@@ -7,6 +7,7 @@ import { initials } from '../../shared/avatar.util';
   selector: 'app-admin-layout',
   standalone: true,
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './admin-layout.component.html'
 })
 export class AdminLayoutComponent {

@@ -1,4 +1,4 @@
-import { Component, inject, signal } from "@angular/core";
+import { Component, inject, signal, ChangeDetectionStrategy } from "@angular/core";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { AuthService } from "../../core/services/auth.service";
@@ -9,6 +9,7 @@ import { errorMessage } from "../../shared/http-error.util";
     selector: "app-login",
     standalone: true,
     imports: [ReactiveFormsModule, RouterLink],
+    changeDetection: ChangeDetectionStrategy.Eager,
     templateUrl: "./login.component.html",
 })
 export class LoginComponent {

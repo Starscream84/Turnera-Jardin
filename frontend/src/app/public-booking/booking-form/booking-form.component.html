@@ -2,7 +2,7 @@
     <app-public-shell heading="¡Listo!">
         <div class="card confirmed">
             <div class="ok-icon" aria-hidden="true"></div>
-            <h2>¡Turno confirmado!</h2>
+            <h2>¡Entrevista confirmada!</h2>
             <p class="text-muted">
                 Te enviamos la confirmación por email. Si no la ves, revisá la carpeta de correo no
                 deseado.
@@ -29,7 +29,7 @@
             </div>
 
             <p>
-                Número de turno: <span class="appointment-number">#{{ c.id }}</span>
+                Número de entrevista: <span class="appointment-number">#{{ c.id }}</span>
             </p>
             <p class="text-muted">Guardalo, lo necesitás si querés cancelar.</p>
 
@@ -50,10 +50,7 @@
         <div class="step-header">
             <span class="tag">Paso 3</span>
             <h2>Completá tus datos:</h2>
-            <p class="text-muted">
-                Te mandamos la confirmación del turno por email. El WhatsApp lo usa la docente para
-                recordarte la entrevista.
-            </p>
+            <p class="text-muted">Te mandamos la confirmación de la entrevista por email.</p>
         </div>
 
         @if (loading()) {
@@ -66,30 +63,27 @@
 
                 <div class="two-columns">
                     <form id="booking-form" [formGroup]="form" (ngSubmit)="confirm()" class="card">
-                        @if (canChooseMode()) {
-                            <fieldset class="form-group mode-group">
-                                <legend>¿Cómo querés tener la entrevista?</legend>
-                                <div class="mode-options">
-                                    <label class="mode-option">
-                                        <input
-                                            type="radio"
-                                            formControlName="mode"
-                                            value="InPerson"
-                                        />
-                                        Presencial
-                                    </label>
-                                    <label class="mode-option">
-                                        <input type="radio" formControlName="mode" value="Online" />
-                                        Virtual
-                                    </label>
-                                </div>
-                                @if (form.controls.mode.invalid && form.controls.mode.touched) {
-                                    <span class="field-error"
-                                        >Elegí si la entrevista es presencial o virtual.</span
-                                    >
-                                }
-                            </fieldset>
-                        }
+                        <fieldset class="form-group mode-group">
+                            <legend>¿Es la primera entrevista de tu hijo/a en el jardín?</legend>
+                            <div class="mode-options">
+                                <label class="mode-option">
+                                    <input type="radio" formControlName="mode" value="InPerson" />
+                                    Sí, es la primera (presencial)
+                                </label>
+                                <label class="mode-option">
+                                    <input type="radio" formControlName="mode" value="Online" />
+                                    No, ya tuvo entrevistas (virtual)
+                                </label>
+                            </div>
+                            <span class="text-muted"
+                                >La primera entrevista es presencial; las siguientes son virtuales.</span
+                            >
+                            @if (form.controls.mode.invalid && form.controls.mode.touched) {
+                                <span class="field-error"
+                                    >Indicá si es la primera entrevista de tu hijo/a.</span
+                                >
+                            }
+                        </fieldset>
 
                         <div class="form-group">
                             <label for="childFirstName">Nombre del niño/a</label>
@@ -163,13 +157,10 @@
                                 form.controls.guardianPhone.touched
                             ) {
                                 <span class="field-error"
-                                    >Ingresá tu WhatsApp con característica, por ejemplo 223 555-1234.</span
+                                    >Ingresá tu WhatsApp con característica, por ejemplo 223
+                                    555-1234.</span
                                 >
                             }
-                            <span class="text-muted"
-                                >La docente te va a escribir a este número para recordarte la
-                                entrevista.</span
-                            >
                         </div>
 
                         <div class="form-group">
@@ -185,10 +176,12 @@
                                 form.controls.guardianEmail.invalid &&
                                 form.controls.guardianEmail.touched
                             ) {
-                                <span class="field-error">Ingresá un email válido (por ejemplo, nombre@gmail.com).</span>
+                                <span class="field-error"
+                                    >Ingresá un email válido (por ejemplo, nombre@gmail.com).</span
+                                >
                             }
                             <span class="text-muted"
-                                >A este email te mandamos la confirmación del turno.</span
+                                >A este email te mandamos la confirmación de la entrevista.</span
                             >
                         </div>
 
@@ -220,7 +213,7 @@
                             <div class="detail">
                                 <span>Modalidad</span
                                 ><strong>{{
-                                    modeLabel(form.controls.mode.value) || "A elegir"
+                                    modeLabel(form.controls.mode.value) || "A definir"
                                 }}</strong>
                             </div>
                             @if (form.controls.mode.value === "InPerson" && appointment.location) {

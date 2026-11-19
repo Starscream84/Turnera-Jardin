@@ -31,7 +31,7 @@ Estado al 27/10/2026: todo el trabajo vive en `main`, que es la rama que desplie
             ▼
 ┌───────────────────────────┐     HTTPS/JSON     ┌──────────────────────────────┐
 │ Vercel                    │ ─────────────────▶ │ Railway — servicio backend   │
-│ Angular 21 (sitio estático)│                    │ ASP.NET Core 8 (Docker, :8080)│
+│ Angular 22 (sitio estático)│                    │ ASP.NET Core 8 (Docker, :8080)│
 └───────────────────────────┘                    └───────┬──────────────┬───────┘
                                                          │ red interna  │ HTTPS
                                                          ▼              ▼
@@ -44,7 +44,7 @@ Estado al 27/10/2026: todo el trabajo vive en `main`, que es la rama que desplie
 | Capa | Tecnología |
 |---|---|
 | Backend | ASP.NET Core 8 Web API, EF Core con Pomelo (MySQL), JWT + BCrypt, rate limiting nativo |
-| Frontend | Angular 21, standalone components, signals, Reactive Forms, sin librerías de UI. Build con `@angular/build`. Estilos globales en `frontend/src/styles.css` (no hay CSS por componente) |
+| Frontend | Angular 22, standalone components, signals, Reactive Forms, sin librerías de UI. Build con `@angular/build`. Estilos globales en `frontend/src/styles.css` (no hay CSS por componente) |
 | Base | MySQL 8.4 en Railway; MySQL 8 local para desarrollo |
 | Emails | API HTTP de Brevo (`BrevoEmailService`) |
 
@@ -185,14 +185,41 @@ npm start
 
 Queda en `http://localhost:4200` y llama a la API en `http://localhost:5275/api` (`environment.ts`). Para verificar que compila igual que en Vercel: `npx ng build`.
 
+### Tests
+
+**Backend** (xUnit, `backend/TurneraJardin.Tests`):
+
+```bash
+cd backend
+dotnet test
+```
+
+- Los tests unitarios corren siempre.
+- Los de integración (`Integration/`) usan un MySQL real: crean una base descartable por test (`tj_test_...`) y la borran al terminar. Prueban migraciones (base nueva, base vieja sin historial, nombre de 48 caracteres como el de Railway), reserva con 10 familias a la vez, reintento de la misma familia, cancelación e historial. Sin la variable `TURNERA_TEST_MYSQL` se saltean. Para correrlos en local, con un usuario que pueda crear y borrar bases:
+
+  ```bash
+  TURNERA_TEST_MYSQL="Server=127.0.0.1;Port=3306;User=root;Password=<tu-contraseña-local>" dotnet test
+  ```
+
+**Frontend** (Vitest, con el builder `@angular/build:unit-test`):
+
+```bash
+cd frontend
+npm test
+```
+
+Specs en `src/app/**/*.spec.ts`: teléfono y email (mismos casos que `PhoneNumberTests.cs` del backend), mensajes de error, `AuthService`, guards e interceptor.
+
+**CI** (`.github/workflows/ci.yml`): en cada PR y push a `main` corre todo lo anterior. El backend usa un servicio MySQL 8.4 (misma versión que Railway), así que en GitHub los tests de integración no se saltean.
+
 ## 5. Base de datos
 
 ### Cómo se crea el esquema
 
-- **No se usan EF Migrations.** Al arrancar, `DbSeeder.Seed` llama a `Database.EnsureCreated()`, que crea las tablas solo si la base está vacía. **Nunca modifica tablas existentes.**
+- **EF Migrations** (desde el 12/11, carpeta `backend/TurneraJardin.Api/Migrations`). Al arrancar, `DbSeeder.Seed` aplica las migraciones pendientes. Una base creada antes con `EnsureCreated()` se marca en la migración base (`InitialBaseline`) sin ejecutarla. Detalle en [`migraciones-y-errores.md`](migraciones-y-errores.md).
 - El seed solo carga datos si la tabla `Teachers` está vacía. Cambiar `DbSeeder.cs` no cambia los datos de una base que ya existe.
 
-Tablas: `Teachers`, `Appointments`, `Users`. Los enums se guardan como entero:
+Tablas: `Teachers`, `Appointments`, `Users`, `AppointmentEvents` (historial) y `__EFMigrationsHistory`. Los enums se guardan como entero:
 
 | Enum | Valores |
 |---|---|
@@ -205,9 +232,16 @@ Un valor nuevo de enum va siempre **al final**: reordenar cambiaría en silencio
 
 ### ⚠️ Cambios de modelo
 
-Cada columna nueva, renombre o cambio de tipo en un modelo necesita su `ALTER TABLE` **a mano en la base de Railway**, antes o junto con el deploy. Si no, la API devuelve 500 en cuanto consulta esa tabla (ver sección 13). Lo mismo para cada base local del equipo (o borrarla y dejar que se recree).
+Cada columna nueva, renombre o cambio de tipo en un modelo necesita su migración:
 
-Ejemplo de lo que hubo que hacer el 23/10: `ALTER TABLE Docentes ADD COLUMN Ciclo INT NULL;`. El renombre completo al inglés del 24/10 está en `backend/scripts/rename-to-english.sql` (ya aplicado en producción; sirve para bases locales creadas antes de esa fecha).
+```bash
+cd backend
+dotnet ef migrations add <NombreDescriptivo> --project TurneraJardin.Api
+```
+
+Revisar el archivo generado y commitearlo con el cambio de modelo. La migración se aplica sola en Railway al arrancar la versión nueva. Hacer backup antes de mergear una migración que borre o cambie columnas. El CI falla si el modelo cambió y falta la migración (`has-pending-model-changes`).
+
+Antes de las migraciones había que hacer `ALTER TABLE` a mano (los scripts viejos están en `backend/scripts/`). Ya no hace falta.
 
 ### Entrar a la base de producción
 
@@ -241,9 +275,9 @@ Los backups tienen datos personales de familias: no se suben al repo ni se compa
 `main` es la única rama permanente. Railway y Vercel despliegan solos cada push a `main`.
 
 1. Rama nueva desde `main` actualizado: `git checkout main && git pull && git checkout -b <tipo>/<descripcion>`.
-2. Probar en local: `dotnet build` y `npx ng build`.
+2. Probar en local: `dotnet test` en `backend/`, `npm test` y `npx ng build` en `frontend/`.
 3. Push y Pull Request con base `main`.
-4. Si el cambio toca un modelo: preparar el `ALTER TABLE` y aplicarlo en Railway al mergear.
+4. Si el cambio toca un modelo: agregar la migración (sección 5) y hacer backup de Railway antes de mergear.
 5. Mergear y esperar los dos deploys (Railway tarda unos minutos más que Vercel).
 6. Probar en producción la parte tocada.
 7. Borrar la rama (local y remota) y volver a `main`.
@@ -278,7 +312,7 @@ Lecciones aprendidas:
 |---|---|
 | Se reserva a partir del día siguiente (hora de Argentina; Railway corre en UTC, por eso existe `ArgentinaDate`) | Backend (`AppointmentsController.Book`) |
 | Se reserva hasta 180 días hacia adelante | Backend (`ArgentinaDate.BookingDaysAhead`) y frontend (`BOOKING_DAYS_AHEAD`): mantener iguales |
-| Primer ciclo y especialistas: solo presencial. Segundo ciclo o sin ciclo: la familia elige | Backend y frontend |
+| Primera entrevista del niño/a: presencial; las siguientes: virtual. La familia lo indica en el paso 3, igual para todos los ciclos | Backend y frontend |
 | Dos familias no pueden tomar el mismo turno | `Book` es un único `UPDATE … WHERE Status = Available` (la segunda recibe 409). Si la misma familia reintenta (mismo teléfono y email), recibe 200 con la misma reserva |
 | Una docente desactivada no aparece en la reserva pública, no se le puede reservar ni generar turnos | Backend |
 | Teléfonos: se guardan normalizados como `549` + característica + número (acepta `0223 15 555-1234`, `+54 9 …`, `(223) …`) | Backend (`Services/PhoneNumber.cs`) y frontend (`shared/phone.util.ts`): misma lógica |
@@ -349,7 +383,7 @@ Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 - Secretos de producción (`Jwt__Key`, API key de Brevo, contraseña de MySQL) **solo en Railway**. `appsettings.json` los tiene vacíos y `appsettings.Development.json` está en `.gitignore`.
 - Contraseña del admin y de MySQL de producción ya cambiadas respecto de las iniciales.
 - `gitleaks detect -v` (23/10): 12 hallazgos, todos claves y contraseñas de **desarrollo** que quedaron en el historial (distintas de las de producción). No se reescribió el historial. Correrlo de nuevo antes de cada entrega.
-- Auditorías: `dotnet list package --vulnerable` sin hallazgos; `npm audit --omit=dev` con 0 vulnerabilidades (las restantes son de desarrollo, en Karma).
+- Auditorías (12/11, Angular 22): `dotnet list package --vulnerable` sin hallazgos; `npm audit` con 0 vulnerabilidades, incluidas las de desarrollo. Karma se reemplazó por Vitest.
 - Las fotos de perfil se validan por tipo y tamaño.
 
 ## 13. Problemas conocidos y cómo resolverlos
@@ -368,7 +402,6 @@ Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 
 - Decidir el hosting a largo plazo y hacer backup antes de migrar.
 - Prueba completa en producción después de la traducción al inglés y limpieza de variables viejas en Railway.
-- Pasar a EF Migrations para no depender de `ALTER TABLE` manuales.
 - Backups periódicos de la base.
 - Tope de anticipación de reserva también en el backend.
 - "Olvidé mi contraseña" sin estar logueado.
@@ -376,4 +409,4 @@ Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 - Definir cómo recibe la familia el link de la videollamada en entrevistas virtuales.
 - Registrar la respuesta de la familia a la confirmación (confirmó / no asiste).
 - Editar el teléfono de la familia en un turno reservado; normalizar números con "15".
-- Tests automatizados; reemplazar Karma.
+- Tests de componentes del frontend (hoy hay specs de utilidades, servicio de sesión, guards e interceptor).

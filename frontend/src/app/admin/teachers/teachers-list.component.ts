@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AdminTeachersService } from '../../core/services/admin-teachers.service';
 import { TeacherAdmin } from '../../core/models/teacher.model';
@@ -7,6 +7,7 @@ import { TeacherAdmin } from '../../core/models/teacher.model';
   selector: 'app-teachers-list',
   standalone: true,
   imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './teachers-list.component.html'
 })
 export class TeachersListComponent implements OnInit {

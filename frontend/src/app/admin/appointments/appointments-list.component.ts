@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from "@angular/core";
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule } from "@angular/forms";
 import { AdminAppointmentsService, AdminAppointmentsFilter, PAGE_SIZE } from "../../core/services/admin-appointments.service";
@@ -19,6 +19,7 @@ import { errorMessage } from "../../shared/http-error.util";
     selector: "app-appointments-list",
     standalone: true,
     imports: [ReactiveFormsModule, RouterLink],
+    changeDetection: ChangeDetectionStrategy.Eager,
     templateUrl: "./appointments-list.component.html",
 })
 export class AppointmentsListComponent implements OnInit {
