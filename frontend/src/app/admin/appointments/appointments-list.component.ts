@@ -233,7 +233,7 @@ export class AppointmentsListComponent implements OnInit {
             `${greeting}, te escribimos del jardín para recordarte la entrevista por ${child} ` +
             `con ${appointment.teacherName}: ${date} a las ${this.formatTime(appointment.startTime)} hs${mode}.\n\n` +
             `¿Nos confirmás si vas a poder asistir? Respondé este mensaje con SÍ o NO.\n\n` +
-            `Turno N.º ${appointment.id}. ¡Gracias!`
+            `Entrevista N.º ${appointment.id}. ¡Gracias!`
         );
     }
 

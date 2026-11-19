@@ -45,7 +45,7 @@ export class CancelAppointmentComponent {
                 this.sending.set(false);
                 // The backend answers the same for "doesn't exist" and "phone doesn't match" (on purpose).
                 this.error.set(
-                    errorMessage(err, "No pudimos cancelar el turno. Intentá de nuevo en un momento."),
+                    errorMessage(err, "No pudimos cancelar la entrevista. Intentá de nuevo en un momento."),
                 );
             },
         });

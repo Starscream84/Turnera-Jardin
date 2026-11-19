@@ -20,7 +20,7 @@ public record AvailableAppointmentDto(
 public class BookAppointmentDto
 {
     /// <summary>Guardian's first and last name, in a single field.</summary>
-    [Required(ErrorMessage = "Ingresá tu nombre y apellido."), MaxLength(200)]
+    [Required(ErrorMessage = "Ingresá el nombre y apellido del tutor/a."), MaxLength(200)]
     public required string GuardianName { get; set; }
 
     /// <summary>WhatsApp number, in any usual Argentine format. Stored normalized (see <see cref="Services.PhoneNumber"/>).</summary>

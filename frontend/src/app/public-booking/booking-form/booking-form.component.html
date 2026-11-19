@@ -44,7 +44,7 @@
         </div>
     </app-public-shell>
 } @else {
-    <app-public-shell heading="Turnos" [step]="3">
+    <app-public-shell heading="Entrevistas" [step]="3">
         <a routerLink="/reservar/{{ teacherId }}" class="back-link">&larr; Elegir otro horario</a>
 
         <div class="step-header">
@@ -68,16 +68,13 @@
                             <div class="mode-options">
                                 <label class="mode-option">
                                     <input type="radio" formControlName="mode" value="InPerson" />
-                                    Sí, es la primera (presencial)
+                                    Sí, es la primera
                                 </label>
                                 <label class="mode-option">
                                     <input type="radio" formControlName="mode" value="Online" />
-                                    No, ya tuvo entrevistas (virtual)
+                                    No, ya tuvo entrevistas
                                 </label>
                             </div>
-                            <span class="text-muted"
-                                >La primera entrevista es presencial; las siguientes son virtuales.</span
-                            >
                             @if (form.controls.mode.invalid && form.controls.mode.touched) {
                                 <span class="field-error"
                                     >Indicá si es la primera entrevista de tu hijo/a.</span
@@ -100,7 +97,7 @@
                         </div>
 
                         <div class="form-group">
-                            <label for="guardianName">Tu nombre y apellido</label>
+                            <label for="guardianName">Nombre y apellido del tutor/a</label>
                             <input
                                 id="guardianName"
                                 type="text"
@@ -111,8 +108,8 @@
                                 <span class="field-error">
                                     {{
                                         form.controls.guardianName.hasError("required")
-                                            ? "Ingresá tu nombre y apellido."
-                                            : "Escribí tu nombre y tu apellido."
+                                            ? "Ingresá el nombre y apellido del tutor/a."
+                                            : "Escribí el nombre y el apellido del tutor/a."
                                     }}
                                 </span>
                             }
@@ -168,7 +165,7 @@
 
                     <aside class="summary">
                         <div class="summary-header">
-                            <h3>Tu turno</h3>
+                            <h3>Tu entrevista</h3>
                             <p>Revisá los datos antes de confirmar</p>
                         </div>
                         <div class="summary-body">
@@ -203,7 +200,7 @@
                                 class="btn btn-primary btn-block"
                                 [disabled]="sending()"
                             >
-                                {{ sending() ? "Confirmando..." : "Confirmar turno" }}
+                                {{ sending() ? "Confirmando..." : "Confirmar entrevista" }}
                             </button>
                             <p class="whatsapp-note">Te llega la confirmación por email.</p>
                         </div>
