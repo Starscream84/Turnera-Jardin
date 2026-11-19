@@ -1370,6 +1370,34 @@ td small {
     font-size: 0.85rem;
 }
 
+/* Comentario que deja la familia al reservar (campo opcional del formulario).
+   El texto usa pre-line para respetar los saltos de línea del textarea y deja
+   cortar las líneas aunque la celda tenga white-space: nowrap. */
+.family-notes {
+    margin: 6px 0 0;
+    max-width: 280px;
+    padding: 6px 10px;
+    border-left: 3px solid var(--orange);
+    border-radius: 0 6px 6px 0;
+    background: var(--orange-light);
+    color: var(--color-text);
+    font-size: 0.85rem;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.family-notes-text {
+    white-space: pre-line;
+}
+
+.family-notes-label {
+    display: block;
+    color: var(--orange-text);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 th {
     background: var(--blue);
     color: #fff;
@@ -1728,6 +1756,21 @@ tbody tr:hover td {
 
     .notes-col {
         width: 30%;
+    }
+
+    .print-table .family-notes {
+        max-width: none;
+        padding: 0;
+        border: 0;
+        background: none;
+        font-size: 9pt;
+        font-style: italic;
+    }
+
+    .print-table .family-notes-label {
+        display: inline;
+        color: inherit;
+        font-size: inherit;
     }
 
     .print-total {
