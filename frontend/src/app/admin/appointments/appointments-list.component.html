@@ -163,12 +163,9 @@
                                 }
                             </td>
                             <td>
-                                @if (appointment.childFirstName) {
-                                    {{ appointment.childFirstName }} {{ appointment.childLastName }}
-                                    <small
-                                        >{{ appointment.guardianFirstName }}
-                                        {{ appointment.guardianLastName }}</small
-                                    >
+                                @if (appointment.childName) {
+                                    {{ appointment.childName }}
+                                    <small>{{ appointment.guardianName }}</small>
                                     @if (appointment.guardianEmail) {
                                         <small>{{ appointment.guardianEmail }}</small>
                                     }
@@ -312,9 +309,9 @@
                             <td>{{ appointment.teacherName }}</td>
                         }
                         <td>{{ modeLabel(appointment.mode) }}</td>
-                        <td>{{ appointment.childFirstName }} {{ appointment.childLastName }}</td>
+                        <td>{{ appointment.childName }}</td>
                         <td>
-                            {{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}
+                            {{ appointment.guardianName }}
                             @if (appointment.notes) {
                                 <p class="family-notes">
                                     <span class="family-notes-label">Comentario:</span>

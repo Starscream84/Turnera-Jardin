@@ -158,10 +158,8 @@ public class AppointmentsController : ControllerBase
         var mode = dto.Mode!.Value;
 
         var bookedAt = DateTime.UtcNow;
-        var guardianFirstName = dto.GuardianFirstName.Trim();
-        var guardianLastName = dto.GuardianLastName.Trim();
-        var childFirstName = dto.ChildFirstName.Trim();
-        var childLastName = dto.ChildLastName.Trim();
+        var guardianName = NormalizeName(dto.GuardianName);
+        var childName = NormalizeName(dto.ChildName);
         var notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
         var firstDay = ArgentinaDate.FirstBookableDay();
         var lastDay = ArgentinaDate.LastBookableDay();
@@ -182,12 +180,10 @@ public class AppointmentsController : ControllerBase
                             && a.Teacher!.IsActive)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(a => a.Status, AppointmentStatus.Booked)
-                    .SetProperty(a => a.GuardianFirstName, guardianFirstName)
-                    .SetProperty(a => a.GuardianLastName, guardianLastName)
+                    .SetProperty(a => a.GuardianName, guardianName)
                     .SetProperty(a => a.GuardianPhone, phone)
                     .SetProperty(a => a.GuardianEmail, email)
-                    .SetProperty(a => a.ChildFirstName, childFirstName)
-                    .SetProperty(a => a.ChildLastName, childLastName)
+                    .SetProperty(a => a.ChildName, childName)
                     .SetProperty(a => a.Notes, notes)
                     .SetProperty(a => a.Mode, (InterviewMode?)mode)
                     .SetProperty(a => a.BookedAt, (DateTime?)bookedAt)
@@ -198,11 +194,9 @@ public class AppointmentsController : ControllerBase
             if (updated == 1)
             {
                 var booked = appointment.SnapshotForEmail();
-                booked.GuardianFirstName = guardianFirstName;
-                booked.GuardianLastName = guardianLastName;
+                booked.GuardianName = guardianName;
                 booked.GuardianPhone = phone;
-                booked.ChildFirstName = childFirstName;
-                booked.ChildLastName = childLastName;
+                booked.ChildName = childName;
                 booked.Mode = mode;
                 _db.AppointmentEvents.Add(AppointmentEvent.From(booked, AppointmentEventType.Booked));
                 await _db.SaveChangesAsync(ct);
@@ -229,8 +223,7 @@ public class AppointmentsController : ControllerBase
         _logger.LogInformation("Appointment {AppointmentId} booked", id);
 
         appointment.Status = AppointmentStatus.Booked;
-        appointment.ChildFirstName = childFirstName;
-        appointment.ChildLastName = childLastName;
+        appointment.ChildName = childName;
         appointment.Mode = mode;
         return Ok(ToBookedDto(appointment));
     }
@@ -287,14 +280,17 @@ public class AppointmentsController : ControllerBase
         PhoneNumber.SameNumber(normalizedPhone, appointment.GuardianPhone)
         && string.Equals(appointment.GuardianEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Full name as typed in the form, without extra spaces ("  Ana   María  Pérez " → "Ana María Pérez").</summary>
+    private static string NormalizeName(string name) =>
+        string.Join(' ', name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
     private static BookedAppointmentDto ToBookedDto(Appointment appointment) => new(
         appointment.Id,
         appointment.Teacher!.FullName,
         appointment.Date,
         appointment.StartTime,
         appointment.EndTime,
-        appointment.ChildFirstName ?? "",
-        appointment.ChildLastName ?? "",
+        appointment.ChildName ?? "",
         appointment.Mode ?? InterviewMode.InPerson,
         appointment.Mode == InterviewMode.InPerson ? appointment.Location : null);
 }

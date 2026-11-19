@@ -86,60 +86,35 @@
                         </fieldset>
 
                         <div class="form-group">
-                            <label for="childFirstName">Nombre del niño/a</label>
-                            <input
-                                id="childFirstName"
-                                type="text"
-                                formControlName="childFirstName"
-                            />
-                            @if (
-                                form.controls.childFirstName.invalid &&
-                                form.controls.childFirstName.touched
-                            ) {
-                                <span class="field-error">Ingresá el nombre del niño/a.</span>
+                            <label for="childName">Nombre y apellido del niño/a</label>
+                            <input id="childName" type="text" formControlName="childName" />
+                            @if (form.controls.childName.invalid && form.controls.childName.touched) {
+                                <span class="field-error">
+                                    {{
+                                        form.controls.childName.hasError("required")
+                                            ? "Ingresá el nombre y apellido del niño/a."
+                                            : "Escribí el nombre y el apellido del niño/a."
+                                    }}
+                                </span>
                             }
                         </div>
 
                         <div class="form-group">
-                            <label for="childLastName">Apellido del niño/a</label>
-                            <input id="childLastName" type="text" formControlName="childLastName" />
-                            @if (
-                                form.controls.childLastName.invalid &&
-                                form.controls.childLastName.touched
-                            ) {
-                                <span class="field-error">Ingresá el apellido del niño/a.</span>
-                            }
-                        </div>
-
-                        <div class="form-group">
-                            <label for="guardianFirstName">Tu nombre</label>
+                            <label for="guardianName">Tu nombre y apellido</label>
                             <input
-                                id="guardianFirstName"
+                                id="guardianName"
                                 type="text"
-                                formControlName="guardianFirstName"
-                                autocomplete="given-name"
+                                formControlName="guardianName"
+                                autocomplete="name"
                             />
-                            @if (
-                                form.controls.guardianFirstName.invalid &&
-                                form.controls.guardianFirstName.touched
-                            ) {
-                                <span class="field-error">Ingresá tu nombre.</span>
-                            }
-                        </div>
-
-                        <div class="form-group">
-                            <label for="guardianLastName">Tu apellido</label>
-                            <input
-                                id="guardianLastName"
-                                type="text"
-                                formControlName="guardianLastName"
-                                autocomplete="family-name"
-                            />
-                            @if (
-                                form.controls.guardianLastName.invalid &&
-                                form.controls.guardianLastName.touched
-                            ) {
-                                <span class="field-error">Ingresá tu apellido.</span>
+                            @if (form.controls.guardianName.invalid && form.controls.guardianName.touched) {
+                                <span class="field-error">
+                                    {{
+                                        form.controls.guardianName.hasError("required")
+                                            ? "Ingresá tu nombre y apellido."
+                                            : "Escribí tu nombre y tu apellido."
+                                    }}
+                                </span>
                             }
                         </div>
 

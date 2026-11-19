@@ -60,17 +60,17 @@ public class AppointmentEvent
         StartTime = appointment.StartTime,
         Type = type,
         Mode = appointment.Mode,
-        GuardianName = Join(appointment.GuardianFirstName, appointment.GuardianLastName),
+        GuardianName = Truncate(appointment.GuardianName),
         GuardianPhone = appointment.GuardianPhone,
-        ChildName = Join(appointment.ChildFirstName, appointment.ChildLastName),
+        ChildName = Truncate(appointment.ChildName),
         UserId = userId,
         UserName = userName,
         CreatedAt = DateTime.UtcNow
     };
 
-    private static string? Join(string? first, string? last)
+    private static string? Truncate(string? name)
     {
-        var full = $"{first} {last}".Trim();
+        var full = name?.Trim() ?? "";
         return full.Length == 0 ? null : full.Length > 200 ? full[..200] : full;
     }
 }

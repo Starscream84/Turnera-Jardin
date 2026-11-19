@@ -67,6 +67,40 @@ public class MigrationsIntegrationTests
         Assert.Equal(0L, database.Scalar("SELECT COUNT(*) FROM AppointmentEvents")); // created by the later migration
     }
 
+    /// <summary>
+    /// SingleNameFields: bookings made with separate first/last name columns keep the full name in
+    /// ChildName / GuardianName, and free slots stay with NULL names.
+    /// </summary>
+    [MySqlFact]
+    public void SingleNameFields_JoinsTheExistingFirstAndLastNames()
+    {
+        using var database = new MySqlDatabase();
+        using (var db = database.CreateContext())
+        {
+            db.Database.Migrate("20261112114020_HistoryAndPasswordChange"); // last schema with two columns each
+        }
+
+        database.Execute(
+            "INSERT INTO Teachers (FirstName, LastName, Email, Classroom, Cycle, IsActive) " +
+            "VALUES ('Ana', 'Gómez', 'ana@example.com', 'Sala Azul', 2, 1)");
+        database.Execute(
+            "INSERT INTO Appointments (TeacherId, Date, StartTime, EndTime, Status, GuardianFirstName, GuardianLastName, " +
+            "ChildFirstName, ChildLastName, ConfirmationSent, ReminderSent, CreatedAt) VALUES " +
+            "(1, '2026-12-01', '09:00', '09:20', 1, ' Laura ', 'Pérez', 'Tomás', NULL, 0, 0, NOW()), " +
+            "(1, '2026-12-01', '09:20', '09:40', 0, NULL, NULL, NULL, NULL, 0, 0, NOW())");
+
+        database.Seed();
+
+        using var after = database.CreateContext();
+        Assert.Empty(after.Database.GetPendingMigrations());
+        var booked = after.Appointments.AsNoTracking().Single(a => a.StartTime == new TimeOnly(9, 0));
+        Assert.Equal("Laura Pérez", booked.GuardianName);
+        Assert.Equal("Tomás", booked.ChildName);
+        var free = after.Appointments.AsNoTracking().Single(a => a.StartTime == new TimeOnly(9, 20));
+        Assert.Null(free.GuardianName);
+        Assert.Null(free.ChildName);
+    }
+
     [MySqlFact]
     public void Seed_TwiceInARow_ChangesNothing()
     {

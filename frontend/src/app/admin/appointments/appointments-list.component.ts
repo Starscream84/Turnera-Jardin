@@ -166,7 +166,7 @@ export class AppointmentsListComponent implements OnInit {
 
     cancel(appointment: AppointmentAdmin): void {
         const confirmed = confirm(
-            `¿Cancelar el turno de ${appointment.childFirstName} ${appointment.childLastName} (responsable: ${appointment.guardianFirstName} ${appointment.guardianLastName})?`,
+            `¿Cancelar el turno de ${appointment.childName} (responsable: ${appointment.guardianName})?`,
         );
         if (!confirmed) return;
 
@@ -221,9 +221,9 @@ export class AppointmentsListComponent implements OnInit {
             day: "numeric",
             month: "long",
         });
-        const guardian = `${appointment.guardianFirstName ?? ""} ${appointment.guardianLastName ?? ""}`.trim();
+        const guardian = (appointment.guardianName ?? "").trim();
         const greeting = guardian ? `Hola ${guardian}` : "Hola";
-        const child = `${appointment.childFirstName ?? ""} ${appointment.childLastName ?? ""}`.trim() || "tu hijo/a";
+        const child = (appointment.childName ?? "").trim() || "tu hijo/a";
         // In person: the address is included so the family knows where to go.
         const place =
             appointment.mode === "InPerson" && appointment.location ? `, en ${appointment.location}` : "";

@@ -18,12 +18,12 @@ export const INTERVIEW_MODE_LABELS: Record<InterviewMode, string> = {
 };
 
 export interface BookAppointmentRequest {
-  guardianFirstName: string;
-  guardianLastName: string;
+  /** Guardian's first and last name, in a single field. */
+  guardianName: string;
   guardianPhone: string;
   guardianEmail: string;
-  childFirstName: string;
-  childLastName: string;
+  /** Child's first and last name, in a single field. */
+  childName: string;
   notes?: string;
   mode: InterviewMode;
 }
@@ -34,8 +34,7 @@ export interface BookedAppointment {
   date: string;
   startTime: string;
   endTime: string;
-  childFirstName: string;
-  childLastName: string;
+  childName: string;
   mode: InterviewMode;
   /** Interview address. null if the interview is online. */
   location: string | null;
@@ -59,11 +58,9 @@ export interface AppointmentAdmin {
   startTime: string;
   endTime: string;
   status: AppointmentStatus;
-  guardianFirstName: string | null;
-  guardianLastName: string | null;
+  guardianName: string | null;
   guardianPhone: string | null;
-  childFirstName: string | null;
-  childLastName: string | null;
+  childName: string | null;
   notes: string | null;
   confirmationSent: boolean;
   reminderSent: boolean;

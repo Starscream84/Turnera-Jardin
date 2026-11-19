@@ -81,7 +81,7 @@ public class AdminAppointmentsController : ControllerBase
             .Take(pageSize)
             .Select(a => new AppointmentAdminDto(
                 a.Id, a.TeacherId, a.Teacher!.FirstName + " " + a.Teacher!.LastName, a.Date, a.StartTime, a.EndTime,
-                a.Status, a.GuardianFirstName, a.GuardianLastName, a.GuardianPhone, a.ChildFirstName, a.ChildLastName, a.Notes,
+                a.Status, a.GuardianName, a.GuardianPhone, a.ChildName, a.Notes,
                 a.ConfirmationSent, a.ReminderSent, a.Mode, a.ConfirmationRequestedAt, a.GuardianEmail, a.Location))
             .ToListAsync();
 

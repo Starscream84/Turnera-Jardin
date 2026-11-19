@@ -183,7 +183,7 @@ public class BrevoEmailService : IEmailService
         return at <= 2 ? $"***{email[Math.Max(at, 0)..]}" : $"{email[..2]}***{email[at..]}";
     }
 
-    private static string GuardianFullName(Appointment a) => $"{a.GuardianFirstName} {a.GuardianLastName}".Trim();
+    private static string GuardianFullName(Appointment a) => a.GuardianName?.Trim() ?? "";
 
-    private static string ChildFullName(Appointment a) => $"{a.ChildFirstName} {a.ChildLastName}".Trim();
+    private static string ChildFullName(Appointment a) => a.ChildName?.Trim() ?? "";
 }

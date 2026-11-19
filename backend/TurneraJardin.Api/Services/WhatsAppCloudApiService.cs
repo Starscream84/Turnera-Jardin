@@ -29,7 +29,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         var parameters = new[]
         {
-            $"{appointment.ChildFirstName} {appointment.ChildLastName}".Trim(),
+            (appointment.ChildName ?? "").Trim(),
             appointment.Teacher?.FullName ?? "",
             FormatDate(appointment.Date),
             appointment.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture)
@@ -42,7 +42,7 @@ public class WhatsAppCloudApiService : IWhatsAppService
     {
         var parameters = new[]
         {
-            $"{appointment.ChildFirstName} {appointment.ChildLastName}".Trim(),
+            (appointment.ChildName ?? "").Trim(),
             appointment.Teacher?.FullName ?? "",
             appointment.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture)
         };

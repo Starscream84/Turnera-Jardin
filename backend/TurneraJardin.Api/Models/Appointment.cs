@@ -38,11 +38,9 @@ public class Appointment
     public string? Location { get; set; }
 
     // Data filled in when booking
-    /// <summary>First name of the guardian (parent) who booked.</summary>
-    public string? GuardianFirstName { get; set; }
-
-    /// <summary>Last name of the guardian (parent) who booked.</summary>
-    public string? GuardianLastName { get; set; }
+    /// <summary>Full name (first and last name, in a single field) of the guardian (parent) who booked.</summary>
+    [MaxLength(200)]
+    public string? GuardianName { get; set; }
 
     /// <summary>Phone number in international E.164 format without "+" (e.g. 5492235551234), ready for the WhatsApp Cloud API.</summary>
     public string? GuardianPhone { get; set; }
@@ -50,11 +48,9 @@ public class Appointment
     /// <summary>Email address the booking confirmation is sent to.</summary>
     public string? GuardianEmail { get; set; }
 
-    /// <summary>Child's first name.</summary>
-    public string? ChildFirstName { get; set; }
-
-    /// <summary>Child's last name.</summary>
-    public string? ChildLastName { get; set; }
+    /// <summary>Child's full name (first and last name, in a single field).</summary>
+    [MaxLength(200)]
+    public string? ChildName { get; set; }
 
     public string? Notes { get; set; }
 
@@ -83,12 +79,10 @@ public class Appointment
     public void ClearBooking()
     {
         Status = AppointmentStatus.Available;
-        GuardianFirstName = null;
-        GuardianLastName = null;
+        GuardianName = null;
         GuardianPhone = null;
         GuardianEmail = null;
-        ChildFirstName = null;
-        ChildLastName = null;
+        ChildName = null;
         Notes = null;
         Mode = null;
         BookedAt = null;
