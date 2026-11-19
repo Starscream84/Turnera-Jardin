@@ -36,13 +36,13 @@ public class BrevoEmailService : IEmailService
 
     public Task<bool> SendConfirmationAsync(Appointment appointment, CancellationToken ct = default)
     {
-        var subject = $"Turno confirmado: {FormatDate(appointment.Date)} a las {FormatTime(appointment.StartTime)} hs";
+        var subject = $"Entrevista confirmada: {FormatDate(appointment.Date)} a las {FormatTime(appointment.StartTime)} hs";
         return SendAsync(appointment, "confirmation", subject, () => BuildConfirmationHtml(appointment), ct);
     }
 
     public Task<bool> SendCancellationAsync(Appointment appointment, CancellationToken ct = default)
     {
-        var subject = $"Turno cancelado: {FormatDate(appointment.Date)} a las {FormatTime(appointment.StartTime)} hs";
+        var subject = $"Entrevista cancelada: {FormatDate(appointment.Date)} a las {FormatTime(appointment.StartTime)} hs";
         return SendAsync(appointment, "cancellation", subject, () => BuildCancellationHtml(appointment), ct);
     }
 
@@ -110,18 +110,18 @@ public class BrevoEmailService : IEmailService
         var frontendUrl = _options.FrontendUrl.TrimEnd('/');
         var bookAgain = string.IsNullOrWhiteSpace(frontendUrl)
             ? ""
-            : $"<p>Podés reservar un nuevo turno desde <a href=\"{E(frontendUrl)}\">{E(frontendUrl)}</a>.</p>";
+            : $"<p>Podés reservar una nueva entrevista desde <a href=\"{E(frontendUrl)}\">{E(frontendUrl)}</a>.</p>";
 
         return $"""
             <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
-              <h2 style="color: #1a3a74;">Turno cancelado</h2>
+              <h2 style="color: #1a3a74;">Entrevista cancelada</h2>
               <p>Hola {E(GuardianFullName(appointment))}, te avisamos que el jardín canceló la entrevista que tenías reservada.</p>
               <table style="border-collapse: collapse;">
                 <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(ChildFullName(appointment))}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Docente</td><td><strong>{E(appointment.Teacher?.FullName)}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Fecha</td><td><strong>{E(FormatDate(appointment.Date))}</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatTime(appointment.StartTime)} hs</strong></td></tr>
-                <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{appointment.Id}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Número de entrevista</td><td><strong>#{appointment.Id}</strong></td></tr>
               </table>
               {bookAgain}
             </div>
@@ -136,7 +136,7 @@ public class BrevoEmailService : IEmailService
         var frontendUrl = _options.FrontendUrl.TrimEnd('/');
         var cancel = string.IsNullOrWhiteSpace(frontendUrl)
             ? ""
-            : $"<p>Si no vas a poder asistir, cancelá el turno desde <a href=\"{E(frontendUrl)}/cancelar\">{E(frontendUrl)}/cancelar</a> con el número de turno y el teléfono que cargaste.</p>";
+            : $"<p>Si no vas a poder asistir, cancelá la entrevista desde <a href=\"{E(frontendUrl)}/cancelar\">{E(frontendUrl)}/cancelar</a> con el número de entrevista y el teléfono que cargaste.</p>";
 
         // The address only matters if the family comes to the school.
         var location = appointment.Mode == InterviewMode.InPerson && !string.IsNullOrWhiteSpace(appointment.Location)
@@ -145,7 +145,7 @@ public class BrevoEmailService : IEmailService
 
         return $"""
             <div style="font-family: Arial, sans-serif; color: #1f2937; max-width: 520px;">
-              <h2 style="color: #1a3a74;">¡Turno confirmado!</h2>
+              <h2 style="color: #1a3a74;">¡Entrevista confirmada!</h2>
               <p>Hola {E(GuardianFullName(appointment))}, tu entrevista quedó reservada.</p>
               <table style="border-collapse: collapse;">
                 <tr><td style="padding: 4px 16px 4px 0;">Niño/a</td><td><strong>{E(ChildFullName(appointment))}</strong></td></tr>
@@ -154,9 +154,9 @@ public class BrevoEmailService : IEmailService
                 <tr><td style="padding: 4px 16px 4px 0;">Horario</td><td><strong>{FormatTime(appointment.StartTime)} hs</strong></td></tr>
                 <tr><td style="padding: 4px 16px 4px 0;">Modalidad</td><td><strong>{E(ModeLabel(appointment.Mode))}</strong></td></tr>
                 {location}
-                <tr><td style="padding: 4px 16px 4px 0;">Número de turno</td><td><strong>#{appointment.Id}</strong></td></tr>
+                <tr><td style="padding: 4px 16px 4px 0;">Número de entrevista</td><td><strong>#{appointment.Id}</strong></td></tr>
               </table>
-              <p>Guardá el número de turno: lo vas a necesitar si querés cancelar.</p>
+              <p>Guardá el número de entrevista: lo vas a necesitar si querés cancelar.</p>
               {cancel}
             </div>
             """;

@@ -5,7 +5,7 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
 /**
  * Visual frame of the public screens (the ones families see): navigation bar,
  * green header with the title, step indicator, contact band and footer.
- * Each screen puts its content inside: <app-public-shell heading="Turnos"> ... </app-public-shell>
+ * Each screen puts its content inside: <app-public-shell heading="Entrevistas"> ... </app-public-shell>
  */
 @Component({
     selector: "app-public-shell",
@@ -15,7 +15,7 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
     template: `
         <header class="hero" [class.hero-compact]="!subtitle">
             <nav class="floating-nav" aria-label="Principal">
-                <a routerLink="/reservar" class="logo" aria-label="Colegio IDRA — inicio de turnos">
+                <a routerLink="/reservar" class="logo" aria-label="Colegio IDRA — inicio de entrevistas">
                     <span class="logo-idra">IDRA</span>
                     <span class="logo-school">COLEGIO</span>
                 </a>
@@ -79,7 +79,7 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
             <div>
                 <h3>Links útiles</h3>
                 <div class="footer-links">
-                    <a routerLink="/cancelar">Cancelar un turno</a>
+                    <a routerLink="/cancelar">Cancelar una entrevista</a>
                 </div>
             </div>
         </footer>

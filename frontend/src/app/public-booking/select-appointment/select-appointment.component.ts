@@ -168,7 +168,7 @@ export class SelectAppointmentComponent implements OnInit {
   dayLabel(day: CalendarDay): string {
     if (!day.date) return '';
     const date = this.formatDate(day.date);
-    if (day.count === 0) return `${date}: sin turnos`;
+    if (day.count === 0) return `${date}: sin horarios disponibles`;
     return `${date}: ${day.count} ${day.count === 1 ? 'horario disponible' : 'horarios disponibles'}`;
   }
 

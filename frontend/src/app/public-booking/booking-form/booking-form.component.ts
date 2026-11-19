@@ -70,7 +70,7 @@ export class BookingFormComponent implements OnInit {
         this.bookingService.getAppointment(this.appointmentId).subscribe({
             next: (appointment) => {
                 if (appointment.teacherId !== this.teacherId) {
-                    this.error.set("Este turno ya no está disponible. Volvé atrás y elegí otro horario.");
+                    this.error.set("Este horario ya no está disponible. Volvé atrás y elegí otro.");
                 } else {
                     this.selectedAppointment.set(appointment);
                 }
@@ -79,7 +79,7 @@ export class BookingFormComponent implements OnInit {
             error: (err: unknown) => {
                 this.error.set(
                     errorCode(err) === "APPOINTMENT_NOT_FOUND"
-                        ? "Este turno ya no está disponible. Volvé atrás y elegí otro horario."
+                        ? "Este horario ya no está disponible. Volvé atrás y elegí otro."
                         : errorMessage(err, "No pudimos cargar los datos de la entrevista."),
                 );
                 this.loading.set(false);
@@ -110,7 +110,7 @@ export class BookingFormComponent implements OnInit {
                 // the same booking, so a 409 here really means someone else took the slot.
                 if (errorCode(err) === "APPOINTMENT_TAKEN") {
                     this.error.set(
-                        "Otra familia acaba de reservar este turno. Volvé atrás y elegí otro horario.",
+                        "Otra familia acaba de reservar este horario. Volvé atrás y elegí otro.",
                     );
                 } else {
                     // 400s carry the backend's reason (e.g. "solo atiende entrevistas presenciales").

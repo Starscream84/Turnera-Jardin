@@ -16,7 +16,7 @@ namespace TurneraJardin.Api.Controllers;
 [Route("api/appointments")]
 public class AppointmentsController : ControllerBase
 {
-    private const string NotFoundOrNoMatchMessage = "No encontramos un turno reservado con ese número y ese teléfono. Revisá los datos.";
+    private const string NotFoundOrNoMatchMessage = "No encontramos una entrevista reservada con ese número y ese teléfono. Revisá los datos.";
 
     private readonly AppDbContext _db;
     private readonly IEmailQueue _emails;
@@ -62,7 +62,7 @@ public class AppointmentsController : ControllerBase
             .FirstOrDefaultAsync();
 
         return dto is null
-            ? this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "Este turno ya no está disponible. Volvé y elegí otro horario.")
+            ? this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "Este horario ya no está disponible. Volvé y elegí otro.")
             : Ok(dto);
     }
 
@@ -125,7 +125,7 @@ public class AppointmentsController : ControllerBase
 
         if (appointment is null)
         {
-            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "El turno no existe.");
+            return this.ApiError(StatusCodes.Status404NotFound, ErrorCodes.AppointmentNotFound, "La entrevista no existe.");
         }
 
         var phone = PhoneNumber.Normalize(dto.GuardianPhone)!; // [ArgentinePhone] already validated it
@@ -135,17 +135,17 @@ public class AppointmentsController : ControllerBase
         {
             return IsSameFamily(appointment, phone, email)
                 ? Ok(ToBookedDto(appointment))
-                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
+                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este horario ya no está disponible. Elegí otro.");
         }
 
         if (appointment.Status != AppointmentStatus.Available || !appointment.Teacher!.IsActive)
         {
-            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
+            return this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este horario ya no está disponible. Elegí otro.");
         }
 
         if (appointment.Date < ArgentinaDate.FirstBookableDay())
         {
-            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.BookingTooSoon, "Los turnos se reservan con al menos un día de anticipación. Elegí un turno a partir de mañana.");
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.BookingTooSoon, "Las entrevistas se reservan con al menos un día de anticipación. Elegí un horario a partir de mañana.");
         }
 
         if (appointment.Date > ArgentinaDate.LastBookableDay())
@@ -214,7 +214,7 @@ public class AppointmentsController : ControllerBase
 
             return current is not null && current.Status == AppointmentStatus.Booked && IsSameFamily(current, phone, email)
                 ? Ok(ToBookedDto(current))
-                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este turno ya no está disponible. Elegí otro horario.");
+                : this.ApiError(StatusCodes.Status409Conflict, ErrorCodes.AppointmentTaken, "Este horario ya no está disponible. Elegí otro.");
         }
 
         // The email goes out in the background (EmailDispatcherService), with retries if Brevo fails.
@@ -261,7 +261,7 @@ public class AppointmentsController : ControllerBase
 
         if (appointment.Date < ArgentinaDate.FirstBookableDay())
         {
-            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.CancelTooLate, "Los turnos de hoy o de días anteriores no se pueden cancelar desde la web. Comunicate con el jardín.");
+            return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.CancelTooLate, "Las entrevistas de hoy o de días anteriores no se pueden cancelar desde la web. Comunicate con el jardín.");
         }
 
         // Status and BookedAt are concurrency tokens: if the appointment changed since we read it,
