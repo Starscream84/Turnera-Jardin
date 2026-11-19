@@ -1435,6 +1435,44 @@ tbody tr:hover td {
     margin-left: 6px;
 }
 
+/* Listado de entrevistas del panel: entra en el ancho de la pantalla sin
+   scroll lateral. Familia y Avisos cortan el texto en varias líneas (los
+   emails largos se parten donde haga falta) y los botones van uno abajo
+   del otro. */
+.appointments-table th,
+.appointments-table td {
+    padding: 12px 10px;
+}
+
+.appointments-table .family-cell,
+.appointments-table .notices-cell {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.appointments-table .family-cell {
+    min-width: 180px;
+}
+
+.appointments-table .notices-cell {
+    min-width: 120px;
+}
+
+.appointments-table .row-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+}
+
+.appointments-table .row-actions .btn + .btn {
+    margin-left: 0;
+}
+
+.appointments-table .family-notes {
+    max-width: none;
+}
+
 .badge {
     display: inline-block;
     padding: 5px 14px;

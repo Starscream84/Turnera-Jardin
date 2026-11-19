@@ -123,7 +123,7 @@
         <p class="text-muted">No hay entrevistas que coincidan con el filtro.</p>
     } @else {
         <div class="table-card">
-            <table>
+            <table class="appointments-table">
                 <thead>
                     <tr>
                         <th>Fecha</th>
@@ -162,7 +162,7 @@
                                     <span class="text-muted">—</span>
                                 }
                             </td>
-                            <td>
+                            <td class="family-cell">
                                 @if (appointment.childName) {
                                     {{ appointment.childName }}
                                     <small>{{ appointment.guardianName }}</small>
@@ -179,7 +179,7 @@
                                     <span class="text-muted">—</span>
                                 }
                             </td>
-                            <td>
+                            <td class="notices-cell">
                                 @if (appointment.status === "Booked") {
                                     <span
                                         class="badge"
@@ -208,6 +208,7 @@
                                 }
                             </td>
                             <td class="actions-cell">
+                                <div class="row-actions">
                                 @if (appointment.status === "Booked") {
                                     <button
                                         type="button"
@@ -233,6 +234,7 @@
                                         Eliminar
                                     </button>
                                 }
+                                </div>
                             </td>
                         </tr>
                     }
