@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BOOKING_DAYS_AHEAD, BookingService } from '../../core/services/booking.service';
 import { AvailableAppointment } from '../../core/models/appointment.model';
@@ -22,6 +22,7 @@ interface Month {
   selector: 'app-select-appointment',
   standalone: true,
   imports: [RouterLink, PublicShellComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './select-appointment.component.html'
 })
 export class SelectAppointmentComponent implements OnInit {
@@ -104,12 +105,6 @@ export class SelectAppointmentComponent implements OnInit {
     const date = this.selectedDate();
     const appointments = date ? this.appointmentsByDate().get(date) ?? [] : [];
     return [...new Set(appointments.map((a) => a.location).filter((l): l is string => !!l))];
-  });
-
-  /** First cycle and specialists: always in person. The rest: the family chooses in step 3. */
-  alwaysInPerson = computed(() => {
-    const cycle = this.teacher()?.cycle;
-    return cycle === 'FirstCycle' || cycle === 'Specialist';
   });
 
   constructor(

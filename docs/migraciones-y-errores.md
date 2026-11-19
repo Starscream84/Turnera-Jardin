@@ -85,7 +85,7 @@ Todas las respuestas de error usan el mismo formato, ProblemDetails (RFC 9457, `
 | `APPOINTMENT_TAKEN` | 409 | Otra familia reservó el turno |
 | `APPOINTMENT_NOT_BOOKED` / `APPOINTMENT_ALREADY_BOOKED` | 409 / 400 | Acción que no corresponde al estado del turno |
 | `BOOKING_TOO_SOON` / `BOOKING_TOO_FAR` | 400 | Reserva para hoy o a más de 180 días |
-| `MODE_NOT_ALLOWED` | 400 | Virtual con una docente que solo atiende presencial |
+| `MODE_NOT_ALLOWED` | 400 | Ya no se usa (desde 2026-11-18 el ciclo no limita la modalidad) |
 | `PHONE_REQUIRED` / `BOOKING_NOT_FOUND` / `CANCEL_TOO_LATE` | 400 / 404 / 400 | Cancelación desde la web |
 
 La lista está en `Services/ApiErrors.cs` (`ErrorCodes`).

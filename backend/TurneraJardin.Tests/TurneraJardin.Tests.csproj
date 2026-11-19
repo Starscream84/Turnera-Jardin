@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Controllers, HttpContext and the output cache, used by the integration tests. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TurneraJardin.Api\TurneraJardin.Api.csproj" />
   </ItemGroup>
 

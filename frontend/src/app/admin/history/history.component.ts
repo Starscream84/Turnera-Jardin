@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from "@angular/core";
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from "@angular/core";
 import { FormBuilder, ReactiveFormsModule } from "@angular/forms";
 import { AuthService } from "../../core/services/auth.service";
 import { AdminAppointmentsService, HistoryFilter, PAGE_SIZE } from "../../core/services/admin-appointments.service";
@@ -21,6 +21,7 @@ import { errorMessage } from "../../shared/http-error.util";
     selector: "app-history",
     standalone: true,
     imports: [ReactiveFormsModule],
+    changeDetection: ChangeDetectionStrategy.Eager,
     templateUrl: "./history.component.html",
 })
 export class HistoryComponent implements OnInit {

@@ -5,7 +5,7 @@ Sistema de reserva de turnos de entrevista para el Nivel Inicial del Colegio IDR
 Desarrollado como proyecto académico y **cedido sin cargo** a la institución, como alternativa a sistemas pagos tipo Agenda Pro.
 
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
-![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white)
+![Angular 22](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white)
 ![MySQL 8](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
 ![Brevo](https://img.shields.io/badge/Email-Brevo-0B996E)
 ![License](https://img.shields.io/badge/uso-institucional%20sin%20cargo-blue)
@@ -27,7 +27,7 @@ Desarrollado como proyecto académico y **cedido sin cargo** a la institución, 
 - Buscador de docentes por nombre o sala.
 - Calendario mensual con los días que tienen lugar, horarios separados en mañana y tarde.
 - Reservas desde el día siguiente y con hasta 6 meses de anticipación.
-- Modalidad presencial o virtual según el ciclo de la docente (primer ciclo y especialistas: solo presencial).
+- Modalidad: la primera entrevista del niño/a en el jardín es presencial y las siguientes son virtuales (la familia lo indica al reservar; igual para todas las docentes).
 - Email de confirmación con el número de turno y botón para agendarlo en Google Calendar.
 - Cancelación autogestionada con número de turno + teléfono.
 - Contacto por WhatsApp con el jardín (un número por turno: mañana y tarde).
@@ -58,7 +58,7 @@ Desarrollado como proyecto académico y **cedido sin cargo** a la institución, 
 | Backend             | C# / ASP.NET Core 8 Web API                                             |
 | ORM / Base de datos | Entity Framework Core + MySQL 8 (Pomelo)                                |
 | Autenticación       | JWT + BCrypt                                                            |
-| Frontend            | Angular 21 (standalone components, signals, Reactive Forms), CSS propio |
+| Frontend            | Angular 22 (standalone components, signals, Reactive Forms), CSS propio |
 | Emails              | Brevo (API HTTP)                                                        |
 | Hosting             | Backend y base en Railway, frontend en Vercel                           |
 

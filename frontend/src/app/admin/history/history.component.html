@@ -2,10 +2,7 @@
     <div class="top-bar">
         <div>
             <h1>Historial</h1>
-            <p class="text-muted">
-                Reservas, cancelaciones y pedidos de confirmación. Un turno cancelado vuelve a quedar disponible
-                en Turnos; acá queda el registro de quién lo había reservado y quién lo canceló.
-            </p>
+            <p class="text-muted">Reservas, cancelaciones y pedidos de confirmación.</p>
         </div>
     </div>
 
@@ -16,19 +13,21 @@
                 <select id="h-teacherId" formControlName="teacherId">
                     <option value="">Todos</option>
                     @for (teacher of teachers(); track teacher.id) {
-                        <option [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }}</option>
+                        <option [value]="teacher.id">
+                            {{ teacher.firstName }} {{ teacher.lastName }}
+                        </option>
                     }
                 </select>
             </div>
         }
 
         <div class="form-group">
-            <label for="h-from">Turnos desde</label>
+            <label for="h-from">Entrevistas desde</label>
             <input id="h-from" type="date" formControlName="from" />
         </div>
 
         <div class="form-group">
-            <label for="h-to">Turnos hasta</label>
+            <label for="h-to">Entrevistas hasta</label>
             <input id="h-to" type="date" formControlName="to" />
         </div>
 
@@ -61,7 +60,7 @@
                     <tr>
                         <th>Cuándo</th>
                         <th>Qué pasó</th>
-                        <th>Turno</th>
+                        <th>Entrevista</th>
                         @if (isManagement()) {
                             <th>Docente</th>
                         }
@@ -73,13 +72,22 @@
                     @for (event of events(); track event.id) {
                         <tr>
                             <td>{{ formatMoment(event.createdAt) }}</td>
-                            <td><span class="badge" [class]="badgeClass(event.type)">{{ eventLabels[event.type] }}</span></td>
+                            <td>
+                                <span class="badge" [class]="badgeClass(event.type)">{{
+                                    eventLabels[event.type]
+                                }}</span>
+                            </td>
                             <td>
                                 {{ formatDate(event.date) }} {{ event.startTime.slice(0, 5) }}
                                 @if (event.mode) {
-                                    <br /><small class="text-muted">{{ modeLabels[event.mode] }} · N.º {{ event.appointmentId }}</small>
+                                    <br /><small class="text-muted"
+                                        >{{ modeLabels[event.mode] }} · N.º
+                                        {{ event.appointmentId }}</small
+                                    >
                                 } @else {
-                                    <br /><small class="text-muted">N.º {{ event.appointmentId }}</small>
+                                    <br /><small class="text-muted"
+                                        >N.º {{ event.appointmentId }}</small
+                                    >
                                 }
                             </td>
                             @if (isManagement()) {
@@ -88,7 +96,9 @@
                             <td>
                                 {{ event.childName || "—" }}
                                 @if (event.guardianName) {
-                                    <br /><small class="text-muted">{{ event.guardianName }} · {{ event.guardianPhone }}</small>
+                                    <br /><small class="text-muted"
+                                        >{{ event.guardianName }} · {{ event.guardianPhone }}</small
+                                    >
                                 }
                             </td>
                             <td>{{ event.userName || "La familia (web)" }}</td>
@@ -99,9 +109,23 @@
         </div>
         @if (pageCount() > 1) {
             <nav class="pager" aria-label="Páginas">
-                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() <= 1" (click)="loadPage(page() - 1)">← Anterior</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary btn-small"
+                    [disabled]="loading() || page() <= 1"
+                    (click)="loadPage(page() - 1)"
+                >
+                    ← Anterior
+                </button>
                 <span>Página {{ page() }} de {{ pageCount() }} · {{ total() }} movimientos</span>
-                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() >= pageCount()" (click)="loadPage(page() + 1)">Siguiente →</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary btn-small"
+                    [disabled]="loading() || page() >= pageCount()"
+                    (click)="loadPage(page() + 1)"
+                >
+                    Siguiente →
+                </button>
             </nav>
         }
     }

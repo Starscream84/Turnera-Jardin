@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { AdminUsersService } from '../../core/services/admin-users.service';
@@ -16,6 +16,7 @@ import { avatarColor, initials } from '../../shared/avatar.util';
   selector: 'app-users-list',
   standalone: true,
   imports: [ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './users-list.component.html'
 })
 export class UsersListComponent implements OnInit {

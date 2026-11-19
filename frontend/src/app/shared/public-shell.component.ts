@@ -1,4 +1,4 @@
-import { Component, Input } from "@angular/core";
+import { Component, Input, ChangeDetectionStrategy } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
 import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
 
@@ -11,6 +11,7 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
     selector: "app-public-shell",
     standalone: true,
     imports: [RouterLink, RouterLinkActive],
+    changeDetection: ChangeDetectionStrategy.Eager,
     template: `
         <header class="hero" [class.hero-compact]="!subtitle">
             <nav class="floating-nav" aria-label="Principal">
@@ -20,10 +21,10 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
                 </a>
                 <div class="nav-links">
                     <a routerLink="/reservar" routerLinkActive="active" class="nav-link"
-                        >Reservar turno</a
+                        >Reservar entrevista</a
                     >
                     <a routerLink="/cancelar" routerLinkActive="active" class="nav-link"
-                        >Cancelar turno</a
+                        >Cancelar entrevista</a
                     >
                 </div>
             </nav>

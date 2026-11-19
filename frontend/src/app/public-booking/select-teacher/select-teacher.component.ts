@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, signal, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { BookingService } from '../../core/services/booking.service';
 import { Teacher } from '../../core/models/teacher.model';
@@ -9,6 +9,7 @@ import { avatarColor, initials } from '../../shared/avatar.util';
   selector: 'app-select-teacher',
   standalone: true,
   imports: [PublicShellComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './select-teacher.component.html'
 })
 export class SelectTeacherComponent implements OnInit {

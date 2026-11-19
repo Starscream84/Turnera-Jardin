@@ -153,17 +153,9 @@ public class AppointmentsController : ControllerBase
             return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.BookingTooFar, $"Por ahora se puede reservar hasta {ArgentinaDate.BookingDaysAhead} días antes. Elegí una fecha más cercana.");
         }
 
+        // Same rule for every teacher: the child's first interview is in person, the rest online.
+        // The family tells us in step 3 (there is no family record to check it against).
         var mode = dto.Mode!.Value;
-        // First cycle and specialists: interviews are always in person and the family does not choose.
-        if (appointment.Teacher!.Cycle is TeacherCycle.FirstCycle or TeacherCycle.Specialist)
-        {
-            if (mode == InterviewMode.Online)
-            {
-                return this.ApiError(StatusCodes.Status400BadRequest, ErrorCodes.ModeNotAllowed, "Esta docente solo atiende entrevistas presenciales.");
-            }
-
-            mode = InterviewMode.InPerson;
-        }
 
         var bookedAt = DateTime.UtcNow;
         var guardianFirstName = dto.GuardianFirstName.Trim();

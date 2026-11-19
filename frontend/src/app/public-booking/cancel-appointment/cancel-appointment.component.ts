@@ -1,4 +1,4 @@
-import { Component, inject, signal } from "@angular/core";
+import { Component, inject, signal, ChangeDetectionStrategy } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { FormBuilder, ReactiveFormsModule, Validators } from "@angular/forms";
 import { BookingService } from "../../core/services/booking.service";
@@ -10,6 +10,7 @@ import { phoneValidator } from "../../shared/phone.util";
     selector: "app-cancel-appointment",
     standalone: true,
     imports: [ReactiveFormsModule, RouterLink, PublicShellComponent],
+    changeDetection: ChangeDetectionStrategy.Eager,
     templateUrl: "./cancel-appointment.component.html",
 })
 export class CancelAppointmentComponent {

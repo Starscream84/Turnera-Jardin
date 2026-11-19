@@ -22,10 +22,12 @@ public class AdminUsersController : ControllerBase
     private const string PasswordCharacters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
 
     private readonly AppDbContext _db;
+    private readonly LoginAttemptTracker _attempts;
 
-    public AdminUsersController(AppDbContext db)
+    public AdminUsersController(AppDbContext db, LoginAttemptTracker attempts)
     {
         _db = db;
+        _attempts = attempts;
     }
 
     [HttpGet]
@@ -132,6 +134,9 @@ public class AdminUsersController : ControllerBase
         user.MustChangePassword = true;
         await _db.SaveChangesAsync();
 
+        // The lock message tells the user to ask for a reset, so the reset has to lift the lock.
+        _attempts.Reset(user.Email);
+
         return Ok(new UserCredentialsDto(user.Id, user.Email, user.FullName, user.Role.ToString(), temporaryPassword));
     }
 
@@ -146,6 +151,7 @@ public class AdminUsersController : ControllerBase
 
         user.IsActive = true;
         await _db.SaveChangesAsync();
+        _attempts.Reset(user.Email);
         return NoContent();
     }
 

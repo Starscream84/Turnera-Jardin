@@ -1,24 +1,26 @@
 <div class="container">
     <div class="top-bar">
         <div>
-            <h1>Turnos</h1>
+            <h1>Entrevistas</h1>
             <p class="text-muted">Entrevistas reservadas y franjas disponibles.</p>
         </div>
         <div class="actions">
             <button
                 type="button"
                 class="btn btn-secondary"
-                title="Imprime los turnos reservados de este listado. Usa el filtro de fechas para acotar."
+                title="Imprime las entrevistas reservadas de este listado. Usa el filtro de fechas para acotar."
                 [disabled]="loading() || bookedForPrint().length === 0"
                 (click)="print()"
             >
-                Imprimir listado ({{ bookedForPrint().length }}){{ pageCount() > 1 ? ' · esta página' : '' }}
+                Imprimir listado ({{ bookedForPrint().length }}){{
+                    pageCount() > 1 ? " · esta página" : ""
+                }}
             </button>
             @if (isManagement()) {
                 <button
                     type="button"
                     class="btn btn-danger"
-                    title="Borra las franjas disponibles que se ven en este listado (nunca los turnos reservados). Usá el filtro para acotar."
+                    title="Borra las franjas disponibles que se ven en este listado (nunca las entrevistas reservadas). Usá el filtro para acotar."
                     [disabled]="deleting() || loading() || availableListed().length === 0"
                     (click)="deleteListed()"
                 >
@@ -57,7 +59,11 @@
                 </div>
                 <span class="kpi-number blue">{{ summary().available }}</span>
             </div>
-            <a class="kpi" routerLink="/admin/historial" style="text-decoration: none; color: inherit;">
+            <a
+                class="kpi"
+                routerLink="/admin/historial"
+                style="text-decoration: none; color: inherit"
+            >
                 <div>
                     <span class="tag tag-small tag-orange">Cancelaciones</span>
                     <small>ver en Historial</small>
@@ -67,7 +73,7 @@
             <div class="kpi">
                 <div>
                     <span class="tag tag-small tag-magenta">Asistencia pedida</span>
-                    <small>{{ pageCount() > 1 ? 'en esta página' : 'por WhatsApp' }}</small>
+                    <small>{{ pageCount() > 1 ? "en esta página" : "por WhatsApp" }}</small>
                 </div>
                 <span class="kpi-number magenta">{{ summary().attendanceRequested }}</span>
             </div>
@@ -114,7 +120,7 @@
     @if (loading()) {
         <p class="text-muted">Cargando...</p>
     } @else if (appointments().length === 0) {
-        <p class="text-muted">No hay turnos que coincidan con el filtro.</p>
+        <p class="text-muted">No hay entrevistas que coincidan con el filtro.</p>
     } @else {
         <div class="table-card">
             <table>
@@ -232,9 +238,26 @@
         </div>
         @if (pageCount() > 1) {
             <nav class="pager" aria-label="Páginas">
-                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() <= 1" (click)="loadPage(page() - 1)">← Anterior</button>
-                <span>Página {{ page() }} de {{ pageCount() }} · {{ summary().total }} turnos</span>
-                <button type="button" class="btn btn-secondary btn-small" [disabled]="loading() || page() >= pageCount()" (click)="loadPage(page() + 1)">Siguiente →</button>
+                <button
+                    type="button"
+                    class="btn btn-secondary btn-small"
+                    [disabled]="loading() || page() <= 1"
+                    (click)="loadPage(page() - 1)"
+                >
+                    ← Anterior
+                </button>
+                <span
+                    >Página {{ page() }} de {{ pageCount() }} ·
+                    {{ summary().total }} entrevistas</span
+                >
+                <button
+                    type="button"
+                    class="btn btn-secondary btn-small"
+                    [disabled]="loading() || page() >= pageCount()"
+                    (click)="loadPage(page() + 1)"
+                >
+                    Siguiente →
+                </button>
             </nav>
         }
     }

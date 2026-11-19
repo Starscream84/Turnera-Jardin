@@ -31,7 +31,7 @@ Estado al 27/10/2026: todo el trabajo vive en `main`, que es la rama que desplie
             ▼
 ┌───────────────────────────┐     HTTPS/JSON     ┌──────────────────────────────┐
 │ Vercel                    │ ─────────────────▶ │ Railway — servicio backend   │
-│ Angular 21 (sitio estático)│                    │ ASP.NET Core 8 (Docker, :8080)│
+│ Angular 22 (sitio estático)│                    │ ASP.NET Core 8 (Docker, :8080)│
 └───────────────────────────┘                    └───────┬──────────────┬───────┘
                                                          │ red interna  │ HTTPS
                                                          ▼              ▼
@@ -41,12 +41,12 @@ Estado al 27/10/2026: todo el trabajo vive en `main`, que es la rama que desplie
                                            └─────────────────────┘  └──────────┘
 ```
 
-| Capa | Tecnología |
-|---|---|
-| Backend | ASP.NET Core 8 Web API, EF Core con Pomelo (MySQL), JWT + BCrypt, rate limiting nativo |
-| Frontend | Angular 21, standalone components, signals, Reactive Forms, sin librerías de UI. Build con `@angular/build`. Estilos globales en `frontend/src/styles.css` (no hay CSS por componente) |
-| Base | MySQL 8.4 en Railway; MySQL 8 local para desarrollo |
-| Emails | API HTTP de Brevo (`BrevoEmailService`) |
+| Capa     | Tecnología                                                                                                                                                                             |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend  | ASP.NET Core 8 Web API, EF Core con Pomelo (MySQL), JWT + BCrypt, rate limiting nativo                                                                                                 |
+| Frontend | Angular 22, standalone components, signals, Reactive Forms, sin librerías de UI. Build con `@angular/build`. Estilos globales en `frontend/src/styles.css` (no hay CSS por componente) |
+| Base     | MySQL 8.4 en Railway; MySQL 8 local para desarrollo                                                                                                                                    |
+| Emails   | API HTTP de Brevo (`BrevoEmailService`)                                                                                                                                                |
 
 El código (clases, métodos, rutas de la API, CSS) está en inglés. Los textos que ven las familias y el personal, y las URLs de las pantallas (`/reservar`, `/admin/turnos`…), están en español.
 
@@ -79,13 +79,13 @@ frontend/
 
 ## 2. Producción
 
-| Pieza | Dónde | Detalle |
-|---|---|---|
-| Frontend | Vercel | https://turnera-jardin-azure.vercel.app — Root Directory `frontend`, Production Branch `main`. `frontend/vercel.json` define build (`ng build`), salida (`dist/frontend/browser`) y el rewrite a `index.html` para que funcionen las rutas de Angular. |
-| Backend | Railway (proyecto `laudable-charisma`, entorno `production`) | https://turnera-jardin-production.up.railway.app — rama `main`, build con el `Dockerfile` de `backend/TurneraJardin.Api`, escucha en el puerto 8080, `ASPNETCORE_ENVIRONMENT=Production` (Swagger apagado). |
-| Base | Railway, servicio `MySQL` del mismo proyecto | MySQL 8.4, solo red interna (`mysql.railway.internal`). Sin acceso público. |
-| Fotos de perfil | Volumen de Railway | Montado en `/app/wwwroot/fotos-perfil` para que no se pierdan entre deploys. |
-| Emails | Brevo | Remitente verificado en la cuenta de Brevo. |
+| Pieza           | Dónde                                                        | Detalle                                                                                                                                                                                                                                                |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Frontend        | Vercel                                                       | https://turnera-jardin-azure.vercel.app — Root Directory `frontend`, Production Branch `main`. `frontend/vercel.json` define build (`ng build`), salida (`dist/frontend/browser`) y el rewrite a `index.html` para que funcionen las rutas de Angular. |
+| Backend         | Railway (proyecto `laudable-charisma`, entorno `production`) | https://turnera-jardin-production.up.railway.app — rama `main`, build con el `Dockerfile` de `backend/TurneraJardin.Api`, escucha en el puerto 8080, `ASPNETCORE_ENVIRONMENT=Production` (Swagger apagado).                                            |
+| Base            | Railway, servicio `MySQL` del mismo proyecto                 | MySQL 8.4, solo red interna (`mysql.railway.internal`). Sin acceso público.                                                                                                                                                                            |
+| Fotos de perfil | Volumen de Railway                                           | Montado en `/app/wwwroot/fotos-perfil` para que no se pierdan entre deploys.                                                                                                                                                                           |
+| Emails          | Brevo                                                        | Remitente verificado en la cuenta de Brevo.                                                                                                                                                                                                            |
 
 - Acceso del personal: https://turnera-jardin-azure.vercel.app/admin/login (no hay link desde la parte pública).
 - El frontend llama a la API con la URL de `frontend/src/environments/environment.prod.ts`. Si cambia el dominio del backend, se cambia ahí.
@@ -98,15 +98,15 @@ En .NET, `__` en el nombre de la variable equivale a `:` en `appsettings.json` (
 
 ### Backend en Railway
 
-| Variable | Obligatoria | Valor |
-|---|---|---|
-| `ConnectionStrings__Default` | Sí | Armada con referencias al servicio MySQL: `Server=${{MySQL.MYSQLHOST}};Port=${{MySQL.MYSQLPORT}};Database=${{MySQL.MYSQLDATABASE}};User=${{MySQL.MYSQLUSER}};Password=${{MySQL.MYSQLPASSWORD}}` |
-| `Jwt__Key` | Sí | Clave aleatoria de **32 caracteres o más**. Solo existe en Railway. |
-| `Email__Enabled` | Sí | `true` |
-| `Email__ApiKey` | Sí | API key de Brevo |
-| `Email__SenderEmail` | Sí | Email remitente verificado en Brevo |
-| `Seed__AdminPassword` | No | Solo para una base **nueva**: contraseña inicial de `admin@jardin.edu.ar` (12+ caracteres). Sin ella se genera una al azar y se escribe una vez en el log |
-| `ForwardedHeaders__KnownNetworks__0` | No | Rango del proxy de Railway (ej. `10.0.0.0/8`) si se quiere restringir de quién se acepta `X-Forwarded-For` |
+| Variable                             | Obligatoria | Valor                                                                                                                                                                                           |
+| ------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ConnectionStrings__Default`         | Sí          | Armada con referencias al servicio MySQL: `Server=${{MySQL.MYSQLHOST}};Port=${{MySQL.MYSQLPORT}};Database=${{MySQL.MYSQLDATABASE}};User=${{MySQL.MYSQLUSER}};Password=${{MySQL.MYSQLPASSWORD}}` |
+| `Jwt__Key`                           | Sí          | Clave aleatoria de **32 caracteres o más**. Solo existe en Railway.                                                                                                                             |
+| `Email__Enabled`                     | Sí          | `true`                                                                                                                                                                                          |
+| `Email__ApiKey`                      | Sí          | API key de Brevo                                                                                                                                                                                |
+| `Email__SenderEmail`                 | Sí          | Email remitente verificado en Brevo                                                                                                                                                             |
+| `Seed__AdminPassword`                | No          | Solo para una base **nueva**: contraseña inicial de `admin@jardin.edu.ar` (12+ caracteres). Sin ella se genera una al azar y se escribe una vez en el log                                       |
+| `ForwardedHeaders__KnownNetworks__0` | No          | Rango del proxy de Railway (ej. `10.0.0.0/8`) si se quiere restringir de quién se acepta `X-Forwarded-For`                                                                                      |
 
 Si falta `ConnectionStrings:Default`, o `Jwt:Key` es más corta que 32 caracteres, la API **no arranca** (lo controla `Program.cs`) y el log de Railway lo dice.
 
@@ -134,27 +134,27 @@ No usa variables de entorno: la URL de la API está en `environment.prod.ts`, qu
 1. Crear una base vacía en el MySQL local (`CREATE DATABASE turnera;`). Las tablas las crea la API sola.
 2. Crear `backend/TurneraJardin.Api/appsettings.Development.json` (está en `.gitignore`, **no se commitea**):
 
-   ```json
-   {
-     "ConnectionStrings": {
-       "Default": "Server=localhost;Port=3306;Database=turnera;User=root;Password=<tu-contraseña-local>"
-     },
-     "Jwt": {
-       "Key": "<cualquier-texto-de-32-caracteres-o-mas-solo-para-desarrollo>"
-     }
-   }
-   ```
+    ```json
+    {
+        "ConnectionStrings": {
+            "Default": "Server=localhost;Port=3306;Database=turnera;User=root;Password=<tu-contraseña-local>"
+        },
+        "Jwt": {
+            "Key": "<cualquier-texto-de-32-caracteres-o-mas-solo-para-desarrollo>"
+        }
+    }
+    ```
 
-   El email queda deshabilitado (`Email:Enabled=false`): los envíos se simulan y solo aparecen en la consola.
+    El email queda deshabilitado (`Email:Enabled=false`): los envíos se simulan y solo aparecen en la consola.
 
 3. Correr:
 
-   ```bash
-   cd backend/TurneraJardin.Api
-   dotnet run
-   ```
+    ```bash
+    cd backend/TurneraJardin.Api
+    dotnet run
+    ```
 
-   Queda en `http://localhost:5275`, con Swagger en `http://localhost:5275/swagger` (ver [`guia-swagger.md`](guia-swagger.md)).
+    Queda en `http://localhost:5275`, con Swagger en `http://localhost:5275/swagger` (ver [`guia-swagger.md`](guia-swagger.md)).
 
 La primera vez, con la base vacía, `DbSeeder` carga:
 
@@ -183,29 +183,38 @@ npm install
 npm start
 ```
 
+Queda en `http://localhost:4200` y llama a la API en `http://localhost:5275/api` (`environment.ts`). Para verificar que compila igual que en Vercel: `npx ng build`.
+
 ## 5. Base de datos
 
 ### Cómo se crea el esquema
 
-- **No se usan EF Migrations.** Al arrancar, `DbSeeder.Seed` llama a `Database.EnsureCreated()`, que crea las tablas solo si la base está vacía. **Nunca modifica tablas existentes.**
+- **EF Migrations** (desde el 12/11, carpeta `backend/TurneraJardin.Api/Migrations`). Al arrancar, `DbSeeder.Seed` aplica las migraciones pendientes. Una base creada antes con `EnsureCreated()` se marca en la migración base (`InitialBaseline`) sin ejecutarla. Detalle en [`migraciones-y-errores.md`](migraciones-y-errores.md).
 - El seed solo carga datos si la tabla `Teachers` está vacía. Cambiar `DbSeeder.cs` no cambia los datos de una base que ya existe.
 
-Tablas: `Teachers`, `Appointments`, `Users`. Los enums se guardan como entero:
+Tablas: `Teachers`, `Appointments`, `Users`, `AppointmentEvents` (historial) y `__EFMigrationsHistory`. Los enums se guardan como entero:
 
-| Enum | Valores |
-|---|---|
-| `AppointmentStatus` | 0 Available, 1 Booked, 2 Cancelled, 3 Completed |
-| `InterviewMode` | 0 InPerson, 1 Online |
-| `TeacherCycle` | 1 FirstCycle, 2 SecondCycle, 3 Specialist (null = la familia elige) |
-| `UserRole` | 0 Admin, 1 Teacher, 2 Coordinator |
+| Enum                | Valores                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| `AppointmentStatus` | 0 Available, 1 Booked, 2 Cancelled, 3 Completed                     |
+| `InterviewMode`     | 0 InPerson, 1 Online                                                |
+| `TeacherCycle`      | 1 FirstCycle, 2 SecondCycle, 3 Specialist (null = la familia elige) |
+| `UserRole`          | 0 Admin, 1 Teacher, 2 Coordinator                                   |
 
 Un valor nuevo de enum va siempre **al final**: reordenar cambiaría en silencio los datos guardados.
 
 ### ⚠️ Cambios de modelo
 
-Cada columna nueva, renombre o cambio de tipo en un modelo necesita su `ALTER TABLE` **a mano en la base de Railway**, antes o junto con el deploy. Si no, la API devuelve 500 en cuanto consulta esa tabla (ver sección 13). Lo mismo para cada base local del equipo (o borrarla y dejar que se recree).
+Cada columna nueva, renombre o cambio de tipo en un modelo necesita su migración:
 
-Ejemplo de lo que hubo que hacer el 23/10: `ALTER TABLE Docentes ADD COLUMN Ciclo INT NULL;`. El renombre completo al inglés del 24/10 está en `backend/scripts/rename-to-english.sql` (ya aplicado en producción; sirve para bases locales creadas antes de esa fecha).
+```bash
+cd backend
+dotnet ef migrations add <NombreDescriptivo> --project TurneraJardin.Api
+```
+
+Revisar el archivo generado y commitearlo con el cambio de modelo. La migración se aplica sola en Railway al arrancar la versión nueva. Hacer backup antes de mergear una migración que borre o cambie columnas. El CI falla si el modelo cambió y falta la migración (`has-pending-model-changes`).
+
+Antes de las migraciones había que hacer `ALTER TABLE` a mano (los scripts viejos están en `backend/scripts/`). Ya no hace falta.
 
 ### Entrar a la base de producción
 
@@ -239,19 +248,19 @@ Los backups tienen datos personales de familias: no se suben al repo ni se compa
 `main` es la única rama permanente. Railway y Vercel despliegan solos cada push a `main`.
 
 1. Rama nueva desde `main` actualizado: `git checkout main && git pull && git checkout -b <tipo>/<descripcion>`.
-2. Probar en local: `dotnet build` y `npx ng build`.
+2. Probar en local: `dotnet test` en `backend/`, `npm test` y `npx ng build` en `frontend/`.
 3. Push y Pull Request con base `main`.
-4. Si el cambio toca un modelo: preparar el `ALTER TABLE` y aplicarlo en Railway al mergear.
+4. Si el cambio toca un modelo: agregar la migración (sección 5) y hacer backup de Railway antes de mergear.
 5. Mergear y esperar los dos deploys (Railway tarda unos minutos más que Vercel).
 6. Probar en producción la parte tocada.
 7. Borrar la rama (local y remota) y volver a `main`.
 
 ## 7. Emails (Brevo)
 
-| Cuándo | Asunto | Contenido |
-|---|---|---|
-| La familia reserva | "Turno confirmado: …" | Niño/a, docente, fecha, horario, modalidad, número de turno y link a `/cancelar` |
-| El jardín cancela desde el panel | "Turno cancelado: …" | Datos del turno y link para reservar de nuevo |
+| Cuándo                           | Asunto                | Contenido                                                                        |
+| -------------------------------- | --------------------- | -------------------------------------------------------------------------------- |
+| La familia reserva               | "Turno confirmado: …" | Niño/a, docente, fecha, horario, modalidad, número de turno y link a `/cancelar` |
+| El jardín cancela desde el panel | "Turno cancelado: …"  | Datos del turno y link para reservar de nuevo                                    |
 
 - Se envían por la API HTTPS de Brevo porque Railway bloquea SMTP en sus planes gratuitos.
 - Si el envío falla, **la reserva o cancelación se hace igual** y queda un warning en el log. En el panel, la columna "Avisos" muestra "Email no enviado".
@@ -267,57 +276,57 @@ Los backups tienen datos personales de familias: no se suben al repo ni se compa
 
 ## 9. Reglas de negocio
 
-| Regla | Dónde se aplica |
-|---|---|
-| Se reserva a partir del día siguiente (hora de Argentina; Railway corre en UTC, por eso existe `ArgentinaDate`) | Backend (`AppointmentsController.Book`) |
-| Se reserva hasta 180 días hacia adelante | Backend (`ArgentinaDate.BookingDaysAhead`) y frontend (`BOOKING_DAYS_AHEAD`): mantener iguales |
-| Primer ciclo y especialistas: solo presencial. Segundo ciclo o sin ciclo: la familia elige | Backend y frontend |
-| Dos familias no pueden tomar el mismo turno | `Book` es un único `UPDATE … WHERE Status = Available` (la segunda recibe 409). Si la misma familia reintenta (mismo teléfono y email), recibe 200 con la misma reserva |
-| Una docente desactivada no aparece en la reserva pública, no se le puede reservar ni generar turnos | Backend |
-| Teléfonos: se guardan normalizados como `549` + característica + número (acepta `0223 15 555-1234`, `+54 9 …`, `(223) …`) | Backend (`Services/PhoneNumber.cs`) y frontend (`shared/phone.util.ts`): misma lógica |
-| Email: tiene que tener dominio con punto (`juan@gmail` no se acepta) | Backend (`StrictEmail`) y frontend |
-| La familia cancela con número de turno + teléfono (en el cuerpo del pedido, cualquier formato del mismo número). "No existe" y "el teléfono no coincide" responden igual (404) | Backend |
-| La familia no puede cancelar desde la web un turno de hoy o de días anteriores | Backend |
-| Cancelar (familia o panel) libera el turno como Disponible y borra los datos de la familia. Desde el panel, primero se guarda y después se avisa por email | Backend |
-| Desde el panel, "Eliminar" solo borra turnos Disponibles; un turno reservado se cancela | Backend |
-| El borrado en bloque borra por lista de ids y **solo** los Disponibles; los reservados se saltean y se informan | Backend (`POST /api/admin/appointments/bulk-delete`) |
-| Generar turnos: hasta 6 meses por pedido, máximo 5.000 turnos por pedido, desde hoy, nunca cruza la medianoche. No se duplican horarios ya cargados (si dos coordinadoras generan a la vez, se reintenta una vez) | Backend; el formulario muestra cuántos turnos por día salen y si sobran minutos |
-| Si dos personas modifican el mismo turno a la vez, la segunda recibe 409 (Status y BookedAt son tokens de concurrencia) | Backend |
-| Límites por IP: reservar y cancelar, 20 cada 10 minutos; lecturas públicas, 120 por minuto; login, 10 cada 5 minutos. Además, 5 logins fallidos seguidos bloquean ese email 15 minutos. El 429 trae `Retry-After` | Backend (`Program.cs`, `LoginAttemptTracker`) |
-| La sesión del panel dura 8 horas, pero se corta en el acto si el usuario se desactiva, cambia o le restablecen la contraseña, o cambia su rol o docente. El frontend, ante un 401, cierra sesión y vuelve al login | Backend (`OnTokenValidated` + `SecurityStamp`), frontend (`auth.interceptor.ts`) |
-| Un usuario Docente sin docente asociada no ve nada (403) | Backend (`TryGetScope`) |
-| Contraseñas de al menos 8 caracteres | Backend y frontend |
+| Regla                                                                                                                                                                                                              | Dónde se aplica                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Se reserva a partir del día siguiente (hora de Argentina; Railway corre en UTC, por eso existe `ArgentinaDate`)                                                                                                    | Backend (`AppointmentsController.Book`)                                                                                                                                 |
+| Se reserva hasta 180 días hacia adelante                                                                                                                                                                           | Backend (`ArgentinaDate.BookingDaysAhead`) y frontend (`BOOKING_DAYS_AHEAD`): mantener iguales                                                                          |
+| Primera entrevista del niño/a: presencial; las siguientes: virtual. La familia lo indica en el paso 3, igual para todos los ciclos                                                                                 | Backend y frontend                                                                                                                                                      |
+| Dos familias no pueden tomar el mismo turno                                                                                                                                                                        | `Book` es un único `UPDATE … WHERE Status = Available` (la segunda recibe 409). Si la misma familia reintenta (mismo teléfono y email), recibe 200 con la misma reserva |
+| Una docente desactivada no aparece en la reserva pública, no se le puede reservar ni generar turnos                                                                                                                | Backend                                                                                                                                                                 |
+| Teléfonos: se guardan normalizados como `549` + característica + número (acepta `0223 15 555-1234`, `+54 9 …`, `(223) …`)                                                                                          | Backend (`Services/PhoneNumber.cs`) y frontend (`shared/phone.util.ts`): misma lógica                                                                                   |
+| Email: tiene que tener dominio con punto (`juan@gmail` no se acepta)                                                                                                                                               | Backend (`StrictEmail`) y frontend                                                                                                                                      |
+| La familia cancela con número de turno + teléfono (en el cuerpo del pedido, cualquier formato del mismo número). "No existe" y "el teléfono no coincide" responden igual (404)                                     | Backend                                                                                                                                                                 |
+| La familia no puede cancelar desde la web un turno de hoy o de días anteriores                                                                                                                                     | Backend                                                                                                                                                                 |
+| Cancelar (familia o panel) libera el turno como Disponible y borra los datos de la familia. Desde el panel, primero se guarda y después se avisa por email                                                         | Backend                                                                                                                                                                 |
+| Desde el panel, "Eliminar" solo borra turnos Disponibles; un turno reservado se cancela                                                                                                                            | Backend                                                                                                                                                                 |
+| El borrado en bloque borra por lista de ids y **solo** los Disponibles; los reservados se saltean y se informan                                                                                                    | Backend (`POST /api/admin/appointments/bulk-delete`)                                                                                                                    |
+| Generar turnos: hasta 6 meses por pedido, máximo 5.000 turnos por pedido, desde hoy, nunca cruza la medianoche. No se duplican horarios ya cargados (si dos coordinadoras generan a la vez, se reintenta una vez)  | Backend; el formulario muestra cuántos turnos por día salen y si sobran minutos                                                                                         |
+| Si dos personas modifican el mismo turno a la vez, la segunda recibe 409 (Status y BookedAt son tokens de concurrencia)                                                                                            | Backend                                                                                                                                                                 |
+| Límites por IP: reservar y cancelar, 20 cada 10 minutos; lecturas públicas, 120 por minuto; login, 10 cada 5 minutos. Además, 5 logins fallidos seguidos bloquean ese email 15 minutos. El 429 trae `Retry-After`  | Backend (`Program.cs`, `LoginAttemptTracker`)                                                                                                                           |
+| La sesión del panel dura 8 horas, pero se corta en el acto si el usuario se desactiva, cambia o le restablecen la contraseña, o cambia su rol o docente. El frontend, ante un 401, cierra sesión y vuelve al login | Backend (`OnTokenValidated` + `SecurityStamp`), frontend (`auth.interceptor.ts`)                                                                                        |
+| Un usuario Docente sin docente asociada no ve nada (403)                                                                                                                                                           | Backend (`TryGetScope`)                                                                                                                                                 |
+| Contraseñas de al menos 8 caracteres                                                                                                                                                                               | Backend y frontend                                                                                                                                                      |
 
 ## 10. Referencia de la API
 
 Los marcados 🔒 necesitan `Authorization: Bearer <token>` (se obtiene en `/api/auth/login`). Todos los errores traen `message` en español: los de negocio como `{ "message": "…" }`, los de validación y los inesperados como ProblemDetails con `message` adentro. Conflictos de base (clave duplicada, cambio concurrente) → 409.
 
-| Método | Ruta | Quién | Descripción |
-|---|---|---|---|
-| POST | `/api/auth/login` | Público | Login (límite `login`) |
-| POST 🔒 | `/api/auth/change-password` | Cualquier usuario | Cambia la contraseña propia y devuelve una sesión nueva (las demás quedan invalidadas) |
-| POST 🔒 | `/api/auth/my-photo` | Cualquier usuario | Sube foto de perfil (campo `file`; JPG/PNG/WEBP, máx. 2 MB) |
-| GET | `/api/teachers` | Público | Docentes activas |
-| GET | `/api/teachers/{id}/available-appointments?from&to` | Público | Turnos libres (por defecto desde mañana) |
-| GET | `/api/appointments/available?teacherId&date` | Público | Turnos libres de una docente (teacherId obligatorio) |
-| POST | `/api/appointments/{id}/book` | Público | Reserva; el email sale en segundo plano (límite `public`) |
-| POST | `/api/appointments/{id}/cancel` | Público | Cancela validando el teléfono, enviado en el cuerpo `{ "phone": "…" }` (límite `public`; `?phone=` se acepta temporalmente) |
-| GET | `/health` | Público | 200 si la API llega a MySQL |
-| GET 🔒 | `/api/admin/teachers` | Admin, Coordinador | Todas las docentes |
-| POST 🔒 | `/api/admin/teachers` | Admin, Coordinador | Alta |
-| PUT 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Edición |
-| DELETE 🔒 | `/api/admin/teachers/{id}` | Admin, Coordinador | Desactiva (no borra) |
-| POST 🔒 | `/api/admin/teachers/{id}/generate-appointments` | Admin, Coordinador | Genera turnos → `{ created, skippedExisting }` |
-| GET 🔒 | `/api/admin/appointments?teacherId&from&to&status` | Todos los roles | Lista (una docente solo ve los suyos) |
-| POST 🔒 | `/api/admin/appointments/{id}/cancel` | Todos (docente: solo propios) | Cancela y avisa por email |
-| POST 🔒 | `/api/admin/appointments/{id}/request-confirmation` | Todos (docente: solo propios) | Registra el pedido de confirmación |
-| DELETE 🔒 | `/api/admin/appointments/{id}` | Todos (docente: solo propios) | Elimina un turno Disponible |
-| POST 🔒 | `/api/admin/appointments/bulk-delete` | Admin, Coordinador | Borra los Disponibles de `{ "ids": [...] }` → `{ deleted, skippedBooked }` |
-| GET 🔒 | `/api/admin/users` | Admin | Usuarios del panel |
-| POST 🔒 | `/api/admin/users` | Admin | Crea un acceso (docente, coordinador o admin) |
-| POST 🔒 | `/api/admin/users/{id}/reset-password` | Admin | Genera contraseña temporal |
-| PUT 🔒 | `/api/admin/users/{id}/activate` | Admin | Reactiva |
-| POST 🔒 | `/api/admin/users/{id}/deactivate` | Admin | Desactiva (no deja desactivar al último usuario de dirección) |
+| Método    | Ruta                                                | Quién                         | Descripción                                                                                                                 |
+| --------- | --------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| POST      | `/api/auth/login`                                   | Público                       | Login (límite `login`)                                                                                                      |
+| POST 🔒   | `/api/auth/change-password`                         | Cualquier usuario             | Cambia la contraseña propia y devuelve una sesión nueva (las demás quedan invalidadas)                                      |
+| POST 🔒   | `/api/auth/my-photo`                                | Cualquier usuario             | Sube foto de perfil (campo `file`; JPG/PNG/WEBP, máx. 2 MB)                                                                 |
+| GET       | `/api/teachers`                                     | Público                       | Docentes activas                                                                                                            |
+| GET       | `/api/teachers/{id}/available-appointments?from&to` | Público                       | Turnos libres (por defecto desde mañana)                                                                                    |
+| GET       | `/api/appointments/available?teacherId&date`        | Público                       | Turnos libres de una docente (teacherId obligatorio)                                                                        |
+| POST      | `/api/appointments/{id}/book`                       | Público                       | Reserva; el email sale en segundo plano (límite `public`)                                                                   |
+| POST      | `/api/appointments/{id}/cancel`                     | Público                       | Cancela validando el teléfono, enviado en el cuerpo `{ "phone": "…" }` (límite `public`; `?phone=` se acepta temporalmente) |
+| GET       | `/health`                                           | Público                       | 200 si la API llega a MySQL                                                                                                 |
+| GET 🔒    | `/api/admin/teachers`                               | Admin, Coordinador            | Todas las docentes                                                                                                          |
+| POST 🔒   | `/api/admin/teachers`                               | Admin, Coordinador            | Alta                                                                                                                        |
+| PUT 🔒    | `/api/admin/teachers/{id}`                          | Admin, Coordinador            | Edición                                                                                                                     |
+| DELETE 🔒 | `/api/admin/teachers/{id}`                          | Admin, Coordinador            | Desactiva (no borra)                                                                                                        |
+| POST 🔒   | `/api/admin/teachers/{id}/generate-appointments`    | Admin, Coordinador            | Genera turnos → `{ created, skippedExisting }`                                                                              |
+| GET 🔒    | `/api/admin/appointments?teacherId&from&to&status`  | Todos los roles               | Lista (una docente solo ve los suyos)                                                                                       |
+| POST 🔒   | `/api/admin/appointments/{id}/cancel`               | Todos (docente: solo propios) | Cancela y avisa por email                                                                                                   |
+| POST 🔒   | `/api/admin/appointments/{id}/request-confirmation` | Todos (docente: solo propios) | Registra el pedido de confirmación                                                                                          |
+| DELETE 🔒 | `/api/admin/appointments/{id}`                      | Todos (docente: solo propios) | Elimina un turno Disponible                                                                                                 |
+| POST 🔒   | `/api/admin/appointments/bulk-delete`               | Admin, Coordinador            | Borra los Disponibles de `{ "ids": [...] }` → `{ deleted, skippedBooked }`                                                  |
+| GET 🔒    | `/api/admin/users`                                  | Admin                         | Usuarios del panel                                                                                                          |
+| POST 🔒   | `/api/admin/users`                                  | Admin                         | Crea un acceso (docente, coordinador o admin)                                                                               |
+| POST 🔒   | `/api/admin/users/{id}/reset-password`              | Admin                         | Genera contraseña temporal                                                                                                  |
+| PUT 🔒    | `/api/admin/users/{id}/activate`                    | Admin                         | Reactiva                                                                                                                    |
+| POST 🔒   | `/api/admin/users/{id}/deactivate`                  | Admin                         | Desactiva (no deja desactivar al último usuario de dirección)                                                               |
 
 Permisos en detalle: [`roles-y-permisos.md`](roles-y-permisos.md).
 
@@ -327,41 +336,40 @@ La pantalla **Usuarios** del panel solo crea accesos para docentes. Un usuario *
 
 Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 
-| Qué | Archivo |
-|---|---|
-| Teléfonos de contacto del jardín (mañana y tarde) | `frontend/src/app/core/config/school-contact.ts` |
-| Ventana de días para reservar (180) | `backend/.../Services/ArgentinaDate.cs` → `BookingDaysAhead` y `frontend/src/app/core/services/booking.service.ts` → `BOOKING_DAYS_AHEAD` (iguales) |
-| URL de la API | `frontend/src/environments/environment*.ts` |
-| Preguntas frecuentes de la reserva | `frontend/src/app/public-booking/select-teacher/select-teacher.component.html` |
-| Texto del WhatsApp de confirmación | `appointments-list.component.ts` → `confirmationMessage()` |
-| Textos de los emails | `backend/.../Services/BrevoEmailService.cs` |
-| Límites de pedidos por IP | `backend/.../Program.cs` |
+| Qué                                               | Archivo                                                                                                                                             |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Teléfonos de contacto del jardín (mañana y tarde) | `frontend/src/app/core/config/school-contact.ts`                                                                                                    |
+| Ventana de días para reservar (180)               | `backend/.../Services/ArgentinaDate.cs` → `BookingDaysAhead` y `frontend/src/app/core/services/booking.service.ts` → `BOOKING_DAYS_AHEAD` (iguales) |
+| URL de la API                                     | `frontend/src/environments/environment*.ts`                                                                                                         |
+| Preguntas frecuentes de la reserva                | `frontend/src/app/public-booking/select-teacher/select-teacher.component.html`                                                                      |
+| Texto del WhatsApp de confirmación                | `appointments-list.component.ts` → `confirmationMessage()`                                                                                          |
+| Textos de los emails                              | `backend/.../Services/BrevoEmailService.cs`                                                                                                         |
+| Límites de pedidos por IP                         | `backend/.../Program.cs`                                                                                                                            |
 
 ## 12. Seguridad
 
 - Secretos de producción (`Jwt__Key`, API key de Brevo, contraseña de MySQL) **solo en Railway**. `appsettings.json` los tiene vacíos y `appsettings.Development.json` está en `.gitignore`.
 - Contraseña del admin y de MySQL de producción ya cambiadas respecto de las iniciales.
 - `gitleaks detect -v` (23/10): 12 hallazgos, todos claves y contraseñas de **desarrollo** que quedaron en el historial (distintas de las de producción). No se reescribió el historial. Correrlo de nuevo antes de cada entrega.
-- Auditorías: `dotnet list package --vulnerable` sin hallazgos; `npm audit --omit=dev` con 0 vulnerabilidades (las restantes son de desarrollo, en Karma).
+- Auditorías (12/11, Angular 22): `dotnet list package --vulnerable` sin hallazgos; `npm audit` con 0 vulnerabilidades, incluidas las de desarrollo. Karma se reemplazó por Vitest.
 - Las fotos de perfil se validan por tipo y tamaño.
 
 ## 13. Problemas conocidos y cómo resolverlos
 
-| Síntoma | Causa probable | Qué hacer |
-|---|---|---|
-| El navegador muestra "CORS Missing Allow Origin" | Casi siempre es un **500** del backend (un error no lleva headers CORS) | Ver el log del servicio en Railway. Si dice `Unknown column`, falta un `ALTER TABLE` (sección 5) |
-| La API no arranca en Railway | Falta `ConnectionStrings__Default` o `Jwt__Key` < 32 caracteres | Revisar variables (sección 3) |
-| La familia reserva pero no llega el email | API key o remitente de Brevo, o tope diario | Log de Railway y panel de Brevo; revisar spam |
-| La familia no puede cancelar ("El teléfono no coincide") | Escribió el número distinto de como lo cargó (por ejemplo, con 0 o 15) | Que lo escriba igual que al reservar, o cancelar desde el panel |
-| `dotnet run`: "address already in use" | Quedó otra instancia en el puerto 5275 | `lsof -nP -iTCP:5275 -sTCP:LISTEN` y `kill -9 <PID>` |
-| `railway connect` no abre | VPN activa o túnel cortado | Apagar la VPN y reconectar |
-| Una docente nueva cargada en `DbSeeder` no aparece en producción | El seed no corre si ya hay docentes | Cargarla desde el panel (Docentes → Nuevo docente) |
+| Síntoma                                                          | Causa probable                                                          | Qué hacer                                                                                        |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| El navegador muestra "CORS Missing Allow Origin"                 | Casi siempre es un **500** del backend (un error no lleva headers CORS) | Ver el log del servicio en Railway. Si dice `Unknown column`, falta un `ALTER TABLE` (sección 5) |
+| La API no arranca en Railway                                     | Falta `ConnectionStrings__Default` o `Jwt__Key` < 32 caracteres         | Revisar variables (sección 3)                                                                    |
+| La familia reserva pero no llega el email                        | API key o remitente de Brevo, o tope diario                             | Log de Railway y panel de Brevo; revisar spam                                                    |
+| La familia no puede cancelar ("El teléfono no coincide")         | Escribió el número distinto de como lo cargó (por ejemplo, con 0 o 15)  | Que lo escriba igual que al reservar, o cancelar desde el panel                                  |
+| `dotnet run`: "address already in use"                           | Quedó otra instancia en el puerto 5275                                  | `lsof -nP -iTCP:5275 -sTCP:LISTEN` y `kill -9 <PID>`                                             |
+| `railway connect` no abre                                        | VPN activa o túnel cortado                                              | Apagar la VPN y reconectar                                                                       |
+| Una docente nueva cargada en `DbSeeder` no aparece en producción | El seed no corre si ya hay docentes                                     | Cargarla desde el panel (Docentes → Nuevo docente)                                               |
 
 ## 14. Pendientes
 
 - Decidir el hosting a largo plazo y hacer backup antes de migrar.
 - Prueba completa en producción después de la traducción al inglés y limpieza de variables viejas en Railway.
-- Pasar a EF Migrations para no depender de `ALTER TABLE` manuales.
 - Backups periódicos de la base.
 - Tope de anticipación de reserva también en el backend.
 - "Olvidé mi contraseña" sin estar logueado.
@@ -369,4 +377,4 @@ Estos valores no son variables de entorno: cambiarlos requiere commit y deploy.
 - Definir cómo recibe la familia el link de la videollamada en entrevistas virtuales.
 - Registrar la respuesta de la familia a la confirmación (confirmó / no asiste).
 - Editar el teléfono de la familia en un turno reservado; normalizar números con "15".
-- Tests automatizados; reemplazar Karma.
+- Tests de componentes del frontend (hoy hay specs de utilidades, servicio de sesión, guards e interceptor).
