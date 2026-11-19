@@ -166,6 +166,12 @@
                                     @if (appointment.guardianEmail) {
                                         <small>{{ appointment.guardianEmail }}</small>
                                     }
+                                    @if (appointment.notes) {
+                                        <p class="family-notes">
+                                            <span class="family-notes-label">Comentario de la familia</span>
+                                            <span class="family-notes-text">{{ appointment.notes }}</span>
+                                        </p>
+                                    }
                                 } @else {
                                     <span class="text-muted">—</span>
                                 }
@@ -286,6 +292,12 @@
                         <td>{{ appointment.childFirstName }} {{ appointment.childLastName }}</td>
                         <td>
                             {{ appointment.guardianFirstName }} {{ appointment.guardianLastName }}
+                            @if (appointment.notes) {
+                                <p class="family-notes">
+                                    <span class="family-notes-label">Comentario:</span>
+                                    <span class="family-notes-text">{{ appointment.notes }}</span>
+                                </p>
+                            }
                         </td>
                         <td></td>
                     </tr>
