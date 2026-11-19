@@ -54,7 +54,7 @@ import { SCHOOL_PHONES, whatsAppUrl } from "../core/config/school-contact";
         </main>
 
         <section class="contact-band">
-            <h2>¿Alguna duda? conversemos</h2>
+            <h2>Contactanos</h2>
             <div class="contact-band-actions">
                 @for (contact of phones; track contact.label) {
                     <a class="btn btn-green" [href]="whatsAppUrl(contact.phone)" target="_blank" rel="noopener"
